@@ -17,5 +17,7 @@ type UserRepositoryInterface interface {
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id int) error
 	UpdatePassword(ctx context.Context, id int, passwordHash string) error
+	GetTokenVersion(ctx context.Context, userID int) (int, error)
+	UpdateTokenVersion(ctx context.Context, userID int) error
 	WithTx(tx database.TransactionInterface) UserRepositoryInterface
 }

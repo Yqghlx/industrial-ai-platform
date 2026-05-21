@@ -10,10 +10,10 @@ import (
 )
 
 type TenantService struct {
-	repo *repository.TenantRepo
+	repo repository.TenantRepositoryInterface
 }
 
-func NewTenantService(repo *repository.TenantRepo) *TenantService {
+func NewTenantService(repo repository.TenantRepositoryInterface) *TenantService {
 	return &TenantService{repo: repo}
 }
 

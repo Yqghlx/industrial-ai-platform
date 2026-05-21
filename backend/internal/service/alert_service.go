@@ -30,13 +30,13 @@ type AlertService struct {
 
 // NewAlertService creates a new alert service
 func NewAlertService(
-	ruleRepo *repository.RuleRepository,
-	alertRepo *repository.AlertRepository,
-	notificationRepo *repository.NotificationRepository,
-	workOrderRepo *repository.WorkOrderRepository,
-	blackBoxRepo *repository.BlackBoxRepository,
-	telemetryRepo *repository.TelemetryRepository,
-	deviceRepo *repository.DeviceRepository,
+	ruleRepo repository.RuleRepositoryInterface,
+	alertRepo repository.AlertRepositoryInterface,
+	notificationRepo repository.NotificationRepositoryInterface,
+	workOrderRepo repository.WorkOrderRepositoryInterface,
+	blackBoxRepo repository.BlackBoxRepositoryInterface,
+	telemetryRepo repository.TelemetryRepositoryInterface,
+	deviceRepo repository.DeviceRepositoryInterface,
 ) *AlertService {
 	// Initialize notification manager from env
 	feishuWebhook := os.Getenv("FEISHU_WEBHOOK_URL")

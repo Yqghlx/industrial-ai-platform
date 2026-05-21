@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -111,6 +112,20 @@ func (m *MockUserRepository) Delete(ctx context.Context, id int) error {
 func (m *MockUserRepository) UpdatePassword(ctx context.Context, id int, passwordHash string) error {
 	args := m.Called(ctx, id, passwordHash)
 	return args.Error(0)
+}
+
+func (m *MockUserRepository) GetTokenVersion(ctx context.Context, userID int) (int, error) {
+	args := m.Called(ctx, userID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockUserRepository) UpdateTokenVersion(ctx context.Context, userID int) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) WithTx(tx database.TransactionInterface) UserRepositoryInterface {
+	return m
 }
 
 // MockAlertRepository implements AlertRepositoryInterface for testing
@@ -417,8 +432,8 @@ func (m *MockNotificationRepository) Create(ctx context.Context, notification *m
 	return args.Error(0)
 }
 
-func (m *MockNotificationRepository) List(ctx context.Context, status string, page, pageSize int) ([]model.Notification, int, error) {
-	args := m.Called(ctx, status, page, pageSize)
+func (m *MockNotificationRepository) List(ctx context.Context, status string, unreadOnly bool, page, pageSize int) ([]model.Notification, int, error) {
+	args := m.Called(ctx, status, unreadOnly, page, pageSize)
 	return args.Get(0).([]model.Notification), args.Get(1).(int), args.Error(2)
 }
 
@@ -491,4 +506,46 @@ func (m *MockAgentTaskLogRepository) Create(ctx context.Context, log *model.Agen
 func (m *MockAgentTaskLogRepository) List(ctx context.Context, limit int) ([]model.AgentTaskLog, error) {
 	args := m.Called(ctx, limit)
 	return args.Get(0).([]model.AgentTaskLog), args.Error(1)
+}
+
+// ============================================
+// Additional Mock Methods
+// ============================================
+
+func (m *MockDeviceRepository) WithTx(tx database.TransactionInterface) DeviceRepositoryInterface {
+	return m
+}
+
+func (m *MockTelemetryRepository) GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error) {
+	args := m.Called(ctx, deviceID, start, end, limit)
+	return args.Get(0).([]model.TelemetryData), args.Error(1)
+}
+
+func (m *MockWorkOrderRepository) UpdateStatus(ctx context.Context, id int, status string) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
+func (m *MockWorkOrderRepository) WithTx(tx database.TransactionInterface) WorkOrderRepositoryInterface {
+	return m
+}
+
+func (m *MockNotificationRepository) WithTx(tx database.TransactionInterface) NotificationRepositoryInterface {
+	return m
+}
+
+func (m *MockBlackBoxRepository) WithTx(tx database.TransactionInterface) BlackBoxRepositoryInterface {
+	return m
+}
+
+func (m *MockReportRepository) WithTx(tx database.TransactionInterface) ReportRepositoryInterface {
+	return m
+}
+
+func (m *MockTelemetryRepository) WithTx(tx database.TransactionInterface) TelemetryRepositoryInterface {
+	return m
+}
+
+func (m *MockAgentTaskLogRepository) WithTx(tx database.TransactionInterface) AgentTaskLogRepositoryInterface {
+	return m
 }
