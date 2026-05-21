@@ -98,9 +98,124 @@ func TestAlertService_GetEfficiencyReport(t *testing.T) {
 	assert.NotNil(t, report)
 }
 
+func TestAlertService_CreateRule(t *testing.T) {
+	mockRuleRepo := &repository.MockRuleRepository{}
+	svc := &AlertService{ruleRepo: mockRuleRepo}
+
+	ctx := context.Background()
+	rule := &model.AlertRule{
+		Name:     "温度告警",
+		Severity: "high",
+	}
+
+	mockRuleRepo.On("Create", ctx, rule).Return(nil)
+
+	err := svc.CreateRule(ctx, rule)
+	assert.NoError(t, err)
+}
+
+func TestAlertService_GetRules(t *testing.T) {
+	mockRuleRepo := &repository.MockRuleRepository{}
+	svc := &AlertService{ruleRepo: mockRuleRepo}
+
+	ctx := context.Background()
+	rules := []model.AlertRule{
+		{ID: 1, Name: "温度告警"},
+		{ID: 2, Name: "压力告警"},
+	}
+
+	mockRuleRepo.On("List", ctx).Return(rules, nil)
+
+	result, err := svc.GetRules(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(result))
+}
+
+func TestAlertService_GetAlerts(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+	alerts := []model.Alert{
+		{ID: 1, Severity: "high"},
+		{ID: 2, Severity: "medium"},
+	}
+
+	mockAlertRepo.On("List", ctx, "active", 1, 10).Return(alerts, 2, nil)
+
+	result, total, err := svc.GetAlerts(ctx, "active", 1, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, total)
+	assert.Equal(t, 2, len(result))
+}
+
+func TestAlertService_GetAlertByID(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+	alert := &model.Alert{ID: 1, Severity: "high"}
+
+	mockAlertRepo.On("List", ctx, "all", 1, 1000).Return([]model.Alert{*alert}, 1, nil)
+
+	result, err := svc.GetAlertByID(ctx, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, alert.ID, result.ID)
+}
+
+func TestAlertService_ResolveAlert(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+
+	mockAlertRepo.On("Resolve", ctx, 1).Return(nil)
+
+	err := svc.ResolveAlert(ctx, 1)
+	assert.NoError(t, err)
+}
+
+func TestAlertService_AcknowledgeAlert(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+
+	mockAlertRepo.On("UpdateStatus", ctx, 1, "acknowledged").Return(nil)
+
+	err := svc.AcknowledgeAlert(ctx, 1)
+	assert.NoError(t, err)
+}
+
+func TestAlertService_GetRuleByID(t *testing.T) {
+	mockRuleRepo := &repository.MockRuleRepository{}
+	svc := &AlertService{ruleRepo: mockRuleRepo}
+
+	ctx := context.Background()
+	rule := &model.AlertRule{ID: 1, Name: "温度告警"}
+
+	mockRuleRepo.On("GetByID", ctx, 1).Return(rule, nil)
+
+	result, err := svc.GetRuleByID(ctx, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, rule.ID, result.ID)
+}
+
+func TestAlertService_DeleteRule(t *testing.T) {
+	mockRuleRepo := &repository.MockRuleRepository{}
+	svc := &AlertService{ruleRepo: mockRuleRepo}
+
+	ctx := context.Background()
+
+	mockRuleRepo.On("Delete", ctx, 1).Return(nil)
+
+	err := svc.DeleteRule(ctx, 1)
+	assert.NoError(t, err)
+}
+
 // ============================================
 // DeviceService Coverage Tests
-// ============================================
+// =============================================
 
 func TestDeviceService_Delete(t *testing.T) {
 	mockDeviceRepo := &repository.MockDeviceRepository{}
