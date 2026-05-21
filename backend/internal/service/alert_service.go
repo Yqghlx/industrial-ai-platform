@@ -18,13 +18,13 @@ import (
 
 // AlertService handles alert evaluation and actions
 type AlertService struct {
-	ruleRepo         *repository.RuleRepository
-	alertRepo        *repository.AlertRepository
-	notificationRepo *repository.NotificationRepository
-	workOrderRepo    *repository.WorkOrderRepository
-	blackBoxRepo     *repository.BlackBoxRepository
-	telemetryRepo    *repository.TelemetryRepository
-	deviceRepo       *repository.DeviceRepository
+	ruleRepo         repository.RuleRepositoryInterface
+	alertRepo        repository.AlertRepositoryInterface
+	notificationRepo repository.NotificationRepositoryInterface
+	workOrderRepo    repository.WorkOrderRepositoryInterface
+	blackBoxRepo     repository.BlackBoxRepositoryInterface
+	telemetryRepo    repository.TelemetryRepositoryInterface
+	deviceRepo       repository.DeviceRepositoryInterface
 	notifyManager    *notify.NotifyManager
 }
 

@@ -11,5 +11,8 @@ type RuleRepositoryInterface interface {
 	Create(ctx context.Context, rule *model.AlertRule) error
 	List(ctx context.Context) ([]model.AlertRule, error)
 	ListEnabled(ctx context.Context) ([]model.AlertRule, error)
+	GetByID(ctx context.Context, id int) (*model.AlertRule, error)
+	Update(ctx context.Context, rule *model.AlertRule) error
+	Delete(ctx context.Context, id int) error
 	ToggleEnabled(ctx context.Context, id int, enabled bool) error
 }

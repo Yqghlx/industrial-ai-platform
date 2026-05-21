@@ -177,6 +177,24 @@ func (m *MockRuleRepository) ToggleEnabled(ctx context.Context, id int, enabled 
 	return args.Error(0)
 }
 
+func (m *MockRuleRepository) GetByID(ctx context.Context, id int) (*model.AlertRule, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.AlertRule), args.Error(1)
+}
+
+func (m *MockRuleRepository) Update(ctx context.Context, rule *model.AlertRule) error {
+	args := m.Called(ctx, rule)
+	return args.Error(0)
+}
+
+func (m *MockRuleRepository) Delete(ctx context.Context, id int) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 // MockTenantRepository implements TenantRepositoryInterface for testing
 type MockTenantRepository struct {
 	mock.Mock
