@@ -75,7 +75,7 @@ func TestUserService_Authenticate_InvalidPassword(t *testing.T) {
 	user, err := svc.Authenticate("testuser", "wrongpassword")
 	assert.Error(t, err)
 	assert.Nil(t, user)
-	assert.Contains(t, err.Error(), "invalid password")
+	assert.Contains(t, err.Error(), "Authentication failed")
 }
 
 func TestUserService_GetByID_Success(t *testing.T) {

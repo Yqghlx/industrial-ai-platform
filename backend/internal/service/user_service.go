@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // UserService 用户服务 (用于 AuthHandler)
@@ -23,7 +23,7 @@ func (s *UserService) Authenticate(username, password string) (*model.User, erro
 	ctx := context.Background()
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewAuthFailedError()
 	}
 
 	// 使用 PasswordHash 或 Password 字段进行验证
@@ -33,7 +33,7 @@ func (s *UserService) Authenticate(username, password string) (*model.User, erro
 	}
 
 	if !VerifyPassword(password, hash) {
-		return nil, errors.New("invalid password")
+		return nil, errors.NewAuthFailedError()
 	}
 
 	return user, nil
