@@ -4,9 +4,7 @@
 name: Gitee Sync
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only (paused)
     inputs:
       force_sync:
         description: 'Force full sync'

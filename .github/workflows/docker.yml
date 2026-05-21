@@ -1,11 +1,7 @@
 name: Docker Build
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-    branches: [main]
+  workflow_dispatch:  # Manual trigger only (paused)
 
 env:
   REGISTRY: ghcr.io

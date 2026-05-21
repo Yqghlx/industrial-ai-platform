@@ -1,15 +1,7 @@
 name: Backend CI
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'backend/**'
+  workflow_dispatch:  # Manual trigger only (paused)
 
 env:
   GO_VERSION: '1.25'
