@@ -209,7 +209,7 @@ func TestDeviceService_Update_DeviceNotFound(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "device not found")
+	assert.Contains(t, err.Error(), "Device not found")
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

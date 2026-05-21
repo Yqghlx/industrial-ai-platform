@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // DeviceService handles device business logic
@@ -35,36 +35,54 @@ func (s *DeviceService) Create(ctx context.Context, device *model.Device) error 
 	if device.Status == "" {
 		device.Status = "online"
 	}
-	return s.deviceRepo.Create(ctx, device)
+	if err := s.deviceRepo.Create(ctx, device); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // GetByID retrieves a device by ID
 func (s *DeviceService) GetByID(ctx context.Context, id string) (*model.Device, error) {
-	return s.deviceRepo.GetByID(ctx, id)
+	device, err := s.deviceRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.NewDeviceNotFoundError(id)
+	}
+	return device, nil
 }
 
 // List retrieves devices with pagination
 func (s *DeviceService) List(ctx context.Context, page, pageSize int) ([]model.Device, int, error) {
-	return s.deviceRepo.List(ctx, page, pageSize)
+	devices, total, err := s.deviceRepo.List(ctx, page, pageSize)
+	if err != nil {
+		return nil, 0, errors.NewDatabaseError(err.Error())
+	}
+	return devices, total, nil
 }
 
 // Update updates a device
 func (s *DeviceService) Update(ctx context.Context, device *model.Device) error {
 	// Check if device exists
-	if _, err := s.deviceRepo.GetByID(ctx, device.ID); err != nil {
-		return fmt.Errorf("device not found")
+	_, err := s.deviceRepo.GetByID(ctx, device.ID)
+	if err != nil {
+		return errors.NewDeviceNotFoundError(device.ID)
 	}
 	return s.deviceRepo.Update(ctx, device)
 }
 
 // Delete removes a device
 func (s *DeviceService) Delete(ctx context.Context, id string) error {
-	return s.deviceRepo.Delete(ctx, id)
+	if err := s.deviceRepo.Delete(ctx, id); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // UpdateStatus updates device status
 func (s *DeviceService) UpdateStatus(ctx context.Context, id, status string) error {
-	return s.deviceRepo.UpdateStatus(ctx, id, status)
+	if err := s.deviceRepo.UpdateStatus(ctx, id, status); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // GetDeviceTypeFromID infers device type from ID prefix
@@ -129,7 +147,7 @@ func (s *DeviceService) AutoRegisterDevice(ctx context.Context, deviceID string)
 	}
 
 	if err := s.deviceRepo.Create(ctx, device); err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError(err.Error())
 	}
 
 	return device, nil
@@ -139,7 +157,7 @@ func (s *DeviceService) AutoRegisterDevice(ctx context.Context, deviceID string)
 func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, error) {
 	devices, _, err := s.deviceRepo.List(ctx, 1, 100)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError(err.Error())
 	}
 
 	// Build graph structure
