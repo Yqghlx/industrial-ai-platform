@@ -14,6 +14,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // ============================================
@@ -231,7 +232,7 @@ func TestDeviceHandlerNew_GetDevice_Error(t *testing.T) {
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
-	mockDeviceSvc.On("GetByID", mock.Anything, "device-1").Return(nil, assert.AnError)
+	mockDeviceSvc.On("GetByID", mock.Anything, "device-1").Return(nil, errors.NewNotFoundError("Device", "device-1"))
 
 	router.GET("/devices/:id", handler.GetDevice)
 

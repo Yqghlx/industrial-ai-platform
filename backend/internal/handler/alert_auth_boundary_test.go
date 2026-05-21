@@ -14,6 +14,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // ============================================
@@ -28,7 +29,7 @@ func TestAlertHandlerNew_GetAlertByID_Error(t *testing.T) {
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
-	mockAlertSvc.On("GetAlertByID", mock.Anything, 1).Return(nil, assert.AnError)
+	mockAlertSvc.On("GetAlertByID", mock.Anything, 1).Return(nil, errors.NewNotFoundError("Alert", "1"))
 
 	router.GET("/alerts/:id", handler.GetAlert)
 

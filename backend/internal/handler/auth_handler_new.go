@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/response"
 )
 
 // ============================================
@@ -39,13 +40,13 @@ func (h *AuthHandlerNew) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	user, token, err := h.authSvc.Login(ctx, req.Username, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		response.Unauthorized(c, "Invalid credentials")
 		return
 	}
 
@@ -71,7 +72,7 @@ func (h *AuthHandlerNew) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -84,7 +85,7 @@ func (h *AuthHandlerNew) Register(c *gin.Context) {
 
 	user, token, err := h.authSvc.Register(ctx, registerReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *AuthHandlerNew) Register(c *gin.Context) {
 func (h *AuthHandlerNew) ChangePassword(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		response.Unauthorized(c, "Unauthorized")
 		return
 	}
 
@@ -108,7 +109,7 @@ func (h *AuthHandlerNew) ChangePassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -123,7 +124,7 @@ func (h *AuthHandlerNew) RefreshToken(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -141,7 +142,7 @@ func (h *AuthHandlerNew) ValidateToken(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/response"
 )
 
 // ============================================
@@ -36,7 +37,7 @@ func (h *TelemetryHandlerNew) GetLatestTelemetry(c *gin.Context) {
 
 	data, err := h.telemetrySvc.GetLatest(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -59,7 +60,7 @@ func (h *TelemetryHandlerNew) GetDeviceTelemetry(c *gin.Context) {
 
 	data, err := h.telemetrySvc.GetLatestByDevice(ctx, deviceID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *TelemetryHandlerNew) GetSystemStatus(c *gin.Context) {
 
 	status, err := h.telemetrySvc.GetSystemStatus(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *TelemetryHandlerNew) GetAIStatus(c *gin.Context) {
 
 	taskLogs, err := h.agentSvc.GetTaskLogs(ctx, 50)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -99,7 +100,7 @@ func (h *TelemetryHandlerNew) GetAIStatus(c *gin.Context) {
 func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
 	var data model.TelemetryData
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -113,15 +114,15 @@ func (h *TelemetryHandlerNew) AgentQuery(c *gin.Context) {
 
 	var req model.AgentQuery
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
-	response, err := h.agentSvc.Query(ctx, req)
+	resp, err := h.agentSvc.Query(ctx, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"response": response})
+	c.JSON(http.StatusOK, gin.H{"response": resp})
 }

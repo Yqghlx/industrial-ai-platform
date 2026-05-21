@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/response"
 )
 
 // ============================================
@@ -47,7 +48,7 @@ func (h *AlertHandler) ListAlerts(c *gin.Context) {
 
 	alerts, total, err := h.alertSvc.GetAlerts(ctx, filterStatus, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *AlertHandler) GetAlert(c *gin.Context) {
 
 	alert, err := h.alertSvc.GetAlertByID(ctx, id)
 	if err != nil {
-		c.JSON(404, gin.H{"error": "Alert not found"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -102,7 +103,7 @@ func (h *AlertHandler) ResolveAlert(c *gin.Context) {
 
 	err := h.alertSvc.ResolveAlert(ctx, id)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -133,7 +134,7 @@ func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 
 	err := h.alertSvc.AcknowledgeAlert(ctx, id)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 

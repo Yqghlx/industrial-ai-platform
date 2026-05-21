@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/response"
 )
 
 // ============================================
@@ -53,7 +54,7 @@ func (h *BusinessHandlerNew) ListWorkOrders(c *gin.Context) {
 
 	orders, total, err := h.workOrderSvc.List(ctx, status, deviceID, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -71,7 +72,7 @@ func (h *BusinessHandlerNew) CreateWorkOrder(c *gin.Context) {
 
 	var order model.WorkOrder
 	if err := c.ShouldBindJSON(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -80,7 +81,7 @@ func (h *BusinessHandlerNew) CreateWorkOrder(c *gin.Context) {
 	order.Status = "pending"
 
 	if err := h.workOrderSvc.Create(ctx, &order); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -99,12 +100,12 @@ func (h *BusinessHandlerNew) UpdateWorkOrderStatus(c *gin.Context) {
 		Status string `json:"status" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	if err := h.workOrderSvc.UpdateStatus(ctx, id, req.Status); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *BusinessHandlerNew) ListNotifications(c *gin.Context) {
 
 	notifications, total, err := h.notificationSvc.List(ctx, status, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -145,7 +146,7 @@ func (h *BusinessHandlerNew) MarkNotificationRead(c *gin.Context) {
 	fmt.Sscanf(notificationID, "%d", &id)
 
 	if err := h.notificationSvc.MarkRead(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -161,7 +162,7 @@ func (h *BusinessHandlerNew) ListBlackBox(c *gin.Context) {
 
 	records, total, err := h.blackBoxSvc.List(ctx, deviceID, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -181,7 +182,7 @@ func (h *BusinessHandlerNew) ListReports(c *gin.Context) {
 
 	reports, total, err := h.reportSvc.ListReports(ctx, reportType, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -202,13 +203,13 @@ func (h *BusinessHandlerNew) GenerateReport(c *gin.Context) {
 		DeviceID   string `json:"device_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	report, err := h.reportSvc.GenerateReport(ctx, req.ReportType, req.DeviceID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -221,7 +222,7 @@ func (h *BusinessHandlerNew) GetROIStats(c *gin.Context) {
 
 	stats, err := h.reportSvc.GetROIStats(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -234,7 +235,7 @@ func (h *BusinessHandlerNew) GetAlertStats(c *gin.Context) {
 
 	alerts, _, err := h.alertSvc.GetAlerts(ctx, "all", 1, 1000)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
