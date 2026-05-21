@@ -98,9 +98,9 @@ func LoadAgentServiceConfigFromEnv() *AgentServiceConfig {
 
 // AgentService handles AI agent queries
 type AgentService struct {
-	taskLogRepo   *repository.AgentTaskLogRepository
-	deviceRepo    *repository.DeviceRepository
-	telemetryRepo *repository.TelemetryRepository
+	taskLogRepo   repository.AgentTaskLogRepositoryInterface
+	deviceRepo    repository.DeviceRepositoryInterface
+	telemetryRepo repository.TelemetryRepositoryInterface
 	apiKey        string
 	baseURL       string
 	model         string
@@ -110,9 +110,9 @@ type AgentService struct {
 
 // NewAgentService creates a new agent service
 func NewAgentService(
-	taskLogRepo *repository.AgentTaskLogRepository,
-	deviceRepo *repository.DeviceRepository,
-	telemetryRepo *repository.TelemetryRepository,
+	taskLogRepo repository.AgentTaskLogRepositoryInterface,
+	deviceRepo repository.DeviceRepositoryInterface,
+	telemetryRepo repository.TelemetryRepositoryInterface,
 ) *AgentService {
 	// FIX-039: 从环境变量加载配置
 	config := LoadAgentServiceConfigFromEnv()
@@ -152,9 +152,9 @@ func NewAgentService(
 // NewAgentServiceWithConfig creates a new agent service with explicit config
 // FIX-039: 支持自定义配置
 func NewAgentServiceWithConfig(
-	taskLogRepo *repository.AgentTaskLogRepository,
-	deviceRepo *repository.DeviceRepository,
-	telemetryRepo *repository.TelemetryRepository,
+	taskLogRepo repository.AgentTaskLogRepositoryInterface,
+	deviceRepo repository.DeviceRepositoryInterface,
+	telemetryRepo repository.TelemetryRepositoryInterface,
 	config *AgentServiceConfig,
 ) *AgentService {
 	if config == nil {

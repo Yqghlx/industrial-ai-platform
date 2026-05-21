@@ -569,6 +569,13 @@ func (r *ReportRepository) Delete(ctx context.Context, id int) error {
 	return err
 }
 
+// AgentTaskLogRepositoryInterface defines the interface for agent task log repository
+type AgentTaskLogRepositoryInterface interface {
+	Create(ctx context.Context, log *model.AgentTaskLog) error
+	List(ctx context.Context, limit int) ([]model.AgentTaskLog, error)
+	WithTx(tx database.TransactionInterface) AgentTaskLogRepositoryInterface
+}
+
 // AgentTaskLogRepository handles AI agent task log data access
 type AgentTaskLogRepository struct {
 	db database.QueryExecutor
@@ -580,7 +587,7 @@ func NewAgentTaskLogRepository(db database.QueryExecutor) *AgentTaskLogRepositor
 }
 
 // WithTx returns a new repository that uses the given transaction
-func (r *AgentTaskLogRepository) WithTx(tx database.TransactionInterface) *AgentTaskLogRepository {
+func (r *AgentTaskLogRepository) WithTx(tx database.TransactionInterface) AgentTaskLogRepositoryInterface {
 	return &AgentTaskLogRepository{db: tx}
 }
 
