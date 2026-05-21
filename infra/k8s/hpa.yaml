@@ -1,0 +1,202 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: backend
+spec:
+  # 目标 Deployment
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  
+  # 副本数限制
+  minReplicas: 2              # 最小副本数 (高可用)
+  maxReplicas: 10             # 最大副本数 (资源限制)
+  
+  # 指标配置
+  metrics:
+    # CPU 使用率指标
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70  # CPU >70% 触发扩容
+    
+    # 内存使用率指标
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80  # 内存 >80% 触发扩容
+    
+    # 自定义指标: HTTP 请求数 (可选)
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: http_requests_per_second
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 1000
+    
+    # 自定义指标: HTTP 延迟 (可选)
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: http_latency_p95_ms
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 100
+  
+  # 扩缩容行为配置
+  behavior:
+    # 缩容行为
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 缩容稳定窗口 5 分钟
+      
+      # 缩容策略
+      policies:
+        # 每分钟最多缩容 10%
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+        
+        # 每分钟最多缩容 1 个 Pod
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      
+      # 选择策略: Min (最保守)
+      selectPolicy: Min
+    
+    # 扩容行为
+    scaleUp:
+      stabilizationWindowSeconds: 60   # 扩容稳定窗口 1 分钟
+      
+      # 扩容策略
+      policies:
+        # 每 15 秒最多扩容 100%
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        
+        # 每 15 秒最多扩容 4 个 Pod
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      
+      # 选择策略: Max (最激进)
+      selectPolicy: Max
+---
+# Frontend HPA 配置
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  
+  minReplicas: 2
+  maxReplicas: 5
+  
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      selectPolicy: Min
+    
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 2
+          periodSeconds: 15
+      selectPolicy: Max
+---
+# AI Worker HPA 配置
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-worker-hpa
+  namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: ai-worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-worker
+  
+  minReplicas: 1
+  maxReplicas: 3
+  
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50  # AI 服务更敏感，50% 触发
+  
+    # 自定义指标: 队列长度 (可选)
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: job_queue_length
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 10
+  
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600  # AI Worker 缩容更谨慎 (10 分钟)
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Min
+    
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      selectPolicy: Max

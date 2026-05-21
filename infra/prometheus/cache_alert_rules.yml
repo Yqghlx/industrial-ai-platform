@@ -1,0 +1,205 @@
+groups:
+  - name: cache-performance
+    rules:
+      # === 缓存命中率告警 ===
+      
+      - alert: CacheHitRateLow
+        expr: 
+          cache_hit_rate < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache hit rate low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}. Expected >= 80%. May need to warm cache."
+          runbook_url: "docs/runbook/cache/HitRateLow.md"
+      
+      - alert: CacheHitRateCritical
+        expr: 
+          cache_hit_rate < 0.5
+        for: 10m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Cache hit rate critical"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}. Cache may be ineffective."
+          runbook_url: "docs/runbook/cache/HitRateCritical.md"
+      
+      - alert: CacheMissRateHigh
+        expr: 
+          rate(cache_misses_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache miss rate high"
+          description: "{{ $value }} cache misses per second. High load on database."
+          runbook_url: "docs/runbook/cache/MissRateHigh.md"
+      
+      # === 缓存性能告警 ===
+      
+      - alert: CacheLatencyHigh
+        expr: 
+          avg(cache_operation_time_ms) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache latency high"
+          description: "Average cache operation time is {{ $value }}ms. Expected < 10ms."
+          runbook_url: "docs/runbook/cache/LatencyHigh.md"
+      
+      - alert: CacheOperationErrors
+        expr: 
+          rate(cache_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache operation errors"
+          description: "{{ $value }} cache errors per second. Check Redis health."
+          runbook_url: "docs/runbook/cache/OperationErrors.md"
+      
+      # === Redis 告警 ===
+      
+      - alert: RedisMemoryHigh
+        expr: 
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.7
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}. May need to increase memory or reduce TTL."
+          runbook_url: "docs/runbook/cache/MemoryHigh.md"
+      
+      - alert: RedisMemoryCritical
+        expr: 
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis memory critical"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}. Immediate action required."
+          runbook_url: "docs/runbook/cache/MemoryCritical.md"
+      
+      - alert: RedisConnectionHigh
+        expr: 
+          redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis connection count high"
+          description: "{{ $value }} Redis connections. May need to optimize connection pool."
+          runbook_url: "docs/runbook/cache/ConnectionHigh.md"
+      
+      - alert: RedisBlockedClients
+        expr: 
+          redis_blocked_clients > 0
+        for: 1m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis blocked clients"
+          description: "{{ $value }} clients blocked on Redis operations. May indicate slow commands."
+          runbook_url: "docs/runbook/cache/BlockedClients.md"
+      
+      - alert: RedisKeyspaceHitsLow
+        expr: 
+          rate(redis_keyspace_hits_total[5m]) 
+          / rate(redis_keyspace_reads_total[5m]) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis keyspace hit rate low"
+          description: "Redis keyspace hit rate is {{ $value | humanizePercentage }}. Cache not effective."
+          runbook_url: "docs/runbook/cache/KeyspaceHitsLow.md"
+      
+      # === 缓存数据质量告警 ===
+      
+      - alert: CacheKeyTooLong
+        expr: 
+          rate(cache_key_too_long_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache key too long"
+          description: "{{ $value }} cache keys too long per second. May need to optimize key generation."
+          runbook_url: "docs/runbook/cache/KeyTooLong.md"
+      
+      - alert: CacheValueTooLarge
+        expr: 
+          rate(cache_value_too_large_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache value too large"
+          description: "{{ $value }} cache values too large per second. May need to reduce data size."
+          runbook_url: "docs/runbook/cache/ValueTooLarge.md"
+      
+      - alert: CacheInvalidationFailed
+        expr: 
+          rate(cache_invalidation_errors_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache invalidation failed"
+          description: "{{ $value }} cache invalidation failures per second. Data may be stale."
+          runbook_url: "docs/runbook/cache/InvalidationFailed.md"
+      
+      # === 缓存容量告警 ===
+      
+      - alert: CacheKeysHigh
+        expr: 
+          redis_keyspace_keys_total > 1000000
+        for: 10m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache key count high"
+          description: "{{ $value }} keys in cache. May need to reduce TTL or clean up."
+          runbook_url: "docs/runbook/cache/KeysHigh.md"
+      
+      - alert: CacheExpiresHigh
+        expr: 
+          rate(redis_expired_keys_total[5m]) > 10000
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Cache expires high"
+          description: "{{ $value }} keys expiring per second. TTL may be too short."
+          runbook_url: "docs/runbook/cache/ExpiresHigh.md"
+      
+      - alert: CacheEvictionsHigh
+        expr: 
+          rate(redis_evicted_keys_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Cache evictions high"
+          description: "{{ $value }} keys evicted per second. Memory pressure. Increase memory or reduce TTL."
+          runbook_url: "docs/runbook/cache/EvictionsHigh.md"

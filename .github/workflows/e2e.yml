@@ -1,0 +1,242 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run E2E tests every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+    inputs:
+      browser:
+        description: 'Browser to test'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+          - webkit
+
+env:
+  NODE_VERSION: '20'
+  GO_VERSION: '1.25'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      backend-artifact: ${{ steps.build-backend.outputs.artifact }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: e2e_test
+          POSTGRES_PASSWORD: e2e_test
+          POSTGRES_DB: industrial_ai_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build backend
+        working-directory: backend
+        env:
+          CGO_ENABLED: 0
+        run: |
+          go build -o bin/server ./cmd/server
+
+      - name: Upload backend binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e-binary
+          path: backend/bin/server
+          retention-days: 1
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: e2e_test
+          POSTGRES_PASSWORD: e2e_test
+          POSTGRES_DB: industrial_ai_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-e2e-binary
+          path: backend/bin
+
+      - name: Start backend server
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://e2e_test:e2e_test@localhost:5432/industrial_ai_e2e?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: e2e-test-secret-key-12345
+          ADMIN_PASSWORD: admin123
+          PORT: 8080
+        run: |
+          chmod +x bin/server
+          bin/server &
+          sleep 10
+          # Verify backend is running
+          curl -f http://localhost:8080/health || exit 1
+
+      - name: Start frontend dev server
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:8080
+        run: |
+          npm run dev &
+          sleep 15
+          # Verify frontend is running
+          curl -f http://localhost:5173 || exit 1
+
+      - name: Run E2E tests
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          E2E_API_URL: http://localhost:8080
+          E2E_ADMIN_PASSWORD: admin123
+        run: |
+          # Determine which browser to use
+          if [ "${{ github.event.inputs.browser }}" != "" ] && [ "${{ github.event.inputs.browser }}" != "all" ]; then
+            npx playwright test --project=${{ github.event.inputs.browser }}
+          else
+            # Run chromium only for PRs (faster)
+            # Run all browsers for main branch
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              npx playwright test --project=chromium
+            else
+              npx playwright test
+            fi
+          fi
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: frontend/test-results/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure-screenshots
+          path: frontend/test-results/
+          retention-days: 7
+
+  # Summary job
+  e2e-summary:
+    name: E2E Tests Summary
+    runs-on: ubuntu-latest
+    needs: [setup, e2e]
+    if: always()
+    steps:
+      - name: Check E2E tests passed
+        run: |
+          if [[ "${{ needs.e2e.result }}" == "failure" ]]; then
+            echo "E2E tests failed"
+            echo "View report: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            exit 1
+          fi
+          echo "E2E tests passed"
+
+      - name: Post failure notification
+        if: failure() && github.event_name == 'schedule'
+        uses: slackapi/slack-github-action@v1
+        with:
+          channel-id: 'alerts'
+          slack-message: |
+            🚨 E2E tests failed on nightly run
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

@@ -1,0 +1,182 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create-release.outputs.id }}
+      release-upload-url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get-version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.get-version.outputs.VERSION }}
+          body: |
+            ## Changes
+            
+            See [CHANGELOG.md](./CHANGELOG.md) for details.
+            
+            ## Docker Images
+            
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}/backend:${{ steps.get-version.outputs.VERSION }}
+            docker pull ghcr.io/${{ github.repository }}/frontend:${{ steps.get-version.outputs.VERSION }}
+            ```
+            
+            ## Assets
+            
+            - `backend-linux-amd64` - Backend binary for Linux x64
+            - `frontend-dist.tar.gz` - Frontend build artifacts
+          draft: false
+          prerelease: ${{ contains(steps.get-version.outputs.VERSION, '-') }}
+          generate_release_notes: true
+
+  build-release-assets:
+    name: Build Release Assets
+    runs-on: ubuntu-latest
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build backend binary
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          go build -ldflags="-s -w" -o "bin/server-${{ matrix.goos }}-${{ matrix.goarch }}$EXT" ./cmd/server
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: backend/bin/server-${{ matrix.goos }}-${{ matrix.goarch }}*
+
+  build-frontend-assets:
+    name: Build Frontend Assets
+    runs-on: ubuntu-latest
+    needs: create-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Create tarball
+        run: |
+          cd frontend
+          tar -czvf ../frontend-dist.tar.gz dist/
+
+      - name: Upload frontend assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: frontend-dist.tar.gz
+
+  update-docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-assets, build-frontend-assets]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get-version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG
+        run: |
+          # Add release entry to CHANGELOG if exists
+          if [ -f CHANGELOG.md ]; then
+            sed -i "1i ## [v${{ steps.get-version.outputs.VERSION }}] - $(date +%Y-%m-%d)\n\nReleased on GitHub.\n\n" CHANGELOG.md
+          fi
+
+      - name: Update VERSION file
+        run: |
+          echo "v${{ steps.get-version.outputs.VERSION }}" > VERSION
+
+      - name: Commit changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add CHANGELOG.md VERSION || true
+          git commit -m "docs: update version to v${{ steps.get-version.outputs.VERSION }}" || true
+          git push origin main || true
+
+  notify:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release-assets, build-frontend-assets]
+    if: success()
+    steps:
+      - name: Get version
+        id: get-version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1
+        with:
+          channel-id: 'releases'
+          slack-message: |
+            🎉 New Release: v${{ steps.get-version.outputs.VERSION }}
+            
+            Repository: ${{ github.repository }}
+            Release URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.get-version.outputs.VERSION }}
+            
+            Docker Images:
+            - `ghcr.io/${{ github.repository }}/backend:${{ steps.get-version.outputs.VERSION }}`
+            - `ghcr.io/${{ github.repository }}/frontend:${{ steps.get-version.outputs.VERSION }}`
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

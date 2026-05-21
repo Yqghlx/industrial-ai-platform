@@ -1,0 +1,92 @@
+version: "3.8"
+
+# Loki 日志栈 Docker Compose
+# Industrial AI Platform - 结构化日志基础设施
+
+services:
+  # ============================================
+  # Loki - 日志存储
+  # ============================================
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"   # HTTP API
+      - "9096:9096"   # gRPC
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=industrial-ai"
+      - "com.docker.compose.service=loki"
+
+  # ============================================
+  # Promtail - 日志采集器
+  # ============================================
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    volumes:
+      - ./promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-positions:/tmp
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=industrial-ai"
+      - "com.docker.compose.service=promtail"
+
+  # ============================================
+  # Grafana - 日志可视化
+  # ============================================
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana-logs
+    ports:
+      - "3001:3000"   # Grafana UI (避免与主 Grafana 冲突)
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+      - promtail
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=industrial-ai"
+      - "com.docker.compose.service=grafana-logs"
+
+volumes:
+  loki-data:
+    driver: local
+  promtail-positions:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  monitoring:
+    driver: bridge
+    name: industrial-ai-monitoring

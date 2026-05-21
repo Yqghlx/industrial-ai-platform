@@ -1,0 +1,377 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: reports/reports.spec.ts >> ROI 报告内容 >> ROI 关键指标
+- Location: e2e/reports/reports.spec.ts:224:3
+
+# Error details
+
+```
+Test timeout of 60000ms exceeded while running "beforeEach" hook.
+```
+
+```
+Error: page.click: Test timeout of 60000ms exceeded.
+Call log:
+  - waiting for locator('[data-testid="generate-report-btn"]')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - generic [ref=e11]: Industrial AI
+      - navigation [ref=e12]:
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - link "仪表盘" [ref=e15] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e16]
+              - text: 仪表盘
+          - listitem [ref=e21]:
+            - link "数字孪生" [ref=e22] [cursor=pointer]:
+              - /url: /digital-twin
+              - img [ref=e23]
+              - text: 数字孪生
+          - listitem [ref=e25]:
+            - link "设备管理" [ref=e26] [cursor=pointer]:
+              - /url: /devices
+              - img [ref=e27]
+              - text: 设备管理
+          - listitem [ref=e30]:
+            - link "知识图谱" [ref=e31] [cursor=pointer]:
+              - /url: /knowledge-graph
+              - img [ref=e32]
+              - text: 知识图谱
+          - listitem [ref=e37]:
+            - link "规则配置" [ref=e38] [cursor=pointer]:
+              - /url: /rules
+              - img [ref=e39]
+              - text: 规则配置
+          - listitem [ref=e42]:
+            - link "工单管理" [ref=e43] [cursor=pointer]:
+              - /url: /work-orders
+              - img [ref=e44]
+              - text: 工单管理
+          - listitem [ref=e46]:
+            - link "通知中心" [ref=e47] [cursor=pointer]:
+              - /url: /notifications
+              - img [ref=e48]
+              - text: 通知中心
+          - listitem [ref=e51]:
+            - link "AI智能体" [ref=e52] [cursor=pointer]:
+              - /url: /ai-agent
+              - img [ref=e53]
+              - text: AI智能体
+          - listitem [ref=e56]:
+            - link "报告中心" [ref=e57] [cursor=pointer]:
+              - /url: /reports
+              - img [ref=e58]
+              - text: 报告中心
+              - img [ref=e61]
+          - listitem [ref=e63]:
+            - link "黑匣子" [ref=e64] [cursor=pointer]:
+              - /url: /blackbox
+              - img [ref=e65]
+              - text: 黑匣子
+          - listitem [ref=e68]:
+            - link "ROI统计" [ref=e69] [cursor=pointer]:
+              - /url: /roi
+              - img [ref=e70]
+              - text: ROI统计
+      - generic [ref=e73]:
+        - img [ref=e74]
+        - button "中文" [ref=e77]
+  - generic [ref=e79]:
+    - generic [ref=e80]:
+      - generic [ref=e81]:
+        - img [ref=e83]
+        - generic [ref=e85]: Industrial AI
+      - button "关闭" [ref=e86]:
+        - img [ref=e87]
+    - navigation [ref=e90]:
+      - list [ref=e91]:
+        - listitem [ref=e92]:
+          - link "仪表盘" [ref=e93] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e94]
+            - text: 仪表盘
+        - listitem [ref=e99]:
+          - link "数字孪生" [ref=e100] [cursor=pointer]:
+            - /url: /digital-twin
+            - img [ref=e101]
+            - text: 数字孪生
+        - listitem [ref=e103]:
+          - link "设备管理" [ref=e104] [cursor=pointer]:
+            - /url: /devices
+            - img [ref=e105]
+            - text: 设备管理
+        - listitem [ref=e108]:
+          - link "知识图谱" [ref=e109] [cursor=pointer]:
+            - /url: /knowledge-graph
+            - img [ref=e110]
+            - text: 知识图谱
+        - listitem [ref=e115]:
+          - link "规则配置" [ref=e116] [cursor=pointer]:
+            - /url: /rules
+            - img [ref=e117]
+            - text: 规则配置
+        - listitem [ref=e120]:
+          - link "工单管理" [ref=e121] [cursor=pointer]:
+            - /url: /work-orders
+            - img [ref=e122]
+            - text: 工单管理
+        - listitem [ref=e124]:
+          - link "通知中心" [ref=e125] [cursor=pointer]:
+            - /url: /notifications
+            - img [ref=e126]
+            - text: 通知中心
+        - listitem [ref=e129]:
+          - link "AI智能体" [ref=e130] [cursor=pointer]:
+            - /url: /ai-agent
+            - img [ref=e131]
+            - text: AI智能体
+        - listitem [ref=e134]:
+          - link "报告中心" [ref=e135] [cursor=pointer]:
+            - /url: /reports
+            - img [ref=e136]
+            - text: 报告中心
+            - img [ref=e139]
+        - listitem [ref=e141]:
+          - link "黑匣子" [ref=e142] [cursor=pointer]:
+            - /url: /blackbox
+            - img [ref=e143]
+            - text: 黑匣子
+        - listitem [ref=e146]:
+          - link "ROI统计" [ref=e147] [cursor=pointer]:
+            - /url: /roi
+            - img [ref=e148]
+            - text: ROI统计
+    - generic [ref=e151]:
+      - img [ref=e152]
+      - button "中文" [ref=e155]
+  - generic [ref=e156]:
+    - banner [ref=e157]:
+      - generic [ref=e158]:
+        - button "打开菜单" [ref=e159]:
+          - img [ref=e160]
+        - heading "Industrial AI" [level=1] [ref=e161]
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - img [ref=e164]
+          - text: 连接断开
+        - button "通知中心" [ref=e166]:
+          - img [ref=e167]
+    - main [ref=e170]:
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - heading "报告中心" [level=1] [ref=e175]
+            - paragraph [ref=e176]: 报告
+          - generic [ref=e177]:
+            - button "导出告警报告" [ref=e178]:
+              - img [ref=e179]
+              - text: 导出告警报告
+            - button "生成报告" [ref=e182]:
+              - img [ref=e183]
+              - text: 生成报告
+        - generic [ref=e184]:
+          - generic [ref=e186]:
+            - img [ref=e187]
+            - text: 报告列表
+          - generic [ref=e191]:
+            - img [ref=e192]
+            - paragraph [ref=e195]: 暂无报告
+            - button "生成报告" [ref=e196]
+  - navigation [ref=e197]:
+    - generic [ref=e198]:
+      - link "仪表盘" [ref=e199] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e200]
+        - text: 仪表盘
+      - link "设备管理" [ref=e205] [cursor=pointer]:
+        - /url: /devices
+        - img [ref=e206]
+        - text: 设备管理
+      - link "数字孪生" [ref=e209] [cursor=pointer]:
+        - /url: /digital-twin
+        - img [ref=e210]
+        - text: 数字孪生
+      - link "通知中心" [ref=e212] [cursor=pointer]:
+        - /url: /notifications
+        - img [ref=e213]
+        - text: 通知中心
+      - link "AI智能体" [ref=e216] [cursor=pointer]:
+        - /url: /ai-agent
+        - img [ref=e217]
+        - text: AI智能体
+```
+
+# Test source
+
+```ts
+  111 |         ]);
+  112 |         
+  113 |         expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
+  114 |       }
+  115 |     }
+  116 |   });
+  117 |   
+  118 |   test('分享报告', async ({ adminPage }) => {
+  119 |     await adminPage.waitForTimeout(1000);
+  120 |     const firstReport = adminPage.locator('[data-testid="reports-list"] tr').first();
+  121 |     
+  122 |     if (await firstReport.isVisible()) {
+  123 |       await firstReport.click();
+  124 |       
+  125 |       const shareBtn = adminPage.locator('[data-testid="share-btn"], button:has-text("分享")');
+  126 |       
+  127 |       if (await shareBtn.isVisible()) {
+  128 |         await shareBtn.click();
+  129 |         
+  130 |         // 验证分享对话框
+  131 |         const shareDialog = adminPage.locator('[role="dialog"]');
+  132 |         await expect(shareDialog).toBeVisible();
+  133 |         
+  134 |         // 验证分享链接可复制
+  135 |         const shareLink = shareDialog.locator('[data-testid="share-link"], input[type="text"]');
+  136 |         await expect(shareLink).toBeVisible();
+  137 |         
+  138 |         // 复制链接
+  139 |         await shareLink.click();
+  140 |         const copyBtn = shareDialog.locator('button:has-text("复制")');
+  141 |         if (await copyBtn.isVisible()) {
+  142 |           await copyBtn.click();
+  143 |           await expect(adminPage.locator('text=/复制成功/i')).toBeVisible();
+  144 |         }
+  145 |       }
+  146 |     }
+  147 |   });
+  148 |   
+  149 |   test('删除报告', async ({ adminPage }) => {
+  150 |     // 等待列表加载
+  151 |     await adminPage.waitForTimeout(1000);
+  152 |     
+  153 |     const firstReport = adminPage.locator('[data-testid="reports-list"] tr').first();
+  154 |     
+  155 |     if (await firstReport.isVisible()) {
+  156 |       // 点击删除按钮
+  157 |       const deleteBtn = firstReport.locator('[data-testid="delete-btn"], button:has-text("删除")');
+  158 |       await deleteBtn.click();
+  159 |       
+  160 |       // 确认删除
+  161 |       const confirmBtn = adminPage.locator('[role="dialog"] button:has-text("确认"), button:has-text("Confirm")');
+  162 |       await confirmBtn.click();
+  163 |       
+  164 |       // 验证报告已删除
+  165 |       await expect(firstReport).not.toBeVisible({ timeout: 10000 });
+  166 |     }
+  167 |   });
+  168 |   
+  169 |   test('报告筛选', async ({ adminPage }) => {
+  170 |     // 检查筛选选项
+  171 |     const typeFilter = adminPage.locator('[data-testid="type-filter"], select[name="type"]');
+  172 |     
+  173 |     if (await typeFilter.isVisible()) {
+  174 |       await typeFilter.selectOption('roi');
+  175 |       await adminPage.waitForTimeout(500);
+  176 |       
+  177 |       // 验证只显示 ROI 报告
+  178 |       const reports = adminPage.locator('[data-testid="reports-list"] tr');
+  179 |       const count = await reports.count();
+  180 |       
+  181 |       for (let i = 0; i < count; i++) {
+  182 |         const type = await reports.nth(i).locator('[data-testid="type"]').textContent();
+  183 |         expect(type?.toLowerCase()).toContain('roi');
+  184 |       }
+  185 |     }
+  186 |   });
+  187 |   
+  188 |   test('报告搜索', async ({ adminPage }) => {
+  189 |     const searchInput = adminPage.locator('[data-testid="search-input"], input[placeholder*="搜索"]');
+  190 |     
+  191 |     if (await searchInput.isVisible()) {
+  192 |       await searchInput.fill('ROI');
+  193 |       await adminPage.waitForTimeout(500);
+  194 |       
+  195 |       // 验证搜索结果
+  196 |       const results = adminPage.locator('[data-testid="reports-list"] tr');
+  197 |       const count = await results.count();
+  198 |       
+  199 |       if (count > 0) {
+  200 |         await expect(results.first()).toContainText('ROI');
+  201 |       }
+  202 |     }
+  203 |   });
+  204 | });
+  205 | 
+  206 | test.describe('ROI 报告内容', () => {
+  207 |   
+  208 |   test.beforeEach(async ({ adminPage }) => {
+  209 |     // 生成 ROI 报告
+  210 |     await adminPage.goto('/reports');
+> 211 |     await adminPage.click('[data-testid="generate-report-btn"]');
+      |                     ^ Error: page.click: Test timeout of 60000ms exceeded.
+  212 |     
+  213 |     const dialog = adminPage.locator('[role="dialog"]');
+  214 |     await dialog.locator('[name="report-type"]').selectOption('roi');
+  215 |     await dialog.locator('button[type="submit"]').click();
+  216 |     
+  217 |     // 等待生成完成
+  218 |     await adminPage.waitForTimeout(5000);
+  219 |     
+  220 |     // 进入报告详情
+  221 |     await adminPage.locator('[data-testid="reports-list"] tr').first().click();
+  222 |   });
+  223 |   
+  224 |   test('ROI 关键指标', async ({ adminPage }) => {
+  225 |     // 验证 ROI 概览卡片
+  226 |     const roiCards = adminPage.locator('[data-testid="roi-overview"], [class*="roi-stats"]');
+  227 |     await expect(roiCards).toBeVisible();
+  228 |     
+  229 |     // 验证关键指标存在
+  230 |     await expect(roiCards.locator('text=/投资回报率|ROI/i')).toBeVisible();
+  231 |     await expect(roiCards.locator('text=/成本节省|Cost Saved/i')).toBeVisible();
+  232 |     await expect(roiCards.locator('text=/效率提升|Efficiency/i')).toBeVisible();
+  233 |   });
+  234 |   
+  235 |   test('ROI 图表', async ({ adminPage }) => {
+  236 |     // 验证趋势图表
+  237 |     const trendChart = adminPage.locator('[data-testid="roi-trend-chart"], canvas, svg[class*="recharts"]');
+  238 |     await expect(trendChart).toBeVisible({ timeout: 10000 });
+  239 |     
+  240 |     // 验证对比图表
+  241 |     const compareChart = adminPage.locator('[data-testid="roi-compare-chart"]');
+  242 |     if (await compareChart.isVisible()) {
+  243 |       await expect(compareChart).toBeVisible();
+  244 |     }
+  245 |   });
+  246 |   
+  247 |   test('ROI 详细分析', async ({ adminPage }) => {
+  248 |     // 检查详细分析 Tab
+  249 |     const detailTab = adminPage.locator('[data-testid="detail-tab"], button:has-text("详细"), button:has-text("Detail")');
+  250 |     
+  251 |     if (await detailTab.isVisible()) {
+  252 |       await detailTab.click();
+  253 |       
+  254 |       // 验证详细数据表格
+  255 |       const detailTable = adminPage.locator('[data-testid="detail-table"], table');
+  256 |       await expect(detailTable).toBeVisible();
+  257 |       
+  258 |       // 验证有数据行
+  259 |       const rowCount = await detailTable.locator('tbody tr').count();
+  260 |       expect(rowCount).toBeGreaterThan(0);
+  261 |     }
+  262 |   });
+  263 | });
+```

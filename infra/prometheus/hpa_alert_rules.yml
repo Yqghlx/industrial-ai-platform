@@ -1,0 +1,160 @@
+groups:
+  - name: hpa
+    rules:
+      # === HPA 副本数告警 ===
+      
+      - alert: HPAAtMaxReplicas
+        expr: kube_hpa_status_current_replicas >= kube_hpa_spec_max_replicas
+        for: 5m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} at maximum replicas"
+          description: "HPA {{ $labels.hpa }} is running at maximum replicas {{ $value }}. Cannot scale further. Consider increasing maxReplicas or optimizing resource usage."
+          runbook_url: "docs/runbook/autoscaling/HPAAtMaxReplicas.md"
+      
+      - alert: HPAAtMinReplicas
+        expr: kube_hpa_status_current_replicas <= kube_hpa_spec_min_replicas and kube_hpa_status_desired_replicas > kube_hpa_spec_min_replicas
+        for: 5m
+        labels:
+          severity: info
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} at minimum replicas"
+          description: "HPA {{ $labels.hpa }} is at minimum replicas but wants to scale down further."
+      
+      - alert: HPAReplicasUnstable
+        expr: abs(kube_hpa_status_current_replicas - kube_hpa_status_desired_replicas) > 2
+        for: 10m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} replicas unstable"
+          description: "HPA {{ $labels.hpa }} current replicas {{ $labels.current }} differs from desired {{ $labels.desired }} by more than 2. Scaling may be failing."
+          runbook_url: "docs/runbook/autoscaling/HPAReplicasUnstable.md"
+      
+      # === HPA 扩缩容限制告警 ===
+      
+      - alert: HPAUnableToScale
+        expr: kube_hpa_status_condition{condition="ScalingLimited",status="true"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} unable to scale"
+          description: "HPA {{ $labels.hpa }} scaling is limited. Check resource quotas, pod limits, or metrics availability."
+          runbook_url: "docs/runbook/autoscaling/HPAUnableToScale.md"
+      
+      - alert: HPAMetricsUnavailable
+        expr: kube_hpa_status_condition{condition="ScalingActive",status="false"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} metrics unavailable"
+          description: "HPA {{ $labels.hpa }} cannot get metrics. Metrics server or Prometheus adapter may be down."
+          runbook_url: "docs/runbook/autoscaling/HPAMetricsUnavailable.md"
+      
+      - alert: HPAInvalidMetrics
+        expr: kube_hpa_status_condition{condition="ValidMetrics",status="false"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} has invalid metrics"
+          description: "HPA {{ $labels.hpa }} metrics are invalid. Check metrics configuration."
+          runbook_url: "docs/runbook/autoscaling/HPAInvalidMetrics.md"
+      
+      # === HPA 扩缩容频率告警 ===
+      
+      - alert: HPAScalingFrequent
+        expr: rate(kube_hpa_status_current_replicas[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} scaling frequently"
+          description: "HPA {{ $labels.hpa }} is scaling {{ $value }} times per minute. May indicate unstable workload or incorrect thresholds."
+          runbook_url: "docs/runbook/autoscaling/HPAScalingFrequent.md"
+      
+      - alert: HPAFlapping
+        expr: 
+          (rate(kube_hpa_status_current_replicas[5m]) > 0.05) and 
+          (rate(kube_hpa_status_current_replicas[10m] offset 5m) < -0.05)
+        for: 15m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} is flapping"
+          description: "HPA {{ $labels.hpa }} is alternating between scaling up and down. Increase stabilization window or adjust thresholds."
+          runbook_url: "docs/runbook/autoscaling/HPAFlapping.md"
+      
+      # === HPA 指标值告警 ===
+      
+      - alert: HPACPUUsageHigh
+        expr: kube_hpa_status_current_metrics_average_utilization{metric="cpu"} > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} CPU usage very high"
+          description: "HPA {{ $labels.hpa }} average CPU usage is {{ $value }}%. Scaling may be too slow."
+          runbook_url: "docs/runbook/autoscaling/HPACPUUsageHigh.md"
+      
+      - alert: HPAMemoryUsageHigh
+        expr: kube_hpa_status_current_metrics_average_utilization{metric="memory"} > 95
+        for: 5m
+        labels:
+          severity: critical
+          category: autoscaling
+        annotations:
+          summary: "HPA {{ $labels.hpa }} memory usage critical"
+          description: "HPA {{ $labels.hpa }} average memory usage is {{ $value }}%. Pods may OOM."
+          runbook_url: "docs/runbook/autoscaling/HPAMemoryUsageHigh.md"
+      
+      # === Deployment 与 HPA 关联告警 ===
+      
+      - alert: DeploymentReplicasMismatch
+        expr: 
+          kube_deployment_status_replicas != kube_deployment_spec_replicas and
+          kube_deployment_spec_replicas != kube_hpa_status_desired_replicas
+        for: 5m
+        labels:
+          severity: warning
+          category: autoscaling
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} replicas mismatch HPA"
+          description: "Deployment {{ $labels.deployment }} replicas {{ $value }} does not match HPA desired replicas."
+          runbook_url: "docs/runbook/autoscaling/DeploymentReplicasMismatch.md"
+      
+      # === Pod 资源告警 (影响 HPA) ===
+      
+      - alert: PodCPUThrottling
+        expr: rate(container_cpu_cfs_throttled_periods_total[5m]) / rate(container_cpu_cfs_periods_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "Pod {{ $labels.pod }} CPU throttling"
+          description: "Pod {{ $labels.pod }} is experiencing {{ $value | humanizePercentage }} CPU throttling. May need to increase CPU limits."
+          runbook_url: "docs/runbook/resource/PodCPUThrottling.md"
+      
+      - alert: PodOOMRisk
+        expr: container_memory_working_set_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          category: resource
+        annotations:
+          summary: "Pod {{ $labels.pod }} OOM risk"
+          description: "Pod {{ $labels.pod }} memory usage {{ $value | humanizePercentage }} of limit. OOM kill risk."
+          runbook_url: "docs/runbook/resource/PodOOMRisk.md"

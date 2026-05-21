@@ -1,0 +1,125 @@
+# Tempo 配置文件
+# Industrial AI Platform - 分布式追踪后端
+
+# ============================================
+# 服务器配置
+# ============================================
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: info
+
+# ============================================
+# Distributor 配置 (接收追踪数据)
+# ============================================
+distributor:
+  receivers:
+    # OTLP 接收器 (gRPC)
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        
+        # OTLP 接收器 (HTTP)
+        http:
+          endpoint: 0.0.0.0:4318
+
+# ============================================
+# Ingester 配置 (追踪数据写入)
+# ============================================
+ingester:
+  # 追踪块配置
+  trace_block_size: 100000         # 每块最大追踪数
+  flush_check_period: 10s          # 刷新检查周期
+  max_block_duration: 30m          # 最大块持续时间
+  complete_block_timeout: 1h       # 完成块超时
+  
+  # WAL 配置
+  wal:
+    bloom_filter_false_positive_rate: 0.05
+    bloom_filter_filter_bytes_limit: 0
+
+# ============================================
+# Compactor 配置 (追踪数据压缩)
+# ============================================
+compactor:
+  ring:
+    kvstore:
+      store: inmemory
+  
+  # 压缩配置
+  compaction:
+    block_retention: 168h          # 7 天保留期
+    compaction_window: 1h          # 压缩窗口
+    max_compaction_objects: 1000000 # 最大压缩对象数
+    max_compaction_time: 30m       # 最大压缩时间
+
+# ============================================
+# Storage 配置 (追踪数据存储)
+# ============================================
+storage:
+  trace:
+    # 后端配置
+    backend: local
+    
+    # 本地存储配置
+    local:
+      path: /tmp/tempo/traces
+    
+    # WAL 配置
+    wal:
+      path: /tmp/tempo/wal
+    
+    # 块配置
+    block:
+      index_downsample_bytes: 1000
+      index_page_size_bytes: 1000
+    
+    # 搜索配置
+    search:
+      chunk_size_bytes: 1000000
+
+# ============================================
+# Querier 配置 (追踪查询)
+# ============================================
+querier:
+  max_concurrent_queries: 20
+  query_timeout: 30s
+  
+  # 搜索配置
+  search:
+    query_ingesters_until: 10m
+
+# ============================================
+# Query Frontend 配置
+# ============================================
+query_frontend:
+  search:
+    concurrent_jobs: 1000
+    max_result_duration: 1h
+  
+  trace_by_id:
+    query_shards: 50
+
+# ============================================
+# Memberlist 配置
+# ============================================
+memberlist:
+  bind_port: 7946
+  bind_addr: ['127.0.0.1']
+  
+  # 集群配置
+  abort_if_cluster_memberlist_join_fails: false
+  rejoin_interval: 60s
+
+# ============================================
+# Metrics 配置
+# ============================================
+metrics:
+  metrics_destination: otel
+  
+  # OTLP 配置
+  otel:
+    endpoint: localhost:4317
+    tls:
+      insecure: true

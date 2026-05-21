@@ -1,0 +1,208 @@
+# Promtail 配置文件
+# Industrial AI Platform - 日志采集器
+
+# ============================================
+# 服务器配置
+# ============================================
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+# ============================================
+# Positions 配置 (日志位置记录)
+# ============================================
+positions:
+  filename: /tmp/positions.yaml
+  sync_period: 10s
+
+# ============================================
+# Loki 客户端配置
+# ============================================
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    tenant_id: industrial-ai
+    batchwait: 1s
+    batchsize: 1048576  # 1MB
+    timeout: 10s
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+# ============================================
+# Docker 容器日志采集
+# ============================================
+scrape_configs:
+  # Docker 容器日志
+  - job_name: docker-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=industrial-ai"]
+    
+    relabel_configs:
+      # 容器名称
+      - source_labels: [__meta_docker_container_name]
+        regex: /(.*)
+        target_label: container
+      
+      # 日志流
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      
+      # 服务名称
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      
+      # 环境标签
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project_environment]
+        target_label: environment
+    
+    pipeline_config:
+      stages:
+        # 解析 JSON 日志
+        - json:
+            expressions:
+              timestamp: timestamp
+              level: level
+              message: message
+              logger: logger
+              service: service
+              environment: environment
+              trace_id: trace_id
+              request_id: request_id
+              tenant_id: tenant_id
+              http_method: 'http.method'
+              http_path: 'http.path'
+              http_status: 'http.status_code'
+              http_latency: 'http.latency_ms'
+              error: error
+        
+        # 设置时间戳
+        - timestamp:
+            source: timestamp
+            format: RFC3339Nano
+        
+        # 设置标签
+        - labels:
+            level:
+            service:
+            environment:
+            logger:
+        
+        # 设置日志级别颜色
+        - match:
+            selector: '{level="error"}'
+            stages:
+              - labels:
+                  level:
+        
+        - match:
+            selector: '{level="warn"}'
+            stages:
+              - labels:
+                  level:
+        
+        # 提取 HTTP 指标
+        - metrics:
+            http_requests_total:
+              type: Counter
+              description: "Total HTTP requests"
+              source: http_method
+              config:
+                action: inc
+                match_all: true
+            
+            http_errors_total:
+              type: Counter
+              description: "Total HTTP errors"
+              source: http_status
+              config:
+                action: inc
+                value: 1
+                match_all: true
+            
+            http_latency_seconds:
+              type: Histogram
+              description: "HTTP request latency"
+              source: http_latency
+              config:
+                buckets: [10, 25, 50, 100, 200, 500, 1000]
+
+  # Kubernetes Pod 日志
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - industrial-ai
+            - monitoring
+    
+    relabel_configs:
+      # Pod 名称
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      
+      # Namespace
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      
+      # Container
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: container
+      
+      # App 标签
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      
+      # Component 标签
+      - source_labels: [__meta_kubernetes_pod_label_component]
+        target_label: component
+    
+    pipeline_config:
+      stages:
+        # 解析 JSON 日志
+        - json:
+            expressions:
+              timestamp: timestamp
+              level: level
+              message: message
+              service: service
+              trace_id: trace_id
+        
+        # 设置时间戳
+        - timestamp:
+            source: timestamp
+            format: RFC3339Nano
+        
+        # 设置标签
+        - labels:
+            level:
+            service:
+
+  # 系统日志文件
+  - job_name: system-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          host: localhost
+        __path__: /var/log/*.log
+    
+    pipeline_config:
+      stages:
+        # 解析系统日志
+        - regex:
+            expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z)\s+(?P<level>\w+)\s+(?P<message>.*)$'
+        
+        # 设置时间戳
+        - timestamp:
+            source: timestamp
+            format: RFC3339Nano
+        
+        # 设置标签
+        - labels:
+            level:

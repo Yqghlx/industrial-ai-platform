@@ -1,0 +1,15 @@
+-- Drop audit logs table
+DROP INDEX IF EXISTS idx_audit_logs_user_time;
+DROP INDEX IF EXISTS idx_audit_logs_tenant_time;
+DROP INDEX IF EXISTS idx_audit_logs_category_time;
+DROP INDEX IF EXISTS idx_audit_logs_ip_address;
+DROP INDEX IF EXISTS idx_audit_logs_resource_id;
+DROP INDEX IF EXISTS idx_audit_logs_resource_type;
+DROP INDEX IF EXISTS idx_audit_logs_result;
+DROP INDEX IF EXISTS idx_audit_logs_severity;
+DROP INDEX IF EXISTS idx_audit_logs_tenant_id;
+DROP INDEX IF EXISTS idx_audit_logs_user_id;
+DROP INDEX IF EXISTS idx_audit_logs_event_category;
+DROP INDEX IF EXISTS idx_audit_logs_event_type;
+DROP INDEX IF EXISTS idx_audit_logs_timestamp;
+DROP TABLE IF EXISTS audit_logs;

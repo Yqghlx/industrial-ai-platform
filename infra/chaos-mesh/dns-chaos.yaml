@@ -1,0 +1,403 @@
+# DNS 故障注入实验 - Industrial AI Platform
+# 用途: 模拟 DNS 故障，验证降级机制和服务发现容错
+
+---
+# ================================
+# 实验 1: DNS 错误 - 随机错误
+# ================================
+# 验证: DNS 解析失败时的错误处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-error-random
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-error
+    chaos-mesh.org/target: backend
+spec:
+  action: error
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duration: "3m"
+  scheduler:
+    cron: "@every 20m"
+
+---
+# ================================
+# 实验 2: DNS 错误 - 所有 Pod
+# ================================
+# 验证: 集群范围 DNS 故障时的降级
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-error-all
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-error-all
+spec:
+  action: error
+  mode: all
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duration: "60s"
+  # 注意: 此实验会导致所有 DNS 查询失败
+  # 用于测试硬编码 IP 或服务发现的容错机制
+
+---
+# ================================
+# 实验 3: DNS 延迟
+# ================================
+# 验证: DNS 解析慢时的超时处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-delay-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-delay
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "500ms"    # DNS 解析延迟 500ms
+    jitter: "100ms"     # 抖动 100ms
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+
+---
+# ================================
+# 实验 4: DNS 延迟 - 高延迟
+# ================================
+# 验证: 极端 DNS 延迟下的应用行为
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-delay-severe
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-delay-severe
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "2s"        # 2 秒延迟
+    jitter: "500ms"
+  duration: "2m"
+  # 注意: 可能导致应用超时
+
+---
+# ================================
+# 实验 5: DNS 欺骗 - 返回错误 IP
+# ================================
+# 验证: DNS 劫持时的服务连接处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-spoof-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-spoof
+spec:
+  action: error  # 返回错误响应
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  # 可以配置特定域名
+  patterns:
+    - "external-service.example.com"
+    - "api.third-party.com"
+  duration: "3m"
+
+---
+# ================================
+# 实验 6: Frontend DNS 故障
+# ================================
+# 验证: 前端服务 DNS 故障影响
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-error-frontend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-error-frontend
+spec:
+  action: error
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: frontend
+  duration: "2m"
+  scheduler:
+    cron: "@every 15m"
+
+---
+# ================================
+# 实验 7: AI Worker DNS 故障
+# ================================
+# 验证: AI 服务 DNS 故障时的降级
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-delay-ai-worker
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-delay-ai
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: ai-worker
+  delay:
+    latency: "1s"
+    jitter: "200ms"
+  duration: "3m"
+
+---
+# ================================
+# 实验 8: DNS 故障 - 固定百分比
+# ================================
+# 验证: 部分 DNS 故障时的行为
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-error-percentage
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: dns-error-partial
+spec:
+  action: error
+  mode: fixed-percent
+  value: "30"           # 30% 的 DNS 查询失败
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+
+---
+# ================================
+# 实验 9: 定时 DNS 故障
+# ================================
+# 验证: 定期 DNS 故障下的服务稳定性
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: scheduled-dns-chaos
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: scheduled-dns
+spec:
+  schedule: "0 */3 * * *"  # 每 3 小时执行一次
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: DNSChaos
+  dnsChaos:
+    action: error
+    mode: one
+    selector:
+      namespaces:
+        - industrial-ai
+      labelSelectors:
+        app: backend
+    duration: "2m"
+
+---
+# ================================
+# 实验 10: DNS 故障工作流
+# ================================
+# 按顺序执行 DNS 故障实验
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: dns-chaos-workflow
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Serial
+      deadline: 20m
+      children:
+        - dns-delay-phase
+        - wait-recovery
+        - dns-error-phase
+        - wait-recovery
+        - dns-mixed-phase
+        - final-check
+    
+    - name: dns-delay-phase
+      templateType: DNSChaos
+      deadline: 5m
+      dnsChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        delay:
+          latency: "500ms"
+          jitter: "100ms"
+        duration: "3m"
+    
+    - name: dns-error-phase
+      templateType: DNSChaos
+      deadline: 3m
+      dnsChaos:
+        action: error
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        duration: "60s"
+    
+    - name: dns-mixed-phase
+      templateType: Parallel
+      deadline: 5m
+      children:
+        - dns-error-frontend
+        - dns-delay-backend
+    
+    - name: dns-error-frontend
+      templateType: DNSChaos
+      deadline: 3m
+      dnsChaos:
+        action: error
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: frontend
+        duration: "2m"
+    
+    - name: dns-delay-backend
+      templateType: DNSChaos
+      deadline: 3m
+      dnsChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        delay:
+          latency: "300ms"
+        duration: "2m"
+    
+    - name: wait-recovery
+      templateType: Suspend
+      deadline: 2m
+    
+    - name: final-check
+      templateType: Suspend
+      deadline: 1m
+
+---
+# ================================
+# 实验 11: 综合故障测试 - DNS + 网络
+# ================================
+# 同时进行 DNS 和网络故障测试
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: combined-chaos-workflow
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Parallel
+      deadline: 10m
+      children:
+        - dns-chaos
+        - network-chaos
+    
+    - name: dns-chaos
+      templateType: DNSChaos
+      deadline: 5m
+      dnsChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        delay:
+          latency: "200ms"
+        duration: "3m"
+    
+    - name: network-chaos
+      templateType: NetworkChaos
+      deadline: 5m
+      networkChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        delay:
+          latency: "100ms"
+          jitter: "20ms"
+        direction: both
+        duration: "3m"

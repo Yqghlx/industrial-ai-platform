@@ -1,0 +1,166 @@
+groups:
+  - name: postgresql-ha
+    rules:
+      # === 主节点状态告警 ===
+      
+      - alert: PostgreSQLPrimaryDown
+        expr: pg_replication_primary_status == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL primary node is down"
+          description: "PostgreSQL primary node is down for 30 seconds. Failover may be required."
+          runbook_url: "docs/runbook/database/PostgreSQLPrimaryDown.md"
+      
+      - alert: PostgreSQLPrimaryNotLeader
+        expr: pg_replication_role != "primary"
+        for: 1m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL node not acting as primary"
+          description: "Expected primary node is not acting as primary for 1 minute."
+          runbook_url: "docs/runbook/database/PostgreSQLRoleCheck.md"
+      
+      # === 复制状态告警 ===
+      
+      - alert: PostgreSQLReplicationLagHigh
+        expr: pg_replication_lag_bytes > 1048576
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL replication lag is high"
+          description: "Replication lag is {{ $value | humanize1024 }}B. Replica may be falling behind."
+          runbook_url: "docs/runbook/database/ReplicationLagHigh.md"
+      
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_bytes > 10485760
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL replication lag is critical"
+          description: "Replication lag is {{ $value | humanize1024 }}B. Data loss risk during failover."
+          runbook_url: "docs/runbook/database/ReplicationLagCritical.md"
+      
+      - alert: PostgreSQLReplicaDown
+        expr: pg_replication_replica_count < 1
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL replica node is down"
+          description: "No replica nodes available. High availability degraded."
+          runbook_url: "docs/runbook/database/PostgreSQLReplicaDown.md"
+      
+      - alert: PostgreSQLReplicationStopped
+        expr: pg_replication_state != "streaming"
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL replication is stopped"
+          description: "Replication is not in streaming state. Immediate investigation required."
+          runbook_url: "docs/runbook/database/ReplicationStopped.md"
+      
+      # === Patroni 告警 ===
+      
+      - alert: PatroniClusterUnhealthy
+        expr: patroni_cluster_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Patroni cluster is unhealthy"
+          description: "Patroni cluster status indicates unhealthy state. Failover may be blocked."
+          runbook_url: "docs/runbook/database/PatroniClusterUnhealthy.md"
+      
+      - alert: PatroniNodeUnhealthy
+        expr: patroni_node_status == 0
+        for: 30s
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Patroni node {{ $labels.name }} is unhealthy"
+          description: "Patroni node {{ $labels.name }} health check failed."
+          runbook_url: "docs/runbook/database/PatroniNodeUnhealthy.md"
+      
+      - alert: PatroniFailoverPossible
+        expr: patroni_failover_candidates < 1
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "No Patroni failover candidates available"
+          description: "No healthy replica nodes available for failover. Cluster at risk."
+          runbook_url: "docs/runbook/database/PatroniNoFailoverCandidates.md"
+      
+      # === pgBouncer 告警 ===
+      
+      - alert: PgBouncerDown
+        expr: pgbouncer_up == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "pgBouncer is down"
+          description: "pgBouncer connection pool is down. Database connections failing."
+          runbook_url: "docs/runbook/database/PgBouncerDown.md"
+      
+      - alert: PgBouncerPoolExhausted
+        expr: pgbouncer_pool_usage_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "pgBouncer connection pool exhausted"
+          description: "pgBouncer pool usage is {{ $value }}%. New connections may be rejected."
+          runbook_url: "docs/runbook/database/PgBouncerPoolExhausted.md"
+      
+      - alert: PgBouncerHighWaitTime
+        expr: pgbouncer_client_wait_time_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "pgBouncer high client wait time"
+          description: "Clients waiting {{ $value }}s for connections. Pool may need tuning."
+          runbook_url: "docs/runbook/database/PgBouncerHighWaitTime.md"
+      
+      # === WAL 告警 ===
+      
+      - alert: PostgreSQLWALFilesHigh
+        expr: pg_wal_files_count > 100
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High number of WAL files"
+          description: "{{ $value }} WAL files accumulated. Check replication status."
+          runbook_url: "docs/runbook/database/WALFilesHigh.md"
+      
+      - alert: PostgreSQLWALArchiveFailed
+        expr: pg_wal_archive_status == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "WAL archive failed"
+          description: "WAL archiving is failing. Point-in-time recovery may be unavailable."
+          runbook_url: "docs/runbook/database/WALArchiveFailed.md"

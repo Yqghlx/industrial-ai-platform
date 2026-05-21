@@ -1,0 +1,165 @@
+# ArgoCD Installation Configuration
+# Industrial AI Platform GitOps Setup
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/component: gitops
+
+---
+# ArgoCD Core Installation (using Helm values in YAML format)
+# For actual installation: helm install argocd argo/argocd -n argocd -f argocd-install.yaml
+
+# ArgoCD Server Configuration
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  # Server Configuration
+  server:
+    host: argocd.industrial-ai.example.com
+    ingress:
+      enabled: true
+      annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+      tls:
+        - hosts:
+          - argocd.industrial-ai.example.com
+          secretName: argocd-tls
+
+  # Repository Configuration
+  repositories:
+    - name: industrial-ai-platform
+      type: git
+      url: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+      usernameSecret:
+        name: argocd-repo-credentials
+        key: username
+      passwordSecret:
+        name: argocd-repo-credentials
+        key: password
+
+  # Application Sync Settings
+  extraConfig:
+    # Enable automatic sync
+    configManagementPlugins: |
+      - name: kustomize
+        init:
+          command: ["/bin/sh", "-c"]
+          args: ["kustomize edit set namespace argocd"]
+        generate:
+          command: ["kustomize", "build"]
+    
+    # Sync Options
+    kustomize.buildOptions: --load_restrictor none
+
+  # Notifications Configuration
+  notifications:
+    enabled: true
+    templates:
+      - name: app-sync-status
+        template: |
+          message: {{ .app.status.sync.status }}
+          slack:
+            attachments: |
+              [{
+                "title": "{{ .app.metadata.name }}",
+                "title_link": "https://argocd.industrial-ai.example.com/applications/{{ .app.metadata.name }}",
+                "text": "Sync Status: {{ .app.status.sync.status }}",
+                "color": "{{ if eq .app.status.sync.status \"Synced\" }}#36a64f{{ else }}#f2c744{{ end }}"
+              }]
+    triggers:
+      - name: on-sync-status-change
+        condition: app.status.sync.status != 'Unknown'
+        template: app-sync-status
+
+---
+# ArgoCD Repository Credentials Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-repo-credentials
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  username: git-username
+  password: git-token-or-password
+  url: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+
+---
+# ArgoCD Image Updater Configuration (optional)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-image-updater-config
+  namespace: argocd
+data:
+  applications.yaml: |
+    - name: industrial-ai-backend
+      namespace: argocd
+      images:
+        - gitee.com/yangqinggang-it/industrial-ai-backend:*
+    - name: industrial-ai-frontend
+      namespace: argocd
+      images:
+        - gitee.com/yangqinggang-it/industrial-ai-frontend:*
+
+---
+# RBAC Configuration for ArgoCD
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.csv: |
+    # Admin role - full access
+    p, role:admin, applications, *, industrial-ai/*, allow
+    p, role:admin, clusters, *, *, allow
+    p, role:admin, repositories, *, *, allow
+    
+    # Developer role - sync and rollback
+    p, role:developer, applications, sync, industrial-ai/*, allow
+    p, role:developer, applications, rollback, industrial-ai/*, allow
+    p, role:developer, applications, get, industrial-ai/*, allow
+    
+    # Viewer role - read only
+    p, role:viewer, applications, get, industrial-ai/*, allow
+    
+    # Default role assignment
+    g, admin, role:admin
+    g, developer, role:developer
+    g, viewer, role:viewer
+  
+  policy.default: viewer
+
+---
+# Service Account for ArgoCD
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-application-controller
+  namespace: argocd
+
+---
+# Cluster Role Binding for ArgoCD
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: argocd-application-controller
+    namespace: argocd

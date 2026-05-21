@@ -1,0 +1,1928 @@
+openapi: 3.0.3
+info:
+  title: Industrial AI Agent Platform API
+  description: |
+    工业AI代理平台API文档
+    
+    ## 功能模块
+    - **认证**: 用户登录、注册、JWT认证
+    - **设备**: 设备管理、遥测数据、设备图谱
+    - **告警**: 告警规则配置、告警管理
+    - **工单**: 维护工单管理
+    - **通知**: 系统通知管理
+    - **AI智能体**: 多智能体对话、预测分析
+    - **报告**: AI报告生成
+    - **黑匣子**: 故障回放数据
+    - **ROI**: 投资回报统计
+    
+    ## 认证方式
+    使用JWT Bearer Token认证：
+    ```
+    Authorization: Bearer <token>
+    ```
+  version: 1.0.0
+  contact:
+    name: Industrial AI Platform Team
+    email: support@industrial.ai
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: 开发服务器
+  - url: http://localhost:8080/api/v1
+    description: API v1
+
+tags:
+  - name: Auth
+    description: 用户认证接口
+  - name: Devices
+    description: 设备管理接口
+  - name: Telemetry
+    description: 遥测数据接口
+  - name: Rules
+    description: 告警规则接口
+  - name: Agent
+    description: AI智能体接口
+  - name: WorkOrders
+    description: 工单管理接口
+  - name: Notifications
+    description: 通知接口
+  - name: Reports
+    description: 报告接口
+  - name: BlackBox
+    description: 黑匣子接口
+  - name: ROI
+    description: ROI统计接口
+  - name: Admin
+    description: 管理员接口
+
+paths:
+  # ===== Auth =====
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      description: |
+        使用用户名密码登录系统，成功后返回JWT token用于后续API认证。
+        
+        **认证流程：**
+        1. 客户端发送用户名密码
+        2. 服务端验证凭据
+        3. 返回JWT token和用户信息
+        4. 后续请求需在Header中携带 `Authorization: Bearer <token>`
+        
+        **注意事项：**
+        - Token有效期默认24小时
+        - 连续失败5次将锁定账户15分钟
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              normalLogin:
+                summary: 普通用户登录
+                value:
+                  username: operator1
+                  password: "******"
+              adminLogin:
+                summary: 管理员登录
+                value:
+                  username: admin
+                  password: "******"
+      responses:
+        '200':
+          description: 登录成功，返回JWT token和用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                successResponse:
+                  summary: 登录成功响应
+                  value:
+                    token: EXAMPLE_TOKEN_PLACEHOLDER
+                    user:
+                      id: 1
+                      username: operator1
+                      email: operator@factory.com
+                      role: user
+                      created_at: "2024-01-15T08:30:00Z"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingFields:
+                  summary: 缺少必填字段
+                  value:
+                    error: 用户名和密码不能为空
+                    code: INVALID_REQUEST
+        '401':
+          description: 认证失败，用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCredentials:
+                  summary: 凭据无效
+                  value:
+                    error: 用户名或密码错误
+                    code: AUTH_FAILED
+                accountLocked:
+                  summary: 账户已锁定
+                  value:
+                    error: 账户已被锁定，请15分钟后重试
+                    code: ACCOUNT_LOCKED
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                serverError:
+                  summary: 服务异常
+                  value:
+                    error: 服务暂时不可用，请稍后重试
+                    code: INTERNAL_ERROR
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: 用户注册
+      description: |
+        注册新用户账户。
+        
+        **注册规则：**
+        - 用户名：3-50字符，仅支持字母数字下划线
+        - 密码：至少6位，建议包含大小写字母和数字
+        - 邮箱：需要验证格式，用于找回密码
+        
+        **默认权限：**
+        - 新注册用户默认角色为 `user`
+        - 管理员角色需要超级管理员分配
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              normalRegister:
+                summary: 普通用户注册
+                value:
+                  username: newoperator
+                  password: "SecurePass123"
+                  email: operator@factory.com
+              adminRegister:
+                summary: 管理员注册（需要权限）
+                value:
+                  username: newadmin
+                  password: "AdminPass456"
+                  email: admin@factory.com
+                  role: admin
+      responses:
+        '200':
+          description: 注册成功，返回登录凭证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                successRegister:
+                  summary: 注册成功
+                  value:
+                    token: EXAMPLE_TOKEN_PLACEHOLDER
+                    user:
+                      id: 42
+                      username: newoperator
+                      email: operator@factory.com
+                      role: user
+                      created_at: "2024-01-15T12:00:00Z"
+        '400':
+          description: 请求参数无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidUsername:
+                  summary: 用户名格式无效
+                  value:
+                    error: 用户名必须为3-50个字符，仅支持字母数字下划线
+                    code: INVALID_USERNAME
+                weakPassword:
+                  summary: 密码强度不足
+                  value:
+                    error: 密码至少6位，建议包含大小写字母和数字
+                    code: WEAK_PASSWORD
+                invalidEmail:
+                  summary: 邮箱格式无效
+                  value:
+                    error: 请输入有效的邮箱地址
+                    code: INVALID_EMAIL
+        '409':
+          description: 用户已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userExists:
+                  summary: 用户名已被注册
+                  value:
+                    error: 用户名已存在
+                    code: USERNAME_EXISTS
+                emailExists:
+                  summary: 邮箱已被注册
+                  value:
+                    error: 该邮箱已注册
+                    code: EMAIL_EXISTS
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Devices =====
+  /api/v1/devices:
+    get:
+      tags: [Devices]
+      summary: 设备列表
+      description: |
+        获取所有设备列表，支持分页查询。
+        
+        **功能说明：**
+        - 返回系统中注册的所有设备信息
+        - 支持分页，默认每页20条记录
+        - 可用于设备监控看板和设备管理
+        
+        **设备状态：**
+        - `online`: 在线运行
+        - `offline`: 离线
+        - `warning`: 告警状态
+        - `maintenance`: 维护中
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: 页码，从1开始
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: page_size
+          in: query
+          description: 每页记录数，最大100
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          description: 按状态筛选设备
+          schema:
+            type: string
+            enum: [online, offline, warning, maintenance]
+        - name: type
+          in: query
+          description: 按设备类型筛选
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取设备列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDevices'
+              examples:
+                deviceList:
+                  summary: 设备列表示例
+                  value:
+                    data:
+                      - id: DEV001
+                        name: CNC加工中心-1号
+                        type: CNC
+                        location: A车间-1号线
+                        status: online
+                        description: 主轴加工设备
+                        created_at: "2024-01-10T10:00:00Z"
+                      - id: DEV002
+                        name: 注塑机-A2
+                        type: InjectionMolder
+                        location: B车间-注塑区
+                        status: warning
+                        description: 注塑生产设备
+                        created_at: "2024-01-10T11:00:00Z"
+                    total: 156
+                    page: 1
+                    page_size: 20
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPage:
+                  summary: 无效页码
+                  value:
+                    error: 页码必须大于0
+                    code: INVALID_PARAM
+        '401':
+          description: 未认证，Token无效或已过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unauthorized:
+                  summary: Token无效
+                  value:
+                    error: 未授权访问，请先登录
+                    code: UNAUTHORIZED
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Devices]
+      summary: 创建设备
+      description: |
+        注册新设备到系统中。
+        
+        **设备类型说明：**
+        - `CNC`: CNC加工中心
+        - `InjectionMolder`: 注塑机
+        - `AssemblyRobot`: 装配机器人
+        - `Conveyor`: 输送带
+        - `Sensor`: 传感器节点
+        
+        **状态说明：**
+        - `online`: 设备在线，正常工作
+        - `offline`: 设备离线
+        - `warning`: 设备有告警
+        - `maintenance`: 设备维护中
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+            examples:
+              cncDevice:
+                summary: CNC加工中心
+                value:
+                  id: DEV-CNC-001
+                  name: CNC加工中心-1号
+                  type: CNC
+                  location: A车间-1号线
+                  status: online
+                  description: 主轴加工设备，加工精度0.01mm
+              sensorDevice:
+                summary: 温度传感器
+                value:
+                  id: DEV-TEMP-001
+                  name: 温度传感器-生产线A
+                  type: Sensor
+                  location: A车间-入口
+                  status: online
+                  description: 监控入口温度
+      responses:
+        '200':
+          description: 设备创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                createdDevice:
+                  summary: 创建成功
+                  value:
+                    id: DEV-CNC-001
+                    name: CNC加工中心-1号
+                    type: CNC
+                    location: A车间-1号线
+                    status: online
+                    description: 主轴加工设备，加工精度0.01mm
+                    created_at: "2024-01-15T10:00:00Z"
+        '400':
+          description: 请求参数无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                duplicateId:
+                  summary: 设备ID已存在
+                  value:
+                    error: 设备ID已存在
+                    code: DUPLICATE_DEVICE_ID
+                invalidType:
+                  summary: 无效的设备类型
+                  value:
+                    error: 不支持的设备类型
+                    code: INVALID_DEVICE_TYPE
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/devices/{id}:
+    get:
+      tags: [Devices]
+      summary: 获取设备
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: 设备不存在
+    put:
+      tags: [Devices]
+      summary: 更新设备
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Devices]
+      summary: 删除设备
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  /api/v1/devices/latest:
+    get:
+      tags: [Telemetry]
+      summary: 最新遥测数据
+      description: 获取所有设备的最新遥测数据
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetryData'
+
+  /api/v1/devices/{id}/telemetry:
+    get:
+      tags: [Telemetry]
+      summary: 设备历史数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: range
+          in: query
+          description: 时间范围 (1h, 6h, 24h, 7d, 30d)
+          schema:
+            type: string
+            default: 1h
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 1000
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetryData'
+
+  /api/v1/devices/{id}/stats:
+    get:
+      tags: [Telemetry]
+      summary: 设备统计
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: range
+          in: query
+          schema:
+            type: string
+            default: 24h
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStats'
+
+  /api/v1/devices/graph:
+    get:
+      tags: [Devices]
+      summary: 设备关系图
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGraph'
+
+  # ===== Telemetry (Public) =====
+  /api/v1/devices/telemetry:
+    post:
+      tags: [Telemetry]
+      summary: 遥测数据摄入
+      description: |
+        边缘设备上报遥测数据接口（公开接口，无需认证）。
+        
+        **功能说明：**
+        - 接收边缘设备实时采集的传感器数据
+        - 数据将存储到时序数据库
+        - 自动触发配置的告警规则检测
+        - 支持批量数据上报
+        
+        **数据字段说明：**
+        - `temperature`: 温度（℃）
+        - `pressure`: 压力（MPa）
+        - `vibration`: 振动（mm/s）
+        - `humidity`: 湿度（%）
+        - `power`: 功率（kW）
+        
+        **数据保留策略：**
+        - 原始数据保留30天
+        - 聚合数据保留1年
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryData'
+            examples:
+              temperatureData:
+                summary: 温度传感器数据
+                value:
+                  device_id: DEV001
+                  timestamp: "2024-01-15T10:30:00Z"
+                  temperature: 85.5
+                  status: normal
+                  message: "正常运行"
+              fullTelemetry:
+                summary: 完整遥测数据
+                value:
+                  device_id: DEV002
+                  timestamp: "2024-01-15T10:30:00Z"
+                  temperature: 72.3
+                  pressure: 1.5
+                  vibration: 0.8
+                  humidity: 45.2
+                  power: 15.6
+                  status: normal
+              batchData:
+                summary: 批量上报示例
+                value:
+                  device_id: DEV003
+                  timestamp: "2024-01-15T10:30:00Z"
+                  temperature: 95.2
+                  pressure: 2.1
+                  vibration: 2.5
+                  status: warning
+                  message: "温度接近阈值上限"
+      responses:
+        '200':
+          description: 数据摄入成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  triggered_alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rule_id:
+                          type: integer
+                        rule_name:
+                          type: string
+                        severity:
+                          type: string
+              examples:
+                successNoAlert:
+                  summary: 成功无告警
+                  value:
+                    success: true
+                    message: 数据已保存
+                    triggered_alerts: []
+                successWithAlert:
+                  summary: 成功并触发告警
+                  value:
+                    success: true
+                    message: 数据已保存，触发1条告警
+                    triggered_alerts:
+                      - rule_id: 5
+                        rule_name: 高温告警
+                        severity: high
+        '400':
+          description: 请求数据格式错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidDevice:
+                  summary: 设备ID无效
+                  value:
+                    error: 设备ID不存在
+                    code: DEVICE_NOT_FOUND
+                invalidTimestamp:
+                  summary: 时间戳格式错误
+                  value:
+                    error: 时间戳格式无效，请使用ISO 8601格式
+                    code: INVALID_TIMESTAMP
+                missingRequired:
+                  summary: 缺少必填字段
+                  value:
+                    error: device_id为必填字段
+                    code: MISSING_FIELD
+        '500':
+          description: 服务器处理失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                storageError:
+                  summary: 存储服务异常
+                  value:
+                    error: 数据存储失败，请稍后重试
+                    code: STORAGE_ERROR
+
+  # ===== Rules =====
+  /api/v1/rules:
+    get:
+      tags: [Rules]
+      summary: 规则列表
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AlertRule'
+    post:
+      tags: [Rules]
+      summary: 创建规则
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRule'
+      responses:
+        '200':
+          description: 创建成功
+
+  /api/v1/rules/{id}:
+    get:
+      tags: [Rules]
+      summary: 获取规则
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Rules]
+      summary: 更新规则
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRule'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Rules]
+      summary: 删除规则
+      description: 需要管理员权限
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+
+  /api/v1/rules/{id}/toggle:
+    put:
+      tags: [Rules]
+      summary: 启用/禁用规则
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: 成功
+
+  # ===== Agent =====
+  /api/v1/agent/query:
+    post:
+      tags: [Agent]
+      summary: AI智能体查询
+      description: |
+        向AI智能体发送自然语言查询请求，支持多轮对话和上下文关联。
+        
+        **功能说明：**
+        - 支持自然语言查询设备状态、故障诊断、预测分析等
+        - 多智能体协作处理复杂查询
+        - 支持会话上下文，实现多轮对话
+        
+        **支持的查询类型：**
+        - 设备状态查询：\"1号设备的温度是多少？\"
+        - 故障诊断：\"设备出现异常振动，可能是什么原因？\"
+        - 预测分析：\"预测CNC加工中心下周的维护需求\"
+        - 数据统计：\"上周有多少设备出现故障？\"
+        - 操作建议：\"如何降低设备能耗？\"
+        
+        **智能体类型：**
+        - `DeviceAgent`: 设备状态分析
+        - `PredictAgent`: 预测性维护分析
+        - `AlertAgent`: 告警分析和处理
+        - `CoordinatorAgent`: 查询路由和协调
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentQuery'
+            examples:
+              deviceQuery:
+                summary: 设备状态查询
+                value:
+                  query: 1号CNC加工中心的温度和振动数据如何？
+                  device_id: DEV001
+                  session_id: sess_abc123
+              faultDiagnosis:
+                summary: 故障诊断查询
+                value:
+                  query: 设备DEV002最近频繁出现高温告警，请分析原因并给出建议
+                  device_id: DEV002
+                  context:
+                    alert_history: true
+                    time_range: 7d
+              predictionQuery:
+                summary: 预测分析查询
+                value:
+                  query: 根据历史数据，预测DEV001设备未来一周是否需要维护
+                  device_id: DEV001
+                  session_id: sess_xyz789
+                  context:
+                    include_history: true
+                    prediction_model: maintenance
+      responses:
+        '200':
+          description: AI查询响应成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              examples:
+                deviceStatusResponse:
+                  summary: 设备状态响应
+                  value:
+                    session_id: sess_abc123
+                    response: "1号CNC加工中心当前状态良好。温度为72.5℃，在正常范围内（上限85℃）；振动为0.8mm/s，处于正常水平。设备运行稳定，无需特别关注。"
+                    agent: DeviceAgent
+                    actions: []
+                    timestamp: "2024-01-15T10:35:00Z"
+                faultDiagnosisResponse:
+                  summary: 故障诊断响应
+                  value:
+                    session_id: sess_def456
+                    response: "设备DEV002高温告警分析完成。可能原因：1) 冷却系统效率下降；2) 环境温度升高；3) 负载过大。建议：检查冷却液流量，清洁散热器，考虑降低工作负载。"
+                    agent: PredictAgent
+                    actions:
+                      - type: create_work_order
+                        device_id: DEV002
+                        priority: high
+                        description: 检查冷却系统
+                    timestamp: "2024-01-15T10:36:00Z"
+        '400':
+          description: 请求参数无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                emptyQuery:
+                  summary: 查询内容为空
+                  value:
+                    error: 查询内容不能为空
+                    code: EMPTY_QUERY
+                invalidSession:
+                  summary: 会话无效
+                  value:
+                    error: 会话已过期，请重新开始对话
+                    code: SESSION_EXPIRED
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: AI服务处理失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                aiServiceError:
+                  summary: AI服务异常
+                  value:
+                    error: AI服务暂时不可用，请稍后重试
+                    code: AI_SERVICE_ERROR
+
+  /api/v1/ai/status:
+    get:
+      tags: [Agent]
+      summary: AI任务日志
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 成功
+
+  # ===== Work Orders =====
+  /api/v1/work-orders:
+    get:
+      tags: [WorkOrders]
+      summary: 工单列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: device_id
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [WorkOrders]
+      summary: 创建工单
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrder'
+      responses:
+        '200':
+          description: 创建成功
+
+  /api/v1/work-orders/{id}/status:
+    put:
+      tags: [WorkOrders]
+      summary: 更新工单状态
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, in_progress, completed, cancelled]
+      responses:
+        '200':
+          description: 成功
+
+  # ===== Notifications =====
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: 通知列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: unread
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: 标记已读
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  # ===== Reports =====
+  /api/v1/reports:
+    get:
+      tags: [Reports]
+      summary: 报告列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/reports/generate:
+    post:
+      tags: [Reports]
+      summary: 生成报告
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [daily, device, maintenance, anomaly, comprehensive]
+                device_id:
+                  type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+
+  # ===== BlackBox =====
+  /api/v1/blackbox:
+    get:
+      tags: [BlackBox]
+      summary: 黑匣子列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: device_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/blackbox/{id}/data:
+    get:
+      tags: [BlackBox]
+      summary: 黑匣子详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  # ===== ROI =====
+  /api/v1/roi/stats:
+    get:
+      tags: [ROI]
+      summary: ROI统计
+      description: |
+        获取投资回报率统计数据，展示平台的业务价值。
+        
+        **功能说明：**
+        - 统计设备监控带来的效率提升
+        - 计算预测性维护节省的成本
+        - 展示告警响应时间改善
+        - 提供投资回报率指标
+        
+        **计算指标说明：**
+        - `predicted_savings`: 预测节省成本（元）
+          - 基于减少的停机时间计算
+          - 包含维护成本节省
+        - `uptime_percentage`: 设备可用率（%）
+          - 计算公式：运行时间 / 总时间 × 100%
+        - `avg_response_time_hours`: 平均告警响应时间（小时）
+          - 从告警产生到处理的平均时间
+        
+        **数据更新频率：**
+        - 每小时更新一次统计数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year]
+            default: month
+        - name: start_date
+          in: query
+          description: 开始日期（ISO 8601格式）
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期（ISO 8601格式）
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 成功获取ROI统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ROIStats'
+              examples:
+                monthlyStats:
+                  summary: 月度统计
+                  value:
+                    total_devices: 156
+                    active_alerts: 12
+                    open_work_orders: 8
+                    resolved_issues: 45
+                    predicted_savings: 128500.00
+                    uptime_percentage: 98.5
+                    avg_response_time_hours: 2.3
+                    period:
+                      start: "2024-01-01"
+                      end: "2024-01-31"
+                    breakdown:
+                      maintenance_savings: 85000.00
+                      downtime_savings: 32000.00
+                      energy_savings: 11500.00
+                quarterlyStats:
+                  summary: 季度统计
+                  value:
+                    total_devices: 156
+                    active_alerts: 8
+                    open_work_orders: 5
+                    resolved_issues: 142
+                    predicted_savings: 425000.00
+                    uptime_percentage: 99.1
+                    avg_response_time_hours: 1.8
+                    period:
+                      start: "2024-01-01"
+                      end: "2024-03-31"
+                    breakdown:
+                      maintenance_savings: 280000.00
+                      downtime_savings: 120000.00
+                      energy_savings: 25000.00
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPeriod:
+                  summary: 无效的日期范围
+                  value:
+                    error: 开始日期不能晚于结束日期
+                    code: INVALID_DATE_RANGE
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Admin =====
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: 用户列表
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Admin]
+      summary: 创建用户
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/admin/users/{id}:
+    delete:
+      tags: [Admin]
+      summary: 删除用户
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/system/status:
+    get:
+      tags: [Admin]
+      summary: 系统状态
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  # ===== Health =====
+  /health:
+    get:
+      tags: [Auth]
+      summary: 健康检查
+      responses:
+        '200':
+          description: 系统健康
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  database:
+                    type: string
+                  db_latency:
+                    type: integer
+                  timestamp:
+                    type: string
+
+  # ===== WebSocket =====
+  /ws:
+    get:
+      tags: [Telemetry]
+      summary: WebSocket连接
+      description: 实时数据推送
+      responses:
+        '200':
+          description: WebSocket连接成功
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      description: 错误响应
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: 错误消息
+          example: 用户名或密码错误
+        code:
+          type: string
+          description: 错误代码，用于程序处理
+          enum:
+            - INVALID_REQUEST
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - DEVICE_NOT_FOUND
+            - INVALID_TIMESTAMP
+            - MISSING_FIELD
+            - AUTH_FAILED
+            - ACCOUNT_LOCKED
+            - SESSION_EXPIRED
+            - EMPTY_QUERY
+            - AI_SERVICE_ERROR
+            - STORAGE_ERROR
+            - INTERNAL_ERROR
+          example: AUTH_FAILED
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: 用户名，3-50字符
+          minLength: 3
+          maxLength: 50
+          example: operator1
+        password:
+          type: string
+          description: 用户密码
+          minLength: 6
+          example: "******"
+      description: 用户登录请求
+
+    RegisterRequest:
+      type: object
+      required: [username, password, email]
+      properties:
+        username:
+          type: string
+          description: 用户名，3-50字符，仅支持字母数字下划线
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+          example: newoperator
+        password:
+          type: string
+          description: 密码，至少6位，建议包含大小写字母和数字
+          minLength: 6
+          example: "SecurePass123"
+        email:
+          type: string
+          description: 邮箱地址，用于找回密码
+          format: email
+          example: operator@factory.com
+        role:
+          type: string
+          description: 用户角色，默认为user
+          enum: [user, admin]
+          default: user
+      description: 用户注册请求
+
+    LoginResponse:
+      type: object
+      description: 登录响应，包含JWT token和用户信息
+      properties:
+        token:
+          type: string
+          description: JWT认证令牌，有效期24小时
+          example: EXAMPLE_TOKEN_PLACEHOLDER
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      description: 用户信息
+      properties:
+        id:
+          type: integer
+          description: 用户唯一标识
+          example: 1
+        username:
+          type: string
+          description: 用户名
+          example: operator1
+        email:
+          type: string
+          description: 邮箱地址
+          example: operator@factory.com
+        role:
+          type: string
+          description: 用户角色
+          enum: [user, admin]
+          example: user
+        created_at:
+          type: string
+          format: date-time
+          description: 账户创建时间
+          example: "2024-01-15T08:30:00Z"
+
+    Device:
+      type: object
+      description: 设备信息
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          description: 设备唯一标识
+          example: DEV001
+        name:
+          type: string
+          description: 设备名称
+          example: CNC加工中心-1号
+        type:
+          type: string
+          description: 设备类型
+          enum: [CNC, InjectionMolder, AssemblyRobot, Conveyor, Sensor, Other]
+          example: CNC
+        location:
+          type: string
+          description: 设备位置
+          example: A车间-1号线
+        status:
+          type: string
+          description: 设备状态
+          enum: [online, offline, warning, maintenance]
+          example: online
+        description:
+          type: string
+          description: 设备描述
+          example: 主轴加工设备，加工精度0.01mm
+        created_at:
+          type: string
+          format: date-time
+          description: 设备创建时间
+          example: "2024-01-10T10:00:00Z"
+
+    PaginatedDevices:
+      type: object
+      description: 分页设备列表
+      properties:
+        data:
+          type: array
+          description: 设备列表
+          items:
+            $ref: '#/components/schemas/Device'
+        total:
+          type: integer
+          description: 总记录数
+          example: 156
+        page:
+          type: integer
+          description: 当前页码
+          example: 1
+        page_size:
+          type: integer
+          description: 每页记录数
+          example: 20
+
+    TelemetryData:
+      type: object
+      required: [device_id]
+      description: |
+        遥测数据，包含设备传感器采集的各项指标。
+        
+        **单位说明：**
+        - temperature: 温度（℃）
+        - pressure: 压力（MPa）
+        - vibration: 振动（mm/s）
+        - humidity: 湿度（%）
+        - power: 功率（kW）
+      properties:
+        device_id:
+          type: string
+          description: 设备唯一标识
+          example: DEV001
+        timestamp:
+          type: string
+          format: date-time
+          description: 数据采集时间（ISO 8601格式），默认为当前时间
+          example: "2024-01-15T10:30:00Z"
+        temperature:
+          type: number
+          description: 温度（℃）
+          example: 75.5
+        pressure:
+          type: number
+          description: 压力（MPa）
+          example: 1.5
+        vibration:
+          type: number
+          description: 振动（mm/s）
+          example: 0.8
+        humidity:
+          type: number
+          description: 湿度（%）
+          example: 45.2
+        power:
+          type: number
+          description: 功率（kW）
+          example: 15.6
+        status:
+          type: string
+          description: 设备运行状态
+          enum: [normal, warning, error, maintenance]
+          example: normal
+        message:
+          type: string
+          description: 附加消息或备注
+          example: "设备运行正常"
+
+    DeviceStats:
+      type: object
+      description: 设备统计数据
+      properties:
+        device_id:
+          type: string
+          description: 设备唯一标识
+          example: DEV001
+        avg_temperature:
+          type: number
+          description: 平均温度（℃）
+          example: 72.5
+        avg_pressure:
+          type: number
+          description: 平均压力（MPa）
+          example: 1.3
+        avg_vibration:
+          type: number
+          description: 平均振动（mm/s）
+          example: 0.65
+        max_temperature:
+          type: number
+          description: 最高温度（℃）
+          example: 85.2
+        max_pressure:
+          type: number
+          description: 最高压力（MPa）
+          example: 2.1
+        max_vibration:
+          type: number
+          description: 最高振动（mm/s）
+          example: 1.2
+        data_points:
+          type: integer
+          description: 数据点数量
+          example: 1440
+
+    DeviceGraph:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+              status:
+                type: string
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              target:
+                type: string
+              type:
+                type: string
+
+    AlertRule:
+      type: object
+      description: 告警规则配置
+      required: [name, metric, operator, threshold]
+      properties:
+        id:
+          type: integer
+          description: 规则ID（创建时自动生成）
+          example: 5
+        name:
+          type: string
+          description: 规则名称
+          example: 高温告警规则
+        device_type:
+          type: string
+          description: 适用设备类型（空表示所有类型）
+          example: CNC
+        metric:
+          type: string
+          description: 监控指标
+          enum: [temperature, pressure, vibration, humidity, power]
+          example: temperature
+        operator:
+          type: string
+          description: 比较运算符
+          enum: ['>', '>=', '<', '<=', '==', '!=']
+          example: '>'
+        threshold:
+          type: number
+          description: 阈值
+          example: 85
+        severity:
+          type: string
+          description: 告警严重级别
+          enum: [low, medium, high, critical]
+          default: medium
+          example: high
+        actions:
+          type: string
+          description: 触发后的动作（JSON字符串）
+          example: '{"notify": true, "create_work_order": true}'
+        enabled:
+          type: boolean
+          description: 是否启用
+          default: true
+          example: true
+        cooldown_sec:
+          type: integer
+          description: 冷却时间（秒），防止重复告警
+          default: 300
+          example: 300
+
+    AgentQuery:
+      type: object
+      description: AI智能体查询请求
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: 自然语言查询内容
+          example: "1号CNC设备的温度是否正常？"
+        context:
+          type: object
+          description: 额外的上下文信息
+          additionalProperties: true
+          example:
+            alert_history: true
+            time_range: 7d
+        device_id:
+          type: string
+          description: 关联设备ID（可选）
+          example: DEV001
+        session_id:
+          type: string
+          description: 会话ID，用于多轮对话
+          example: sess_abc123
+
+    AgentResponse:
+      type: object
+      description: AI智能体响应
+      properties:
+        session_id:
+          type: string
+          description: 会话ID，用于后续多轮对话
+          example: sess_abc123
+        response:
+          type: string
+          description: AI智能体的自然语言响应
+          example: "1号CNC设备当前温度为72.5℃，处于正常范围内（上限85℃）。设备运行稳定。"
+        agent:
+          type: string
+          description: 处理该请求的智能体类型
+          enum: [DeviceAgent, PredictAgent, AlertAgent, CoordinatorAgent]
+          example: DeviceAgent
+        actions:
+          type: array
+          description: 建议执行的后续操作列表
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: 操作类型
+              device_id:
+                type: string
+                description: 相关设备ID
+              priority:
+                type: string
+                description: 优先级
+              description:
+                type: string
+                description: 操作描述
+          example:
+            - type: create_work_order
+              device_id: DEV002
+              priority: high
+              description: 检查冷却系统
+        timestamp:
+          type: string
+          format: date-time
+          description: 响应时间
+          example: "2024-01-15T10:35:00Z"
+
+    WorkOrder:
+      type: object
+      description: 维护工单
+      required: [title, device_id]
+      properties:
+        id:
+          type: integer
+          description: 工单ID（创建时自动生成）
+          example: 100
+        title:
+          type: string
+          description: 工单标题
+          example: CNC设备冷却系统检查
+        description:
+          type: string
+          description: 工单详细描述
+          example: 设备DEV002频繁出现高温告警，需要检查冷却系统工作状态
+        device_id:
+          type: string
+          description: 关联设备ID
+          example: DEV002
+        priority:
+          type: string
+          description: 工单优先级
+          enum: [low, medium, high, urgent]
+          default: medium
+          example: high
+        status:
+          type: string
+          description: 工单状态
+          enum: [pending, in_progress, completed, cancelled]
+          default: pending
+          example: pending
+        assigned_to:
+          type: integer
+          description: 分配给的用户ID
+          example: 5
+        created_at:
+          type: string
+          format: date-time
+          description: 工单创建时间
+          example: "2024-01-15T10:30:00Z"
+
+    Report:
+      type: object
+      description: AI生成的报告
+      properties:
+        id:
+          type: integer
+          description: 报告ID
+          example: 50
+        title:
+          type: string
+          description: 报告标题
+          example: 设备DEV001日运行报告
+        type:
+          type: string
+          description: 报告类型
+          enum: [daily, device, maintenance, anomaly, comprehensive]
+          example: daily
+        device_id:
+          type: string
+          description: 关联设备ID（部分报告类型需要）
+          example: DEV001
+        content:
+          type: string
+          description: 报告内容（Markdown格式）
+          example: |
+            # 设备运行报告
+            
+            ## 概览
+            设备DEV001在过去24小时内运行稳定...
+        generated_at:
+          type: string
+          format: date-time
+          description: 报告生成时间
+          example: "2024-01-15T08:00:00Z"
+
+    ROIStats:
+      type: object
+      description: 投资回报率统计数据
+      properties:
+        total_devices:
+          type: integer
+          description: 设备总数
+          example: 156
+        active_alerts:
+          type: integer
+          description: 当前活跃告警数
+          example: 12
+        open_work_orders:
+          type: integer
+          description: 待处理工单数
+          example: 8
+        resolved_issues:
+          type: integer
+          description: 已解决问题数
+          example: 45
+        predicted_savings:
+          type: number
+          description: 预测节省成本（元）
+          example: 128500.00
+        uptime_percentage:
+          type: number
+          description: 设备可用率（%）
+          example: 98.5
+        avg_response_time_hours:
+          type: number
+          description: 平均告警响应时间（小时）
+          example: 2.3
+
+    SystemStatus:
+      type: object
+      description: 系统状态信息
+      properties:
+        database:
+          type: string
+          description: 数据库连接状态
+          enum: [connected, disconnected, error]
+          example: connected
+        db_latency_ms:
+          type: integer
+          description: 数据库延迟（毫秒）
+          example: 5
+        uptime:
+          type: string
+          description: 系统运行时长
+          example: "15d 6h 32m"
+        version:
+          type: string
+          description: 系统版本号
+          example: "1.0.0"
+        timestamp:
+          type: string
+          format: date-time
+          description: 当前时间戳
+          example: "2024-01-15T10:30:00Z"
+        device_count:
+          type: integer
+          description: 已注册设备总数
+          example: 156
+        user_count:
+          type: integer
+          description: 用户总数
+          example: 25

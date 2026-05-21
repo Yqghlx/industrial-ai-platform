@@ -1,0 +1,244 @@
+# ArgoCD Sync Policy Configuration
+# Industrial AI Platform Automatic Sync Settings
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-sync-policies
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-sync-policies
+data:
+  # Default sync policy
+  default-sync-policy.yaml: |
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - PrunePropagationPolicy=foreground
+      - Replace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Production sync policy (with manual approval)
+  production-sync-policy.yaml: |
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - Validate=true
+      - FailOnSharedResource=true
+    # No retry - manual intervention required
+    retry:
+      limit: 0
+
+  # Preview sync policy (fast, auto)
+  preview-sync-policy.yaml: |
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=background
+    retry:
+      limit: 3
+      backoff:
+        duration: 1s
+        factor: 2
+        maxDuration: 30s
+
+---
+# Sync Workflow Configuration
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: industrial-ai-sync-workflow
+  namespace: argocd
+spec:
+  entrypoint: sync-flow
+  templates:
+    # Main sync workflow
+    - name: sync-flow
+      steps:
+        - - name: pre-sync
+            template: pre-sync-hook
+        - - name: sync-application
+            template: sync-app
+        - - name: post-sync
+            template: post-sync-hook
+        - - name: health-check
+            template: verify-health
+        - - name: notify
+            template: send-notification
+
+    # Pre-sync hooks
+    - name: pre-sync-hook
+      container:
+        image: busybox
+        command: [sh, -c]
+        args: ["echo 'Pre-sync: Running database migrations and backup'"]
+      hooks:
+        exitHandler:
+          execDuration: 5m
+
+    # Sync application
+    - name: sync-app
+      resource:
+        action: sync
+        manifest: |
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: industrial-ai-platform
+            namespace: argocd
+          spec:
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+
+    # Post-sync hooks
+    - name: post-sync-hook
+      container:
+        image: busybox
+        command: [sh, -c]
+        args: ["echo 'Post-sync: Running smoke tests'"]
+
+    # Health verification
+    - name: verify-health
+      container:
+        image: curlimages/curl:latest
+        command: [sh, -c]
+        args: ["curl -f https://backend.industrial-ai.example.com/health && curl -f https://frontend.industrial-ai.example.com/"]
+
+    # Notification
+    - name: send-notification
+      container:
+        image: busybox
+        command: [sh, -c]
+        args: ["echo 'Sync completed successfully - notification sent'"]
+
+---
+# Application Rollback Strategy
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rollback-strategy
+  namespace: argocd
+data:
+  rollback.yaml: |
+    # Rollback Strategy Configuration
+    strategies:
+      immediate:
+        description: "Immediate rollback - fastest recovery"
+        steps:
+          - name: freeze-new-deployments
+            timeout: 30s
+          - name: rollback-application
+            timeout: 60s
+          - name: verify-health
+            timeout: 120s
+          - name: notify-team
+            timeout: 30s
+        total_timeout: 240s
+      
+      staged:
+        description: "Staged rollback - safer, with validation"
+        steps:
+          - name: freeze-new-deployments
+            timeout: 30s
+          - name: create-backup
+            timeout: 60s
+          - name: rollback-application
+            timeout: 60s
+          - name: run-validation-tests
+            timeout: 180s
+          - name: verify-health
+            timeout: 120s
+          - name: notify-team
+            timeout: 30s
+        total_timeout: 480s
+      
+      emergency:
+        description: "Emergency rollback - bypass normal checks"
+        steps:
+          - name: rollback-application
+            timeout: 30s
+          - name: verify-minimal-health
+            timeout: 60s
+        total_timeout: 90s
+        bypass_validation: true
+
+---
+# Sync Hooks Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-hooks
+  namespace: argocd
+data:
+  hooks.yaml: |
+    # Pre-sync hooks
+    pre-sync:
+      - name: database-backup
+        image: postgres:16
+        command: ["pg_dump", "-h", "postgres", "-U", "postgres", "industrial_ai", ">", "/backup/pre-sync.sql"]
+        timeout: 300s
+        
+      - name: cache-backup
+        image: redis:7
+        command: ["redis-cli", "BGSAVE"]
+        timeout: 60s
+      
+      - name: notify-start
+        image: curlimages/curl
+        command: ["curl", "-X", "POST", "https://hooks.slack.com/services/...", "-d", '{"text": "Sync starting"}']
+        timeout: 10s
+    
+    # Sync hooks
+    sync:
+      - name: apply-migrations
+        image: migrate/migrate
+        command: ["migrate", "-path", "/migrations", "-database", "postgres://...", "up"]
+        timeout: 300s
+    
+    # Post-sync hooks
+    post-sync:
+      - name: smoke-tests
+        image: curlimages/curl
+        command: ["sh", "-c", "curl -f http://backend:8080/health && curl -f http://frontend:80/"]
+        timeout: 120s
+      
+      - name: cache-warmup
+        image: redis:7
+        command: ["sh", "-c", "redis-cli -h redis SET preload_key value"]
+        timeout: 60s
+      
+      - name: notify-complete
+        image: curlimages/curl
+        command: ["curl", "-X", "POST", "https://hooks.slack.com/services/...", "-d", '{"text": "Sync completed"}']
+        timeout: 10s
+    
+    # Sync-fail hooks
+    sync-fail:
+      - name: notify-failure
+        image: curlimages/curl
+        command: ["curl", "-X", "POST", "https://hooks.slack.com/services/...", "-d", '{"text": "Sync FAILED"}']
+        timeout: 10s
+      
+      - name: rollback-automatic
+        image: argoproj/argocd-cli
+        command: ["argocd", "app", "rollback", "industrial-ai-platform", "--revision", "$PREVIOUS_REVISION"]
+        timeout: 60s

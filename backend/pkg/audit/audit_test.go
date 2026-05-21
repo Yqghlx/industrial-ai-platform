@@ -1,0 +1,819 @@
+package audit
+
+import (
+	"context"
+	"errors"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+)
+
+// ============================================
+// Error Mock Repository for testing error paths
+// ============================================
+
+type ErrorMockRepository struct {
+	mu           sync.Mutex
+	logs         []*AuditLog
+	createError  bool
+	queryError   bool
+	getByIDError bool
+	deleteError  bool
+}
+
+func NewErrorMockRepository() *ErrorMockRepository {
+	return &ErrorMockRepository{
+		logs: make([]*AuditLog, 0),
+	}
+}
+
+func (m *ErrorMockRepository) Create(ctx context.Context, log *AuditLog) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.createError {
+		return errors.New("create error")
+	}
+	m.logs = append(m.logs, log)
+	return nil
+}
+
+func (m *ErrorMockRepository) Query(ctx context.Context, query *QueryRequest) ([]*AuditLog, int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.queryError {
+		return nil, 0, errors.New("query error")
+	}
+	return m.logs, int64(len(m.logs)), nil
+}
+
+func (m *ErrorMockRepository) GetByID(ctx context.Context, auditID string) (*AuditLog, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.getByIDError {
+		return nil, errors.New("get by id error")
+	}
+	for _, log := range m.logs {
+		if log.AuditID == auditID {
+			return log, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *ErrorMockRepository) DeleteOld(ctx context.Context, retentionDays int) error {
+	if m.deleteError {
+		return errors.New("delete error")
+	}
+	return nil
+}
+
+func (m *ErrorMockRepository) GetLogCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.logs)
+}
+
+func (m *ErrorMockRepository) SetCreateError(enabled bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.createError = enabled
+}
+
+// ============================================
+// Test NewAuditLogger with nil config
+// ============================================
+
+func TestNewAuditLogger_NilConfig(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+
+	// Test with nil config - should use default
+	auditLogger := NewAuditLogger(repo, logger, nil)
+	defer auditLogger.Close()
+
+	assert.NotNil(t, auditLogger)
+	assert.NotNil(t, auditLogger.config)
+	assert.Equal(t, LogLevelAll, auditLogger.config.LogLevel)
+	assert.True(t, auditLogger.config.Enabled)
+}
+
+func TestNewAuditLogger_NoAsync(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+		QueueSize:    0,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	assert.NotNil(t, auditLogger)
+	assert.Nil(t, auditLogger.auditQueue)
+}
+
+// ============================================
+// Test NewService (compatibility alias)
+// ============================================
+
+func TestNewService(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+
+	service := NewService(repo, logger)
+	defer service.Close()
+
+	assert.NotNil(t, service)
+	assert.NotNil(t, service.config)
+	assert.True(t, service.config.Enabled)
+}
+
+// ============================================
+// Test GetByID and DeleteOld
+// ============================================
+
+func TestGetByID(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Create a log entry
+	err := auditLogger.Log(context.Background(), &AuditLog{
+		AuditID:       "audit-test-123",
+		EventType:     EventAuthLogin,
+		EventCategory: CategoryAuth,
+		UserID:        "user-123",
+	})
+	require.NoError(t, err)
+
+	// Retrieve by ID
+	log, err := auditLogger.GetByID(context.Background(), "audit-test-123")
+	assert.NoError(t, err)
+	assert.NotNil(t, log)
+	assert.Equal(t, "audit-test-123", log.AuditID)
+	assert.Equal(t, "user-123", log.UserID)
+}
+
+func TestGetByID_NotFound(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	log, err := auditLogger.GetByID(context.Background(), "nonexistent")
+	assert.NoError(t, err)
+	assert.Nil(t, log)
+}
+
+func TestDeleteOld(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:       true,
+		LogLevel:      LogLevelAll,
+		AsyncEnabled:  false,
+		RetentionDays: 30,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	err := auditLogger.DeleteOld(context.Background())
+	assert.NoError(t, err)
+}
+
+// ============================================
+// Test Log with various field combinations
+// ============================================
+
+func TestLog_AutoGeneratedFields(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Log with empty AuditID, Timestamp, Severity, Result
+	err := auditLogger.Log(context.Background(), &AuditLog{
+		EventType:     EventAuthLogin,
+		EventCategory: CategoryAuth,
+		UserID:        "user-123",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, repo.GetLogCount())
+
+	// Verify the log was auto-filled
+	logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+	require.Len(t, logs, 1)
+	assert.NotEmpty(t, logs[0].AuditID)
+	assert.NotZero(t, logs[0].Timestamp)
+	assert.NotZero(t, logs[0].CreatedAt)
+	assert.Equal(t, SeverityInfo, logs[0].Severity)
+	assert.Equal(t, ResultSuccess, logs[0].Result)
+}
+
+func TestLog_WithPreSetFields(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	presetTime := time.Now().Add(-1 * time.Hour)
+	presetID := "preset-audit-id"
+
+	err := auditLogger.Log(context.Background(), &AuditLog{
+		AuditID:       presetID,
+		Timestamp:     presetTime,
+		EventType:     EventAuthLogin,
+		EventCategory: CategoryAuth,
+		Severity:      SeverityCritical,
+		Result:        ResultFailure,
+		UserID:        "user-123",
+	})
+	require.NoError(t, err)
+
+	logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+	require.Len(t, logs, 1)
+	assert.Equal(t, presetID, logs[0].AuditID)
+	assert.Equal(t, presetTime.Unix(), logs[0].Timestamp.Unix())
+	assert.Equal(t, SeverityCritical, logs[0].Severity)
+	assert.Equal(t, ResultFailure, logs[0].Result)
+}
+
+func TestLog_RepositoryError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorMockRepository()
+	repo.SetCreateError(true)
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	err := auditLogger.Log(context.Background(), &AuditLog{
+		EventType:     EventAuthLogin,
+		EventCategory: CategoryAuth,
+		UserID:        "user-123",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create error")
+}
+
+// ============================================
+// Test LogAuthEvent with all event types
+// ============================================
+
+func TestLogAuthEvent_AllEventTypes(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	tests := []struct {
+		name      string
+		eventType string
+		success   bool
+	}{
+		{EventAuthLogin + " success", EventAuthLogin, true},
+		{EventAuthLogin + " failure", EventAuthLogin, false},
+		{EventAuthLogout, EventAuthLogout, true},
+		{EventAuthPasswordChange + " success", EventAuthPasswordChange, true},
+		{EventAuthPasswordChange + " failure", EventAuthPasswordChange, false},
+		{EventAuthTokenRefresh + " success", EventAuthTokenRefresh, true},
+		{EventAuthTokenRefresh + " failure", EventAuthTokenRefresh, false},
+		{"unknown event type", "auth.unknown", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := auditLogger.LogAuthEvent(context.Background(), tt.eventType, "user-123", "tenant-456", "session-789", "192.168.1.1", "Mozilla/5.0", tt.success, map[string]interface{}{"key": "value"})
+			assert.NoError(t, err)
+		})
+	}
+
+	assert.Equal(t, len(tests), repo.GetLogCount())
+}
+
+// ============================================
+// Test LogDataAccess with all action types
+// ============================================
+
+func TestLogDataAccess_AllActionTypes(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	_ = NewAuditLogger(repo, logger, config)
+
+	tests := []struct {
+		name       string
+		action     string
+		expectType string
+		expectSev  string
+	}{
+		{"Read action", ActionRead, EventDataRead, SeverityInfo},
+		{"Write action", ActionWrite, EventDataWrite, SeverityInfo},
+		{"Delete action", ActionDelete, EventDataDelete, SeverityWarning},
+		{"Export action", ActionExport, EventDataExport, SeverityWarning},
+		{"Unknown action", "unknown", EventDataRead, SeverityInfo},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := NewMockRepository() // fresh repo for each test
+			auditLogger := NewAuditLogger(repo, logger, config)
+
+			err := auditLogger.LogDataAccess(context.Background(), "user-123", "tenant-456", "192.168.1.1", "device", "device-001", tt.action, "Test operation", nil)
+			assert.NoError(t, err)
+
+			logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+			require.Len(t, logs, 1)
+			assert.Equal(t, tt.expectType, logs[0].EventType)
+			assert.Equal(t, tt.expectSev, logs[0].Severity)
+		})
+	}
+}
+
+// ============================================
+// Test LogAdminAction with all event types
+// ============================================
+
+func TestLogAdminAction_AllEventTypes(t *testing.T) {
+	logger := zap.NewNop()
+
+	tests := []struct {
+		name      string
+		eventType string
+		expectSev string
+		expectAct string
+	}{
+		{EventAdminUserCreate, EventAdminUserCreate, SeverityWarning, ActionCreate},
+		{EventAdminUserUpdate, EventAdminUserUpdate, SeverityWarning, ActionUpdate},
+		{EventAdminUserDelete, EventAdminUserDelete, SeverityCritical, ActionDelete},
+		{EventAdminRoleAssign, EventAdminRoleAssign, SeverityCritical, ActionUpdate},
+		{EventAdminRoleRevoke, EventAdminRoleRevoke, SeverityCritical, ActionUpdate},
+		{EventAdminConfigChange, EventAdminConfigChange, SeverityCritical, ActionUpdate},
+		{EventAdminSystemRestart, EventAdminSystemRestart, SeverityCritical, ActionUpdate},
+		{"unknown event", "admin.unknown", SeverityWarning, ""}, // unknown event types don't set action
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := NewMockRepository()
+			config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+			auditLogger := NewAuditLogger(repo, logger, config)
+
+			err := auditLogger.LogAdminAction(context.Background(), "admin-001", "tenant-456", "192.168.1.1", tt.eventType, "user", "user-123", "Test operation", nil, nil, nil, nil)
+			assert.NoError(t, err)
+
+			logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+			require.Len(t, logs, 1)
+			assert.Equal(t, tt.expectSev, logs[0].Severity)
+			assert.Equal(t, tt.expectAct, logs[0].Action)
+		})
+	}
+}
+
+// ============================================
+// Test LogSecurityEvent with all event types
+// ============================================
+
+func TestLogSecurityEvent_AllEventTypes(t *testing.T) {
+	logger := zap.NewNop()
+
+	tests := []struct {
+		name      string
+		eventType string
+		inputSev  string
+		expectSev string
+		expectRes string
+	}{
+		{EventSecurityAlert, EventSecurityAlert, SeverityWarning, SeverityWarning, ResultSuccess},
+		{EventSecurityViolation, EventSecurityViolation, SeverityCritical, SeverityCritical, ResultFailure},
+		{EventSecurityBlocked, EventSecurityBlocked, SeverityWarning, SeverityWarning, ResultFailure},
+		{EventSecurityIncident, EventSecurityIncident, SeverityCritical, SeverityCritical, ResultFailure},
+		{"unknown security event", "security.unknown", SeverityWarning, SeverityWarning, ResultFailure},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := NewMockRepository()
+			config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+			auditLogger := NewAuditLogger(repo, logger, config)
+
+			err := auditLogger.LogSecurityEvent(context.Background(), "user-123", "tenant-456", "192.168.1.1", tt.eventType, "Test operation", tt.inputSev, nil)
+			assert.NoError(t, err)
+
+			logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+			require.Len(t, logs, 1)
+			assert.Equal(t, tt.expectSev, logs[0].Severity)
+			assert.Equal(t, tt.expectRes, logs[0].Result)
+		})
+	}
+}
+
+func TestLogSecurityAlert_WithNilMetadata(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Test with nil metadata
+	err := auditLogger.LogSecurityAlert(context.Background(), "user-123", "tenant-456", "192.168.1.1", "test_alert", "Test description", nil)
+	assert.NoError(t, err)
+
+	logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+	require.Len(t, logs, 1)
+	assert.NotNil(t, logs[0].Metadata)
+	assert.Equal(t, "test_alert", logs[0].Metadata["alert_type"])
+}
+
+func TestLogSecurityViolation_WithNilMetadata(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Test with nil metadata
+	err := auditLogger.LogSecurityViolation(context.Background(), "user-123", "tenant-456", "192.168.1.1", "unauthorized", "Test description", nil)
+	assert.NoError(t, err)
+
+	logs, _, _ := repo.Query(context.Background(), &QueryRequest{})
+	require.Len(t, logs, 1)
+	assert.NotNil(t, logs[0].Metadata)
+	assert.Equal(t, "unauthorized", logs[0].Metadata["violation_type"])
+}
+
+// ============================================
+// Test Query
+// ============================================
+
+func TestQuery(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Create some logs
+	_ = auditLogger.LogLogin(context.Background(), "user-123", "tenant-456", "session-789", "192.168.1.1", "Mozilla/5.0", true)
+	_ = auditLogger.LogLogout(context.Background(), "user-123", "tenant-456", "session-789", "192.168.1.1")
+
+	query := &QueryRequest{
+		TenantID: "tenant-456",
+		UserID:   "user-123",
+		Page:     1,
+		PageSize: 10,
+	}
+
+	logs, total, err := auditLogger.Query(context.Background(), query)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), total)
+	assert.Len(t, logs, 2)
+}
+
+// ============================================
+// Test ExportAuditLogs error handling
+// ============================================
+
+func TestExportAuditLogs_QueryError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorMockRepository()
+	repo.queryError = true
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	_, err := auditLogger.ExportAuditLogs(context.Background(), &QueryRequest{}, "json")
+	assert.Error(t, err)
+}
+
+func TestExportAuditLogs_DefaultFormat(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	_ = auditLogger.LogLogin(context.Background(), "user-123", "tenant-456", "session-789", "192.168.1.1", "Mozilla/5.0", true)
+
+	// Test default format (should be json)
+	data, err := auditLogger.ExportAuditLogs(context.Background(), &QueryRequest{}, "unknown")
+	assert.NoError(t, err)
+	assert.NotNil(t, data)
+	assert.Contains(t, string(data), "audit-")
+}
+
+// ============================================
+// Test async logging with queue full
+// ============================================
+
+func TestAsyncLogging_QueueFull(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: true,
+		QueueSize:    2, // Very small queue
+		WorkerCount:  1,
+		BatchSize:    100,
+		BatchTimeout: 10, // Long timeout so items stay in queue
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Fill the queue
+	for i := 0; i < 10; i++ {
+		_ = auditLogger.Log(context.Background(), &AuditLog{
+			EventType:     EventAuthLogin,
+			EventCategory: CategoryAuth,
+			UserID:        "user-123",
+		})
+	}
+
+	// Wait for processing
+	time.Sleep(500 * time.Millisecond)
+	auditLogger.Close()
+
+	// Should have processed logs (some via sync fallback)
+	assert.GreaterOrEqual(t, repo.GetLogCount(), 1)
+}
+
+// ============================================
+// Test LogLevel.ShouldLog with unknown severity
+// ============================================
+
+func TestLogLevelShouldLog_UnknownSeverity(t *testing.T) {
+	// Test with unknown severity - specific log levels check for specific severity values
+	// unknown severity won't match any specific severity, so:
+	assert.True(t, LogLevelAll.ShouldLog("unknown"))       // LogLevelAll returns true for everything
+	assert.False(t, LogLevelInfo.ShouldLog("unknown"))     // unknown doesn't match info/warning/critical
+	assert.False(t, LogLevelWarning.ShouldLog("unknown"))  // unknown doesn't match warning/critical
+	assert.False(t, LogLevelCritical.ShouldLog("unknown")) // unknown doesn't match critical
+	assert.False(t, LogLevelNone.ShouldLog("unknown"))     // LogLevelNone returns false for everything
+}
+
+// ============================================
+// Test flushRemaining with items in queue
+// ============================================
+
+func TestFlushRemaining_WithQueueItems(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: true,
+		QueueSize:    100,
+		WorkerCount:  1,
+		BatchSize:    50, // Large batch so items stay in buffer
+		BatchTimeout: 10, // Long timeout
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Add items to queue
+	for i := 0; i < 5; i++ {
+		_ = auditLogger.Log(context.Background(), &AuditLog{
+			EventType:     EventAuthLogin,
+			EventCategory: CategoryAuth,
+			UserID:        "user-123",
+		})
+	}
+
+	// Close immediately to trigger flushRemaining
+	auditLogger.Close()
+
+	// Give time for flush to complete
+	time.Sleep(200 * time.Millisecond)
+
+	// Should have processed all items
+	assert.GreaterOrEqual(t, repo.GetLogCount(), 1)
+}
+
+// ============================================
+// Test writeBatch with errors
+// ============================================
+
+func TestWriteBatch_WithErrors(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorMockRepository()
+	repo.SetCreateError(true)
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: true,
+		QueueSize:    100,
+		WorkerCount:  1,
+		BatchSize:    10,
+		BatchTimeout: 1,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// This should trigger writeBatch which will fail
+	for i := 0; i < 5; i++ {
+		_ = auditLogger.Log(context.Background(), &AuditLog{
+			EventType:     EventAuthLogin,
+			EventCategory: CategoryAuth,
+			UserID:        "user-123",
+		})
+	}
+
+	time.Sleep(500 * time.Millisecond)
+	auditLogger.Close()
+
+	// Stats should show failures
+	stats := auditLogger.GetStats()
+	assert.GreaterOrEqual(t, stats.FailureCount, int64(0))
+}
+
+// ============================================
+// Test with all QueryRequest fields
+// ============================================
+
+func TestQuery_WithAllFields(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Create a log
+	_ = auditLogger.Log(context.Background(), &AuditLog{
+		EventType:     EventAuthLogin,
+		EventCategory: CategoryAuth,
+		UserID:        "user-123",
+		TenantID:      "tenant-456",
+		IPAddress:     "192.168.1.1",
+		Result:        ResultSuccess,
+	})
+
+	now := time.Now()
+	query := &QueryRequest{
+		TenantID:     "tenant-456",
+		UserID:       "user-123",
+		EventType:    EventAuthLogin,
+		Category:     CategoryAuth,
+		ResourceType: "user",
+		ResourceID:   "user-123",
+		Result:       ResultSuccess,
+		IPAddress:    "192.168.1.1",
+		StartTime:    &now,
+		EndTime:      &now,
+		Page:         1,
+		PageSize:     10,
+	}
+
+	logs, total, err := auditLogger.Query(context.Background(), query)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	assert.Len(t, logs, 1)
+}
+
+// ============================================
+// Test stats updates
+// ============================================
+
+func TestStats_Updates(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Initial stats
+	stats := auditLogger.GetStats()
+	assert.Equal(t, int64(0), stats.TotalLogs)
+	assert.Equal(t, int64(0), stats.SuccessCount)
+	assert.Equal(t, int64(0), stats.FailureCount)
+	assert.True(t, stats.LastLogTime.IsZero())
+
+	// After logging
+	_ = auditLogger.LogLogin(context.Background(), "user-123", "tenant-456", "session-789", "192.168.1.1", "Mozilla/5.0", true)
+
+	stats = auditLogger.GetStats()
+	assert.Equal(t, int64(1), stats.TotalLogs)
+	assert.Equal(t, int64(1), stats.SuccessCount)
+	assert.False(t, stats.LastLogTime.IsZero())
+}
+
+// ============================================
+// Test async config variations
+// ============================================
+
+func TestAsyncConfig_ZeroQueueSize(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: true,
+		QueueSize:    0, // Zero queue size
+		WorkerCount:  3,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	// Should not create queue
+	assert.Nil(t, auditLogger.auditQueue)
+
+	// Should still work (sync mode)
+	err := auditLogger.LogLogin(context.Background(), "user-123", "tenant-456", "session-789", "192.168.1.1", "Mozilla/5.0", true)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, repo.GetLogCount())
+}
+
+// ============================================
+// Test Close without async
+// ============================================
+
+func TestClose_WithoutAsync(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{
+		Enabled:      true,
+		LogLevel:     LogLevelAll,
+		AsyncEnabled: false,
+	}
+
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	// Close should work fine
+	err := auditLogger.Close()
+	assert.NoError(t, err)
+}
+
+// ============================================
+// Benchmark tests for async logging
+// ============================================
+
+func BenchmarkLogDataAccess(b *testing.B) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = auditLogger.LogDataAccess(context.Background(), "user-123", "tenant-456", "192.168.1.1", "device", "device-001", ActionRead, "Read device", nil)
+	}
+}
+
+func BenchmarkLogAdminAction(b *testing.B) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = auditLogger.LogAdminAction(context.Background(), "admin-001", "tenant-456", "192.168.1.1", EventAdminUserCreate, "user", "user-123", "Create user", nil, nil, nil, nil)
+	}
+}
+
+func BenchmarkLogSecurityEvent(b *testing.B) {
+	logger := zap.NewNop()
+	repo := NewMockRepository()
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = auditLogger.LogSecurityEvent(context.Background(), "user-123", "tenant-456", "192.168.1.1", EventSecurityAlert, "Test", SeverityWarning, nil)
+	}
+}

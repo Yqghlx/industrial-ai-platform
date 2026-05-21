@@ -1,0 +1,702 @@
+# Prometheus Values Configuration
+# P2-002: Monitoring Alert Tuning - Collection Frequency Optimization
+# Industrial AI Platform - Optimized for Performance
+
+# ==========================================
+# Prometheus Server Configuration
+# ==========================================
+
+prometheus:
+  # Image and version
+  image:
+    repository: prom/prometheus
+    tag: v2.45.0
+    pullPolicy: IfNotPresent
+  
+  # Resource limits (optimized for production)
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  # Retention configuration
+  retention: 15d
+  retentionSize: "10GB"
+  
+  # Storage configuration
+  storageSpec:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+  
+  # Configuration for scrape intervals
+  config:
+    # Global settings - Optimized collection frequency
+    global:
+      # Default scrape interval - Optimized from 15s to 10s for faster detection
+      scrape_interval: 10s
+      # Evaluation interval for alert rules - Reduced for faster alerting
+      evaluation_interval: 10s
+      # Scrape timeout - Prevent hanging scrapes
+      scrape_timeout: 8s
+    
+    # Alert manager configuration
+    alerting:
+      alertmanagers:
+        - kubernetes_sd_configs:
+            - role: pod
+              namespaces:
+                names:
+                  - monitoring
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_label_app]
+              regex: alertmanager
+              action: keep
+            - source_labels: [__meta_kubernetes_pod_container_port_number]
+              regex: "9093"
+              action: keep
+    
+    # Rule files configuration
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+    
+    # Scrape configurations - Optimized per job
+    scrape_configs:
+      # ==========================================
+      # Critical Services - High Frequency Scraping
+      # ==========================================
+      
+      # Backend API service - Critical, scrape every 5s
+      - job_name: 'backend-api'
+        scrape_interval: 5s
+        scrape_timeout: 3s
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - industrial-ai
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+        metric_relabel_configs:
+          # Keep only relevant metrics to reduce storage
+          - source_labels: [__name__]
+            regex: 'http_requests_total|http_request_duration_seconds|db_connections_active|cache_hits_total|cache_misses_total|ws_connections_active'
+            action: keep
+      
+      # WebSocket service - High frequency for connection monitoring
+      - job_name: 'websocket'
+        scrape_interval: 5s
+        scrape_timeout: 3s
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - industrial-ai
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_component]
+            regex: websocket
+            action: keep
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'ws_connections_total|ws_messages_total|ws_errors_total|ws_latency_seconds'
+            action: keep
+      
+      # ==========================================
+      # Database & Cache - Medium Frequency
+      # ==========================================
+      
+      # PostgreSQL metrics - 15s interval
+      - job_name: 'postgresql'
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        static_configs:
+          - targets:
+              - postgres-exporter:9187
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'pg_stat_database.*|pg_replication.*|pg_connections.*'
+            action: keep
+      
+      # Redis cache metrics - 10s interval
+      - job_name: 'redis'
+        scrape_interval: 10s
+        scrape_timeout: 5s
+        static_configs:
+          - targets:
+              - redis-exporter:9121
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'redis_connected_clients|redis_memory_usage_bytes|redis_keyspace_hits|redis_keyspace_misses|redis_commands_total'
+            action: keep
+      
+      # ==========================================
+      # Infrastructure - Standard Frequency
+      # ==========================================
+      
+      # Kubernetes nodes - 30s interval
+      - job_name: 'kubernetes-nodes'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - source_labels: [__meta_kubernetes_node_address_InternalIP]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: $1:10250
+      
+      # Kubernetes pods - 30s interval (default)
+      - job_name: 'kubernetes-pods'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+      
+      # Kubernetes services - 30s interval
+      - job_name: 'kubernetes-services'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: service
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+      
+      # ==========================================
+      # Observability Stack - Optimized Frequencies
+      # ==========================================
+      
+      # Prometheus self-monitoring - 10s interval
+      - job_name: 'prometheus-self'
+        scrape_interval: 10s
+        static_configs:
+          - targets: ['localhost:9090']
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'prometheus_target_scrape_duration_seconds|prometheus_target_scrapes_sync_total|prometheus_rule_group_duration_seconds|prometheus_tsdb_head_series'
+            action: keep
+      
+      # Alertmanager metrics - 15s interval
+      - job_name: 'alertmanager'
+        scrape_interval: 15s
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - monitoring
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: alertmanager
+            action: keep
+      
+      # Grafana metrics - 30s interval
+      - job_name: 'grafana'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - monitoring
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: grafana
+            action: keep
+      
+      # Loki logs - 30s interval
+      - job_name: 'loki'
+        scrape_interval: 30s
+        static_configs:
+          - targets: ['loki:3100']
+      
+      # Tempo tracing - 30s interval  
+      - job_name: 'tempo'
+        scrape_interval: 30s
+        static_configs:
+          - targets: ['tempo:3200']
+      
+      # ==========================================
+      # Circuit Breaker & Rate Limiting
+      # ==========================================
+      
+      # Circuit breaker state - 5s for quick failure detection
+      - job_name: 'circuit-breaker'
+        scrape_interval: 5s
+        scrape_timeout: 3s
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - industrial-ai
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_metrics_circuitbreaker]
+            regex: enabled
+            action: keep
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'circuitbreaker_state|circuitbreaker_failures_total|circuitbreaker_successes_total|circuitbreaker_open_total'
+            action: keep
+      
+      # Rate limiting metrics - 10s interval
+      - job_name: 'rate-limiter'
+        scrape_interval: 10s
+        static_configs:
+          - targets: ['backend:8080']
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'rate_limit_requests_total|rate_limit_rejected_total|rate_limit_tokens_available'
+            action: keep
+
+# ==========================================
+# Alert Rules Configuration
+# ==========================================
+
+alertmanager:
+  # Alertmanager image
+  image:
+    repository: prom/alertmanager
+    tag: v0.26.0
+    pullPolicy: IfNotPresent
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  
+  # Configuration (see alertmanager-config.yaml)
+  config:
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['severity', 'category', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: 'default-receiver'
+      routes:
+        # Critical alerts - immediate notification
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+          group_wait: 10s
+          group_interval: 1m
+          repeat_interval: 1h
+          continue: false
+        
+        # Warning alerts - grouped notification
+        - match:
+            severity: warning
+          receiver: 'warning-alerts'
+          group_wait: 1m
+          group_interval: 5m
+          repeat_interval: 4h
+          continue: false
+        
+        # Database alerts - specialized receiver
+        - match:
+            category: database
+          receiver: 'database-alerts'
+          group_wait: 30s
+          continue: false
+    
+    receivers:
+      - name: 'default-receiver'
+        webhook_configs:
+          - url: 'http://backend:8080/api/v1/alerts/webhook'
+            send_resolved: true
+            max_alerts: 100
+      
+      - name: 'critical-alerts'
+        slack_configs:
+          - channel: '#alerts-critical'
+            send_resolved: true
+            title: 'Critical Alert: {{ .GroupLabels.service }}'
+            text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}{{ end }}'
+        webhook_configs:
+          - url: 'http://backend:8080/api/v1/alerts/webhook'
+            send_resolved: true
+      
+      - name: 'warning-alerts'
+        slack_configs:
+          - channel: '#alerts-warning'
+            send_resolved: true
+      
+      - name: 'database-alerts'
+        slack_configs:
+          - channel: '#alerts-database'
+            send_resolved: true
+        webhook_configs:
+          - url: 'http://backend:8080/api/v1/alerts/database'
+            send_resolved: true
+  
+  # Storage
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+
+# ==========================================
+# Grafana Configuration
+# ==========================================
+
+grafana:
+  image:
+    repository: grafana/grafana
+    tag: 10.2.0
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Environment configuration
+  env:
+    GF_SECURITY_ADMIN_USER: admin
+    GF_SECURITY_ADMIN_PASSWORD__FILE: /etc/secrets/grafana-admin-password
+    GF_USERS_ALLOW_SIGN_UP: false
+    GF_INSTALL_PLUGINS: redis-datasource,grafana-clock-panel
+    GF_ALERTING_ENABLED: true
+    GF_UNIFIED_ALERTING_ENABLED: true
+    # Dashboard refresh interval
+    GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/main.json
+  
+  # Dashboard configuration
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 30
+          options:
+            path: /var/lib/grafana/dashboards
+  
+  # Data sources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+          editable: false
+          jsonData:
+            timeInterval: "10s"
+            httpMethod: POST
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          editable: false
+        - name: Tempo
+          type: tempo
+          access: proxy
+          url: http://tempo:3200
+          editable: false
+          jsonData:
+            tracesToLogs:
+              datasourceUid: 'loki'
+              tags: ['service', 'pod']
+            tracesToLogsV2:
+              datasourceUid: 'loki'
+              spanStartTimeShift: '-10m'
+              spanEndTimeShift: '10m'
+        - name: Redis
+          type: redis-datasource
+          access: proxy
+          url: redis://redis:6379
+          editable: false
+  
+  # Sidecar for automatic dashboard import
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchInterval: 30s
+
+# ==========================================
+# Node Exporter (Node Metrics)
+# ==========================================
+
+nodeExporter:
+  enabled: true
+  image:
+    repository: prom/node-exporter
+    tag: v1.6.1
+  
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ==========================================
+# Pushgateway (for batch jobs)
+# ==========================================
+
+pushgateway:
+  enabled: false  # Disabled by default, enable if needed
+
+# ==========================================
+# RBAC Configuration
+# ==========================================
+
+rbac:
+  create: true
+  
+serviceAccounts:
+  prometheus:
+    create: true
+    name: prometheus
+  alertmanager:
+    create: true
+    name: alertmanager
+  grafana:
+    create: true
+    name: grafana
+  nodeExporter:
+    create: true
+    name: node-exporter
+
+# ==========================================
+# Service Configuration
+# ==========================================
+
+service:
+  prometheus:
+    type: ClusterIP
+    port: 9090
+    targetPort: 9090
+  
+  alertmanager:
+    type: ClusterIP
+    port: 9093
+    targetPort: 9093
+  
+  grafana:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "3000"
+      prometheus.io/path: "/metrics"
+
+# ==========================================
+# Ingress Configuration
+# ==========================================
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  
+  hosts:
+    - name: prometheus.industrial-ai.local
+      service: prometheus
+      port: 9090
+      tls: true
+    - name: grafana.industrial-ai.local
+      service: grafana
+      port: 80
+      tls: true
+    - name: alertmanager.industrial-ai.local
+      service: alertmanager
+      port: 9093
+      tls: true
+  
+  tls:
+    enabled: true
+    secretName: monitoring-tls
+
+# ==========================================
+# Additional Prometheus Rules
+# ==========================================
+
+additionalPrometheusRulesMap:
+  # Performance monitoring rules
+  performance-rules:
+    groups:
+      - name: performance-monitoring
+        rules:
+          # Response time alerts
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[1m])) > 0.5
+            for: 2m
+            labels:
+              severity: warning
+              category: performance
+            annotations:
+              summary: "High API response time detected"
+              description: "P95 response time is {{ $value | humanizeDuration }} for endpoint {{ $labels.endpoint }}"
+          
+          - alert: VeryHighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[1m])) > 2
+            for: 1m
+            labels:
+              severity: critical
+              category: performance
+            annotations:
+              summary: "Very high API response time"
+              description: "P95 response time is {{ $value | humanizeDuration }} - immediate action required"
+          
+          # Request rate alerts
+          - alert: LowRequestRate
+            expr: sum(rate(http_requests_total[5m])) < 10
+            for: 5m
+            labels:
+              severity: warning
+              category: performance
+            annotations:
+              summary: "Low request rate detected"
+              description: "Request rate is {{ $value }} req/s, possible service degradation"
+          
+          - alert: HighRequestRate
+            expr: sum(rate(http_requests_total[5m])) > 1000
+            for: 2m
+            labels:
+              severity: warning
+              category: performance
+            annotations:
+              summary: "High request rate detected"
+              description: "Request rate is {{ $value }} req/s - consider scaling"
+          
+          # Scrape performance
+          - alert: PrometheusScrapeSlow
+            expr: prometheus_target_scrape_duration_seconds > 5
+            for: 1m
+            labels:
+              severity: warning
+              category: monitoring
+            annotations:
+              summary: "Slow Prometheus scrape"
+              description: "Scrape for {{ $labels.job }} took {{ $value | humanizeDuration }}"
+          
+          # Rule evaluation performance
+          - alert: SlowRuleEvaluation
+            expr: prometheus_rule_group_duration_seconds > 1
+            for: 2m
+            labels:
+              severity: warning
+              category: monitoring
+            annotations:
+              summary: "Slow alert rule evaluation"
+              description: "Rule group {{ $labels.group }} took {{ $value | humanizeDuration }} to evaluate"
+
+# ==========================================
+# Performance Tuning Settings
+# ==========================================
+
+# TSDB configuration for performance
+tsdbConfig:
+  # Sample retention
+  retention: 15d
+  # Maximum samples per block
+  maxSamplesPerBlock: 10000000
+  # Min block duration
+  minBlockDuration: 2h
+  # Max block duration
+  maxBlockDuration: 24h
+  # Compaction configuration
+  compaction:
+    # Enable parallel compaction
+    parallel: true
+    # Max concurrent compactions
+    maxConcurrent: 2
+
+# Query tuning
+queryConfig:
+  # Maximum concurrent queries
+  maxConcurrent: 20
+  # Query timeout
+  timeout: 30s
+  # Maximum samples returned per query
+  maxSamples: 10000000
+
+# Remote write configuration (if using long-term storage)
+remoteWrite:
+  enabled: false
+  # Configure if using Thanos or Cortex
+  # url: http://thanos-receive:10908/api/v1/receive
+
+# Recording rules for pre-computing expensive queries
+recordingRules:
+  enabled: true
+  rules:
+    # Pre-compute request rates
+    - record: job:http_requests:rate5m
+      expr: sum by (job) (rate(http_requests_total[5m]))
+    # Pre-compute error rates
+    - record: job:http_errors:rate5m
+      expr: sum by (job) (rate(http_requests_total{status=~"5.."}[5m]))
+    # Pre-compute latency buckets
+    - record: job:http_latency:p95
+      expr: histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[5m])))
+    # Pre-compute cache hit rate
+    - record: cache:hit_rate
+      expr: sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m])))

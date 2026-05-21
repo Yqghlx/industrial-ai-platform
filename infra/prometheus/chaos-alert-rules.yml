@@ -1,0 +1,521 @@
+# Prometheus Chaos 告警规则 - Industrial AI Platform
+# 用途: 混沌工程实验期间和实验后的告警监控
+
+groups:
+  # ================================
+  # Chaos 实验告警规则
+  # ================================
+  - name: chaos-experiment-alerts
+    rules:
+      # Chaos 实验启动告警
+      - alert: ChaosExperimentStarted
+        expr: |
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 0m
+        labels:
+          severity: info
+          category: chaos
+          experiment_type: "{{ $labels.kind }}"
+        annotations:
+          summary: "Chaos 实验已启动"
+          description: "Chaos 实验 '{{ $labels.name }}' (类型: {{ $labels.kind }}) 在命名空间 {{ $labels.namespace }} 已启动。"
+          runbook_url: "https://wiki.example.com/runbooks/chaos-experiment"
+
+      # Chaos 实验失败告警
+      - alert: ChaosExperimentFailed
+        expr: |
+          chaos_mesh_experiment_status{phase="Failed"} == 1
+        for: 0m
+        labels:
+          severity: warning
+          category: chaos
+          experiment_type: "{{ $labels.kind }}"
+        annotations:
+          summary: "Chaos 实验失败"
+          description: "Chaos 实验 '{{ $labels.name }}' (类型: {{ $labels.kind }}) 失败。请检查实验配置和日志。"
+
+      # Chaos 实验长时间运行告警
+      - alert: ChaosExperimentLongRunning
+        expr: |
+          chaos_mesh_experiment_duration_seconds > 600
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+        annotations:
+          summary: "Chaos 实验运行时间过长"
+          description: "Chaos 实验 '{{ $labels.name }}' 已运行超过 10 分钟，请确认是否需要手动停止。"
+
+  # ================================
+  # Pod 故障告警规则
+  # ================================
+  - name: pod-chaos-alerts
+    rules:
+      # Pod 重启率异常高
+      - alert: HighPodRestartRateDuringChaos
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="industrial-ai"}[10m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          category: chaos
+          component: pod
+        annotations:
+          summary: "Chaos 实验期间 Pod 重启率异常高"
+          description: "Pod {{ $labels.pod }} 在过去 10 分钟内重启了 {{ $value }} 次。可能需要停止 Chaos 实验。"
+
+      # Pod 非正常终止
+      - alert: PodUnexpectedTermination
+        expr: |
+          kube_pod_container_status_terminated_reason{reason!="Completed"} == 1
+          and on(pod, namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: pod
+        annotations:
+          summary: "Pod 非正常终止"
+          description: "Pod {{ $labels.pod }} 以 {{ $labels.reason }} 原因终止，可能由 Chaos 实验引起。"
+
+      # 可用副本数过低
+      - alert: LowAvailableReplicasDuringChaos
+        expr: |
+          kube_deployment_status_replicas_available{namespace="industrial-ai"}
+          /
+          kube_deployment_spec_replicas{namespace="industrial-ai"}
+          < 0.5
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 3m
+        labels:
+          severity: critical
+          category: chaos
+          component: pod
+        annotations:
+          summary: "Chaos 实验期间可用副本数过低"
+          description: "Deployment {{ $labels.deployment }} 的可用副本数低于 50%。当前: {{ $value | humanizePercentage }}。"
+
+      # Pod 重建时间过长
+      - alert: PodRecoveryTooSlow
+        expr: |
+          kube_deployment_status_replicas_unavailable{namespace="industrial-ai"} > 0
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: chaos
+          component: pod
+        annotations:
+          summary: "Pod 恢复时间过长"
+          description: "Chaos 实验结束后 5 分钟，Deployment {{ $labels.deployment }} 仍有不可用副本。"
+
+  # ================================
+  # 网络故障告警规则
+  # ================================
+  - name: network-chaos-alerts
+    rules:
+      # 网络延迟异常
+      - alert: HighNetworkLatencyDuringChaos
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{namespace="industrial-ai"}[5m])) by (le)
+          ) > 2
+          and on(namespace)
+          chaos_mesh_networkchaos_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: chaos
+          component: network
+        annotations:
+          summary: "Chaos 实验期间网络延迟异常高"
+          description: "P95 延迟超过 2 秒 (当前: {{ $value | humanizeDuration }})，可能超出应用容忍范围。"
+
+      # 网络错误率高
+      - alert: HighNetworkErrorRateDuringChaos
+        expr: |
+          sum(rate(http_requests_total{status=~"5..", namespace="industrial-ai"}[5m]))
+          /
+          sum(rate(http_requests_total{namespace="industrial-ai"}[5m]))
+          > 0.1
+          and on(namespace)
+          chaos_mesh_networkchaos_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: critical
+          category: chaos
+          component: network
+        annotations:
+          summary: "Chaos 实验期间网络错误率过高"
+          description: "HTTP 错误率超过 10% (当前: {{ $value | humanizePercentage }})，服务可能不可用。"
+
+      # 连接超时增加
+      - alert: HighConnectionTimeoutDuringChaos
+        expr: |
+          increase(http_client_timeouts_total{namespace="industrial-ai"}[5m]) > 10
+          and on(namespace)
+          chaos_mesh_networkchaos_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: chaos
+          component: network
+        annotations:
+          summary: "Chaos 实验期间连接超时增加"
+          description: "过去 5 分钟内连接超时增加了 {{ $value }} 次。"
+
+      # 网络分区检测
+      - alert: NetworkPartitionDetected
+        expr: |
+          chaos_mesh_networkchaos_status{action="partition", phase="Running"} == 1
+        for: 0m
+        labels:
+          severity: info
+          category: chaos
+          component: network
+        annotations:
+          summary: "网络分区实验正在进行"
+          description: "检测到网络分区实验 '{{ $labels.name }}' 正在运行，服务间可能无法通信。"
+
+      # 网络丢包告警
+      - alert: HighPacketLossRate
+        expr: |
+          chaos_mesh_networkchaos_loss_rate > 50
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: network
+        annotations:
+          summary: "高丢包率网络故障实验"
+          description: "网络实验 '{{ $labels.name }}' 的丢包率超过 50% (当前: {{ $value }}%)。"
+
+  # ================================
+  # DNS 故障告警规则
+  # ================================
+  - name: dns-chaos-alerts
+    rules:
+      # DNS 解析失败率高
+      - alert: HighDNSFailureRate
+        expr: |
+          sum(rate(dns_resolver_failures_total{namespace="industrial-ai"}[5m]))
+          /
+          sum(rate(dns_resolver_requests_total{namespace="industrial-ai"}[5m]))
+          > 0.2
+          and on(namespace)
+          chaos_mesh_dnschaos_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: dns
+        annotations:
+          summary: "DNS 解析失败率高"
+          description: "DNS 解析失败率超过 20% (当前: {{ $value | humanizePercentage }})。"
+
+      # DNS 延迟异常
+      - alert: HighDNSLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(dns_resolver_request_duration_seconds_bucket{namespace="industrial-ai"}[5m])) by (le)
+          ) > 1
+          and on(namespace)
+          chaos_mesh_dnschaos_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: dns
+        annotations:
+          summary: "DNS 解析延迟异常高"
+          description: "P95 DNS 解析延迟超过 1 秒 (当前: {{ $value | humanizeDuration }})。"
+
+      # 服务发现失败
+      - alert: ServiceDiscoveryFailure
+        expr: |
+          kube_endpoint_address_not_ready{namespace="industrial-ai"} > 0
+          and on(namespace)
+          chaos_mesh_dnschaos_status{phase="Running"} == 1
+        for: 3m
+        labels:
+          severity: warning
+          category: chaos
+          component: dns
+        annotations:
+          summary: "服务发现失败"
+          description: "Endpoint {{ $labels.endpoint }} 的地址未就绪，可能是 DNS 故障实验导致。"
+
+  # ================================
+  # 资源压力告警规则
+  # ================================
+  - name: stress-chaos-alerts
+    rules:
+      # CPU 压力过载
+      - alert: HighCPUStressDetected
+        expr: |
+          rate(container_cpu_usage_seconds_total{namespace="industrial-ai"}[5m]) > 0.9
+          and on(namespace, pod)
+          chaos_mesh_stresschaos_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: stress
+        annotations:
+          summary: "CPU 压力测试导致高负载"
+          description: "Pod {{ $labels.pod }} 的 CPU 使用率超过 90%，可能影响服务稳定性。"
+
+      # 内存压力过载
+      - alert: HighMemoryStressDetected
+        expr: |
+          container_memory_usage_bytes{namespace="industrial-ai"}
+          /
+          container_spec_memory_limit_bytes{namespace="industrial-ai"}
+          > 0.9
+          and on(namespace, pod)
+          chaos_mesh_stresschaos_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          category: chaos
+          component: stress
+        annotations:
+          summary: "内存压力测试导致高内存使用"
+          description: "Pod {{ $labels.pod }} 的内存使用率超过 90%，可能导致 OOM。"
+
+      # OOM Kill 检测
+      - alert: OOMKillDuringChaos
+        expr: |
+          increase(kube_pod_container_status_terminated_reason{reason="OOMKilled"}[5m]) > 0
+          and on(namespace)
+          chaos_mesh_stresschaos_status{phase="Running"} == 1
+        for: 0m
+        labels:
+          severity: critical
+          category: chaos
+          component: stress
+        annotations:
+          summary: "Chaos 实验期间发生 OOM Kill"
+          description: "Pod {{ $labels.pod }} 因内存不足被 OOM Kill。建议增加内存限制。"
+
+  # ================================
+  # HPA 弹性告警规则
+  # ================================
+  - name: hpa-chaos-alerts
+    rules:
+      # HPA 达到最大副本数
+      - alert: HPAReachedMaxReplicas
+        expr: |
+          kube_hpa_status_current_replicas{namespace="industrial-ai"}
+          ==
+          kube_hpa_spec_max_replicas{namespace="industrial-ai"}
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: chaos
+          component: hpa
+        annotations:
+          summary: "HPA 达到最大副本数限制"
+          description: "HPA {{ $labels.hpa }} 已达到最大副本数 {{ $value }}，无法继续扩容。"
+
+      # HPA 扩容速度过慢
+      - alert: HPAScalingTooSlow
+        expr: |
+          kube_hpa_status_desired_replicas{namespace="industrial-ai"}
+          >
+          kube_hpa_status_current_replicas{namespace="industrial-ai"}
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: chaos
+          component: hpa
+        annotations:
+          summary: "HPA 扩容速度过慢"
+          description: "HPA {{ $labels.hpa }} 的期望副本数与当前副本数不一致超过 5 分钟。"
+
+      # HPA 异常缩容
+      - alert: HPAAbnormalScaleDown
+        expr: |
+          delta(kube_hpa_status_current_replicas{namespace="industrial-ai"}[5m]) < -2
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 0
+        for: 1m
+        labels:
+          severity: info
+          category: chaos
+          component: hpa
+        annotations:
+          summary: "HPA 实验后快速缩容"
+          description: "HPA {{ $labels.hpa }} 在实验结束后快速缩容了 {{ $value }} 个副本。"
+
+  # ================================
+  # 服务可用性告警规则
+  # ================================
+  - name: availability-chaos-alerts
+    rules:
+      # 服务可用性低于 SLO
+      - alert: ServiceAvailabilityBelowSLO
+        expr: |
+          sum(rate(http_requests_total{status!~"5..", namespace="industrial-ai"}[5m]))
+          /
+          sum(rate(http_requests_total{namespace="industrial-ai"}[5m]))
+          < 0.95
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: critical
+          category: chaos
+          component: availability
+        annotations:
+          summary: "Chaos 实验期间服务可用性低于 SLO"
+          description: "服务可用性降至 {{ $value | humanizePercentage }}，低于 95% SLO 目标。"
+
+      # 错误率激增
+      - alert: ErrorRateSpikeDuringChaos
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5..", namespace="industrial-ai"}[5m]))
+            /
+            sum(rate(http_requests_total{namespace="industrial-ai"}[5m]))
+          )
+          >
+          (
+            sum(rate(http_requests_total{status=~"5..", namespace="industrial-ai"}[5m] offset 1h))
+            /
+            sum(rate(http_requests_total{namespace="industrial-ai"}[5m] offset 1h))
+          ) * 5
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          category: chaos
+          component: availability
+        annotations:
+          summary: "Chaos 实验期间错误率激增"
+          description: "错误率相比 1 小时前增加了 5 倍以上。"
+
+      # 响应时间超时
+      - alert: ResponseTimeoutSpike
+        expr: |
+          sum(rate(http_request_duration_seconds_count{namespace="industrial-ai"}[5m]))
+          -
+          sum(rate(http_request_duration_seconds_count{namespace="industrial-ai"}[5m] offset 5m))
+          < -100
+          and on(namespace)
+          chaos_mesh_networkchaos_status{phase="Running"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: chaos
+          component: availability
+        annotations:
+          summary: "响应超时数量增加"
+          description: "请求超时数量异常增加，可能是网络故障实验导致。"
+
+  # ================================
+  # 综合健康告警规则
+  # ================================
+  - name: overall-chaos-health-alerts
+    rules:
+      # Chaos 实验后服务未恢复
+      - alert: ServiceNotRecoveredAfterChaos
+        expr: |
+          kube_deployment_status_replicas_available{namespace="industrial-ai"}
+          <
+          kube_deployment_spec_replicas{namespace="industrial-ai"}
+          and on(namespace)
+          time() - chaos_mesh_experiment_end_timestamp > 300
+        for: 5m
+        labels:
+          severity: critical
+          category: chaos
+          component: recovery
+        annotations:
+          summary: "Chaos 实验后服务未恢复"
+          description: "Chaos 实验结束 5 分钟后，Deployment {{ $labels.deployment }} 仍未完全恢复。"
+
+      # 多个 Chaos 实验同时运行
+      - alert: MultipleChaosExperimentsRunning
+        expr: |
+          count(chaos_mesh_experiment_status{phase="Running"}) > 3
+        for: 0m
+        labels:
+          severity: warning
+          category: chaos
+          component: coordination
+        annotations:
+          summary: "多个 Chaos 实验同时运行"
+          description: "当前有 {{ $value }} 个 Chaos 实验同时运行，可能产生意外影响。"
+
+      # Chaos 实验影响多个服务
+      - alert: ChaosAffectingMultipleServices
+        expr: |
+          count_values("target", chaos_mesh_experiment_status{phase="Running"}) > 2
+        for: 1m
+        labels:
+          severity: info
+          category: chaos
+          component: scope
+        annotations:
+          summary: "Chaos 实验影响多个服务"
+          description: "当前 Chaos 实验影响了 {{ $value }} 个不同的服务。"
+
+      # 系统整体健康度降低
+      - alert: SystemHealthDegradedDuringChaos
+        expr: |
+          (
+            sum(up{job="backend", namespace="industrial-ai"})
+            +
+            sum(up{job="frontend", namespace="industrial-ai"})
+            +
+            sum(up{job="ai-worker", namespace="industrial-ai"})
+          ) < 2
+          and on(namespace)
+          chaos_mesh_experiment_status{phase="Running"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          category: chaos
+          component: system
+        annotations:
+          summary: "Chaos 实验期间系统健康度降低"
+          description: "多个服务不可用，Chaos 实验可能需要停止。"
+
+  # ================================
+  # 实验结束告警规则
+  # ================================
+  - name: chaos-completion-alerts
+    rules:
+      # Chaos 实验完成
+      - alert: ChaosExperimentCompleted
+        expr: |
+          chaos_mesh_experiment_status{phase="Finished"} == 1
+        for: 0m
+        labels:
+          severity: info
+          category: chaos
+          experiment_type: "{{ $labels.kind }}"
+        annotations:
+          summary: "Chaos 实验已完成"
+          description: "Chaos 实验 '{{ $labels.name }}' 已成功完成。"
+
+      # Chaos 实验被暂停
+      - alert: ChaosExperimentPaused
+        expr: |
+          chaos_mesh_experiment_status{phase="Paused"} == 1
+        for: 0m
+        labels:
+          severity: info
+          category: chaos
+        annotations:
+          summary: "Chaos 实验已暂停"
+          description: "Chaos 实验 '{{ $labels.name }}' 已暂停，请确认是否需要恢复或停止。"

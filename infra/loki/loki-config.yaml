@@ -1,0 +1,138 @@
+# Loki 配置文件
+# Industrial AI Platform - 结构化日志存储
+
+# ============================================
+# 服务器配置
+# ============================================
+auth_enabled: false  # 单租户模式
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+# ============================================
+# Ingester 配置 (日志写入)
+# ============================================
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  chunk_idle_period: 5m       # 空闲 chunk 等待时间
+  chunk_block_size: 262144    # chunk 块大小 (256KB)
+  chunk_target_size: 1572864  # 目标 chunk 大小 (1.5MB)
+  chunk_retain_period: 30s    # chunk 保留时间
+  max_chunk_age: 1h           # 最大 chunk 年龄
+  max_transfer_retries: 0     # 最大传输重试次数
+
+# ============================================
+# 限制配置
+# ============================================
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h  # 7 天
+  
+  # 查询限制
+  max_entries_per_query: 10000
+  max_streams_per_user: 10000
+  max_global_streams_per_user: 50000
+  max_line_size: 256kb
+  max_line_size_truncate: true
+  
+  # 推送限制
+  max_streams_matchers_per_query: 1000
+  max_label_names_per_series: 30
+  max_label_value_length: 2048
+
+# ============================================
+# Schema 配置
+# ============================================
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+# ============================================
+# Storage 配置
+# ============================================
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    shared_store: filesystem
+    index_gateway_client:
+      server_address: ''
+  
+  filesystem:
+    directory: /loki/chunks
+
+# ============================================
+# Compactor 配置 (日志压缩)
+# ============================================
+compactor:
+  working_directory: /loki/compactor
+  shared_store: filesystem
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_reference_count: 0
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+
+# ============================================
+# Table Manager 配置
+# ============================================
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h  # 7 天保留期
+
+# ============================================
+# Ruler 配置 (日志告警)
+# ============================================
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules
+  rule_path: /loki/rules-temp
+  alertmanager_url: http://alertmanager:9093
+  ring:
+    kvstore:
+      store: inmemory
+  enable_api: true
+  enable_alertmanager_v2: true
+  external_url: http://grafana:3000
+
+# ============================================
+# Query Range 配置
+# ============================================
+query_range:
+  results_cache:
+    cache:
+      enable_fifocache: true
+      fifocache:
+        size: 1000
+        validity: 24h
+
+# ============================================
+# Frontend Worker 配置
+# ============================================
+frontend_worker:
+  match_io: false
+  parallelism: 10
+
+# ============================================
+# Memberlist 配置
+# ============================================
+memberlist:
+  bind_port: 7946
+  bind_addr: ['127.0.0.1']

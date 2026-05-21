@@ -1,0 +1,640 @@
+# Prometheus 多数据中心告警规则
+# 用于北京(主) - 上海(灾备) 双数据中心监控告警
+
+groups:
+  # ===========================================================================
+  # PostgreSQL 跨数据中心告警规则
+  # ===========================================================================
+  - name: postgresql_cross_dc_alerts
+    rules:
+      # PostgreSQL 复制延迟告警
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds{dc!="local"} > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: postgresql
+          category: replication
+        annotations:
+          summary: "PostgreSQL 跨数据中心复制延迟 (Warning)"
+          description: "数据中心 {{ $labels.dc }} PostgreSQL 复制延迟超过 5 秒。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "数据同步延迟增加，可能影响灾备切换 RPO"
+          action: "检查网络连接和主库负载，必要时暂停部分订阅"
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds{dc!="local"} > 30
+        for: 1m
+        labels:
+          severity: critical
+          service: postgresql
+          category: replication
+        annotations:
+          summary: "PostgreSQL 跨数据中心复制延迟严重 (Critical)"
+          description: "数据中心 {{ $labels.dc }} PostgreSQL 复制延迟超过 30 秒。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "灾备切换可能导致大量数据丢失，RPO 无法保证"
+          action: "立即检查复制状态，考虑暂停订阅或切换数据中心"
+
+      # PostgreSQL 复制断开告警
+      - alert: PostgreSQLReplicationDisconnected
+        expr: pg_replication_status{status="down"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          service: postgresql
+          category: replication
+        annotations:
+          summary: "PostgreSQL 复制连接断开"
+          description: "数据中心 {{ $labels.dc }} 到主数据中心的复制连接已断开"
+          impact: "灾备数据中心无法接收新数据，无法保证数据一致性"
+          action: "立即检查网络和数据库状态，必要时重新建立复制"
+
+      # PostgreSQL 订阅错误
+      - alert: PostgreSQLSubscriptionError
+        expr: pg_subscription_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: postgresql
+          category: replication
+        annotations:
+          summary: "PostgreSQL 逻辑订阅错误"
+          description: "订阅 {{ $labels.subscription }} 出现 {{ $value }} 个错误"
+          impact: "部分数据可能未同步到灾备数据中心"
+          action: "检查订阅状态和错误日志，必要时重建订阅"
+
+      # PostgreSQL Patroni 集群状态
+      - alert: PatroniClusterNotHealthy
+        expr: patroni_cluster_health{dc!="local"} < 1
+        for: 1m
+        labels:
+          severity: critical
+          service: postgresql
+          category: ha
+        annotations:
+          summary: "Patroni 集群不健康"
+          description: "数据中心 {{ $labels.dc }} Patroni 集群状态异常"
+          impact: "数据库高可用受损，可能导致服务中断"
+          action: "检查 Patroni 状态和节点健康，必要时手动干预"
+
+      # PostgreSQL Primary 变更
+      - alert: PostgreSQLPrimaryChanged
+        expr: changes(pg_primary_elected_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: postgresql
+          category: ha
+        annotations:
+          summary: "PostgreSQL Primary 发生切换"
+          description: "数据中心 {{ $labels.dc }} 发生 Primary 切换，请在 {{ $value }} 分钟内确认"
+          impact: "可能影响数据复制和应用连接"
+          action: "验证切换原因，检查应用连接状态"
+
+      # PostgreSQL 同步复制节点不足
+      - alert: PostgreSQLSynchronousReplicaMissing
+        expr: pg_replication_synchronous_standby_count < 2
+        for: 2m
+        labels:
+          severity: warning
+          service: postgresql
+          category: replication
+        annotations:
+          summary: "同步复制节点不足"
+          description: "数据中心 {{ $labels.dc }} 同步复制节点数量: {{ $value }}，少于配置的 2 个"
+          impact: "数据安全性降低，可能导致数据丢失"
+          action: "检查同步节点状态，必要时添加新的同步节点"
+
+  # ===========================================================================
+  # Redis 跨数据中心告警规则
+  # ===========================================================================
+  - name: redis_cross_dc_alerts
+    rules:
+      # Redis 主从延迟告警
+      - alert: RedisReplicationLagWarning
+        expr: redis_replication_lag_seconds{dc!="local"} > 3
+        for: 1m
+        labels:
+          severity: warning
+          service: redis
+          category: replication
+        annotations:
+          summary: "Redis 跨数据中心复制延迟 (Warning)"
+          description: "数据中心 {{ $labels.dc }} Redis 主从延迟超过 3 秒。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "缓存数据不一致，可能导致业务异常"
+          action: "检查 Redis 主库负载和网络延迟"
+
+      - alert: RedisReplicationLagCritical
+        expr: redis_replication_lag_seconds{dc!="local"} > 10
+        for: 30s
+        labels:
+          severity: critical
+          service: redis
+          category: replication
+        annotations:
+          summary: "Redis 跨数据中心复制延迟严重 (Critical)"
+          description: "数据中心 {{ $labels.dc }} Redis 主从延迟超过 10 秒。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "缓存数据严重不一致，可能导致灾备切换后数据丢失"
+          action: "立即检查 Redis 主库状态，考虑切换到灾备数据中心"
+
+      # Redis 同步断开告警
+      - alert: RedisSyncDisconnected
+        expr: redis_replication_status{status="down"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          service: redis
+          category: replication
+        annotations:
+          summary: "Redis 同步连接断开"
+          description: "数据中心 {{ $labels.dc }} Redis 同步连接已断开"
+          impact: "灾备数据中心无法接收新数据"
+          action: "立即检查 Redis 和网络状态"
+
+      # RedisShake 同步异常
+      - alert: RedisShakeSyncError
+        expr: redisshake_sync_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: redis
+          category: sync
+        annotations:
+          summary: "RedisShake 同步错误"
+          description: "RedisShake 出现 {{ $value }} 个同步错误"
+          impact: "部分 Redis 数据可能未同步"
+          action: "检查 RedisShake 日志，必要时重启同步进程"
+
+      - alert: RedisShakeNotRunning
+        expr: redisshake_running == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+          category: sync
+        annotations:
+          summary: "RedisShake 未运行"
+          description: "RedisShake 同步进程未运行"
+          impact: "Redis 数据无法同步到灾备数据中心"
+          action: "启动 RedisShake 同步进程"
+
+      # Redis Sentinel 状态
+      - alert: RedisSentinelDown
+        expr: redis_sentinel_running{dc!="local"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+          category: ha
+        annotations:
+          summary: "Redis Sentinel 不运行"
+          description: "数据中心 {{ $labels.dc }} Redis Sentinel 已停止运行"
+          impact: "Redis 高可用受损，无法自动故障切换"
+          action: "立即启动 Sentinel 服务"
+
+      - alert: RedisMasterNotFound
+        expr: redis_sentinel_master_status{status="not_found"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          service: redis
+          category: ha
+        annotations:
+          summary: "Redis Sentinel 找不到 Master"
+          description: "数据中心 {{ $labels.dc }} Sentinel 无法找到 Redis Master"
+          impact: "Redis 服务不可用"
+          action: "立即检查 Redis 集群状态，必要时手动指定 Master"
+
+      # Redis 键数量差异
+      - alert: RedisKeyCountMismatchWarning
+        expr: abs(redis_db_keys{dc="beijing"} - redis_db_keys{dc="shanghai"}) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+          category: consistency
+        annotations:
+          summary: "Redis 键数量差异较大"
+          description: "北京和上海数据中心 Redis 键数量差异: {{ $value }}"
+          impact: "数据可能未完全同步"
+          action: "检查同步状态，必要时执行数据校验"
+
+      - alert: RedisKeyCountMismatchCritical
+        expr: abs(redis_db_keys{dc="beijing"} - redis_db_keys{dc="shanghai"}) > 1000
+        for: 10m
+        labels:
+          severity: critical
+          service: redis
+          category: consistency
+        annotations:
+          summary: "Redis 键数量差异严重"
+          description: "北京和上海数据中心 Redis 键数量差异: {{ $value }}"
+          impact: "大量数据未同步，灾备切换可能丢失数据"
+          action: "立即执行全量数据同步"
+
+  # ===========================================================================
+  # 网络和连接告警规则
+  # ===========================================================================
+  - name: network_cross_dc_alerts
+    rules:
+      # 跨数据中心网络延迟
+      - alert: CrossDCNetworkLatencyWarning
+        expr: ping_latency_seconds{target=~"dc-sh-.+"} > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: network
+          category: latency
+        annotations:
+          summary: "跨数据中心网络延迟增加 (Warning)"
+          description: "到数据中心 {{ $labels.target }} 网络延迟超过 50ms。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "数据复制延迟增加，可能影响同步性能"
+          action: "检查网络连接状态，联系网络团队"
+
+      - alert: CrossDCNetworkLatencyCritical
+        expr: ping_latency_seconds{target=~"dc-sh-.+"} > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          service: network
+          category: latency
+        annotations:
+          summary: "跨数据中心网络延迟严重 (Critical)"
+          description: "到数据中心 {{ $labels.target }} 网络延迟超过 100ms。当前延迟: {{ $value | humanizeDuration }}"
+          impact: "严重影响数据复制性能，可能导致服务异常"
+          action: "立即检查网络状态，考虑切换到灾备数据中心"
+
+      # 网络连接断开
+      - alert: CrossDCNetworkDisconnected
+        expr: ping_reachable{target=~"dc-sh-.+"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: network
+          category: connectivity
+        annotations:
+          summary: "跨数据中心网络连接断开"
+          description: "无法连接到数据中心 {{ $labels.target }}"
+          impact: "灾备数据中心无法访问，无法进行灾备切换"
+          action: "立即检查网络连接，启用备用线路或 VPN"
+
+      # 带宽使用过高
+      - alert: CrossDCBandwidthUsageHigh
+        expr: network_bandwidth_usage{link="cross-dc"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: network
+          category: bandwidth
+        annotations:
+          summary: "跨数据中心带宽使用率高"
+          description: "跨数据中心链路带宽使用率: {{ $value }}%"
+          impact: "可能影响数据复制性能"
+          action: "检查流量来源，必要时限制非关键流量"
+
+      - alert: CrossDCBandwidthUsageCritical
+        expr: network_bandwidth_usage{link="cross-dc"} > 95
+        for: 1m
+        labels:
+          severity: critical
+          service: network
+          category: bandwidth
+        annotations:
+          summary: "跨数据中心带宽使用率严重"
+          description: "跨数据中心链路带宽使用率: {{ $value }}%"
+          impact: "数据复制可能中断"
+          action: "立即限制非关键流量，联系网络团队扩容"
+
+  # ===========================================================================
+  # 数据中心整体健康告警
+  # ===========================================================================
+  - name: datacenter_health_alerts
+    rules:
+      # 数据中心整体不可用
+      - alert: DataCenterUnavailable
+        expr: dc_health_score{dc="beijing"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+          category: datacenter
+        annotations:
+          summary: "主数据中心不可用"
+          description: "北京主数据中心整体不可用，健康检查失败"
+          impact: "服务可能中断，需要切换到灾备数据中心"
+          action: "立即启动灾备切换流程"
+
+      - alert: DisasterRecoverySiteUnavailable
+        expr: dc_health_score{dc="shanghai"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          category: datacenter
+        annotations:
+          summary: "灾备数据中心不可用"
+          description: "上海灾备数据中心整体不可用，健康检查失败"
+          impact: "灾备能力受损，无法进行灾备切换"
+          action: "立即检查灾备数据中心状态，修复故障"
+
+      # 数据中心组件部分不可用
+      - alert: DataCenterPartialFailure
+        expr: dc_health_score{dc="beijing"} < 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: datacenter
+        annotations:
+          summary: "主数据中心部分组件异常"
+          description: "北京主数据中心健康评分: {{ $value }}，低于 0.8"
+          impact: "服务稳定性降低"
+          action: "检查异常组件，尽快修复"
+
+      # 数据中心资源告警
+      - alert: DataCenterCPUUsageHigh
+        expr: dc_cpu_usage{dc=~"beijing|shanghai"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: resource
+        annotations:
+          summary: "数据中心 CPU 使用率高"
+          description: "数据中心 {{ $labels.dc }} CPU 使用率: {{ $value }}%"
+          impact: "可能影响服务性能"
+          action: "检查高 CPU 使用率的节点，优化负载"
+
+      - alert: DataCenterMemoryUsageHigh
+        expr: dc_memory_usage{dc=~"beijing|shanghai"} > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: resource
+        annotations:
+          summary: "数据中心内存使用率高"
+          description: "数据中心 {{ $labels.dc }} 内存使用率: {{ $value }}%"
+          impact: "可能导致服务不稳定"
+          action: "检查内存使用情况，清理缓存或扩容"
+
+      - alert: DataCenterDiskUsageHigh
+        expr: dc_disk_usage{dc=~"beijing|shanghai"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: resource
+        annotations:
+          summary: "数据中心磁盘使用率高"
+          description: "数据中心 {{ $labels.dc }} 磁盘使用率: {{ $value }}%"
+          impact: "可能导致数据写入失败"
+          action: "清理旧数据或扩容存储"
+
+      - alert: DataCenterDiskUsageCritical
+        expr: dc_disk_usage{dc=~"beijing|shanghai"} > 95
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+          category: resource
+        annotations:
+          summary: "数据中心磁盘使用率严重"
+          description: "数据中心 {{ $labels.dc }} 磌盘使用率: {{ $value }}%"
+          impact: "数据库写入可能失败，数据丢失风险"
+          action: "立即清理磁盘空间或扩容"
+
+  # ===========================================================================
+  # 应用和服务告警规则
+  # ===========================================================================
+  - name: application_cross_dc_alerts
+    rules:
+      # 应用健康检查失败
+      - alert: ApplicationHealthCheckFailed
+        expr: http_health_check_status{service="industrial-ai",dc=~"beijing|shanghai"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: application
+          category: health
+        annotations:
+          summary: "应用健康检查失败"
+          description: "数据中心 {{ $labels.dc }} 应用健康检查失败"
+          impact: "服务可能不可用"
+          action: "检查应用状态，必要时重启服务"
+
+      # API 响应时间告警
+      - alert: APIResponseTimeHigh
+        expr: http_request_duration_seconds{service="industrial-ai",quantile="0.95"} > 1
+        for: 2m
+        labels:
+          severity: warning
+          service: application
+          category: performance
+        annotations:
+          summary: "API 响应时间过长"
+          description: "数据中心 {{ $labels.dc }} API 95% 响应时间: {{ $value }} 秒"
+          impact: "用户体验下降"
+          action: "检查 API 性能瓶颈，优化查询或扩容"
+
+      - alert: APIResponseTimeCritical
+        expr: http_request_duration_seconds{service="industrial-ai",quantile="0.95"} > 3
+        for: 1m
+        labels:
+          severity: critical
+          service: application
+          category: performance
+        annotations:
+          summary: "API 响应时间严重过长"
+          description: "数据中心 {{ $labels.dc }} API 95% 响应时间: {{ $value }} 秒"
+          impact: "严重影响用户体验，可能导致请求超时"
+          action: "立即排查问题，考虑切换数据中心"
+
+      # API 错误率告警
+      - alert: APIErrorRateHigh
+        expr: rate(http_requests_total{service="industrial-ai",status=~"5.."}[5m]) / rate(http_requests_total{service="industrial-ai"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: application
+          category: error
+        annotations:
+          summary: "API 错误率高"
+          description: "数据中心 {{ $labels.dc }} API 5xx 错误率: {{ $value | humanizePercentage }}"
+          impact: "部分请求失败，影响业务"
+          action: "检查错误日志，定位问题"
+
+      - alert: APIErrorRateCritical
+        expr: rate(http_requests_total{service="industrial-ai",status=~"5.."}[5m]) / rate(http_requests_total{service="industrial-ai"}[5m]) > 0.2
+        for: 1m
+        labels:
+          severity: critical
+          service: application
+          category: error
+        annotations:
+          summary: "API 错误率严重"
+          description: "数据中心 {{ $labels.dc }} API 5xx 错误率: {{ $value | humanizePercentage }}"
+          impact: "大量请求失败，严重影响业务"
+          action: "立即排查问题，考虑切换数据中心"
+
+      # WebSocket 连接告警
+      - alert: WebSocketConnectionDrop
+        expr: delta(ws_connections_total{dc=~"beijing|shanghai"}[5m]) < -100
+        for: 1m
+        labels:
+          severity: warning
+          service: application
+          category: websocket
+        annotations:
+          summary: "WebSocket 连接大量断开"
+          description: "数据中心 {{ $labels.dc }} WebSocket 连接在 5 分钟内断开 {{ $value }} 个"
+          impact: "实时数据推送中断，影响用户体验"
+          action: "检查 WebSocket 服务状态"
+
+      # Kubernetes Pod 健康告警
+      - alert: KubernetesPodNotReady
+        expr: kube_pod_status_ready{condition="true",namespace="industrial-ai"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kubernetes
+          category: pod
+        annotations:
+          summary: "Kubernetes Pod 不健康"
+          description: "数据中心 {{ $labels.dc }} Pod {{ $labels.pod }} 不健康"
+          impact: "服务可能异常"
+          action: "检查 Pod 状态和日志，必要时重启"
+
+      - alert: KubernetesPodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total{namespace="industrial-ai"}[15m]) * 60 * 15 > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: kubernetes
+          category: pod
+        annotations:
+          summary: "Kubernetes Pod 反复重启"
+          description: "数据中心 {{ $labels.dc }} Pod {{ $labels.pod }} 在 15 分钟内重启 {{ $value }} 次"
+          impact: "服务不稳定"
+          action: "检查 Pod 日志，定位崩溃原因"
+
+  # ===========================================================================
+  # 灾备切换和状态告警
+  # ===========================================================================
+  - name: disaster_recovery_alerts
+    rules:
+      # 灾备状态变更告警
+      - alert: DisasterRecoveryModeActive
+        expr: dr_active_mode == 1
+        for: 0m
+        labels:
+          severity: warning
+          service: disaster-recovery
+          category: status
+        annotations:
+          summary: "灾备模式已激活"
+          description: "系统当前运行在灾备数据中心 (上海)"
+          impact: "服务运行在灾备数据中心，可能存在性能差异"
+          action: "监控灾备数据中心状态，计划回切"
+
+      # 灾备切换事件告警
+      - alert: DisasterRecoverySwitchTriggered
+        expr: changes(dr_switch_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: disaster-recovery
+          category: switch
+        annotations:
+          summary: "灾备切换已触发"
+          description: "检测到灾备切换事件，请在 {{ $value }} 分钟内确认切换结果"
+          impact: "服务正在切换数据中心"
+          action: "确认切换是否成功，检查服务状态"
+
+      # RTO 超限告警
+      - alert: RTOExceeded
+        expr: dr_switch_duration_seconds > 300
+        for: 0m
+        labels:
+          severity: critical
+          service: disaster-recovery
+          category: performance
+        annotations:
+          summary: "RTO 超限"
+          description: "灾备切换耗时 {{ $value }} 秒，超过目标 300 秒"
+          impact: "服务中断时间超过预期"
+          action: "优化切换流程，减少切换耗时"
+
+      # RPO 超限告警
+      - alert: RPOExceeded
+        expr: dr_data_loss_bytes > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: disaster-recovery
+          category: data
+        annotations:
+          summary: "RPO 超限，存在数据丢失"
+          description: "灾备切换时丢失数据 {{ $value | humanizeBytes }}"
+          impact: "数据不完整，需要人工干预"
+          action: "评估数据丢失影响，尝试恢复丢失数据"
+
+      # 灾备演练提醒
+      - alert: DisasterRecoveryDrillDue
+        expr: time() - last_drill_timestamp > 7776000  # 90 days
+        for: 24h
+        labels:
+          severity: warning
+          service: disaster-recovery
+          category: drill
+        annotations:
+          summary: "灾备演练超期"
+          description: "距离上次灾备演练已超过 90 天"
+          impact: "灾备流程可能失效"
+          action: "计划并执行灾备演练"
+
+  # ===========================================================================
+  # TimescaleDB 特定告警规则
+  # ===========================================================================
+  - name: timescaledb_cross_dc_alerts
+    rules:
+      # Hypertable 数据延迟告警
+      - alert: TimescaleDBHypertableSyncLag
+        expr: timescaledb_hypertable_sync_lag_bytes > 104857600  # 100MB
+        for: 5m
+        labels:
+          severity: warning
+          service: timescaledb
+          category: sync
+        annotations:
+          summary: "TimescaleDB Hypertable 同步延迟"
+          description: "Hypertable {{ $labels.hypertable }} 同步延迟: {{ $value | humanizeBytes }}"
+          impact: "时序数据可能不完整"
+          action: "检查逻辑复制状态"
+
+      # Chunk 压缩状态告警
+      - alert: TimescaleDBCompressionFailed
+        expr: timescaledb_compression_errors_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: timescaledb
+          category: compression
+        annotations:
+          summary: "TimescaleDB 块压缩失败"
+          description: "数据中心 {{ $labels.dc }} TimescaleDB 出现 {{ $value }} 次压缩错误"
+          impact: "存储空间可能不足"
+          action: "检查压缩策略和错误日志"
+
+      # 连续聚合同步告警
+      - alert: TimescaleDBContinuousAggregateSyncLag
+        expr: timescaledb_cagg_sync_lag_seconds > 3600
+        for: 10m
+        labels:
+          severity: warning
+          service: timescaledb
+          category: cagg
+        annotations:
+          summary: "TimescaleDB 连续聚合同步延迟"
+          description: "连续聚合 {{ $labels.cagg }} 同步延迟: {{ $value | humanizeDuration }}"
+          impact: "聚合数据可能不准确"
+          action: "检查聚合刷新策略"

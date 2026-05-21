@@ -1,0 +1,197 @@
+# Industrial AI Platform - Full Stack Docker Compose
+# Production-ready configuration with all services
+
+version: '3.8'
+
+services:
+  # ====================
+  # Frontend Service (Nginx + React)
+  # ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${API_URL:-http://localhost:8080}
+    container_name: industrial-ai-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+
+  # ====================
+  # Backend Service (Go + Gin)
+  # ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: industrial-ai-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-industrial_ai}?sslmode=disable
+      # Redis Cache
+      - REDIS_URL=redis://redis:6379/0
+      - CACHE_ENABLED=${CACHE_ENABLED:-true}
+      - CACHE_PREFIX=${CACHE_PREFIX:-iai:}
+      # Authentication
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRY=${JWT_EXPIRY:-24h}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin@123456}
+      # LLM Configuration
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-glm-5}
+      # CORS & Security
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      - ENV=${ENV:-production}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ====================
+  # PostgreSQL Database
+  # ====================
+  postgres:
+    image: postgres:16-alpine
+    container_name: industrial-ai-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-industrial_ai}
+      # Performance tuning
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-run migrations on startup
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-industrial_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+
+  # ====================
+  # Redis Cache
+  # ====================
+  redis:
+    image: redis:7-alpine
+    container_name: industrial-ai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - redis-server
+      - --appendonly yes
+      - --maxmemory 256mb
+      - --maxmemory-policy allkeys-lru
+      - --save 60 1000
+
+  # ====================
+  # Optional: Monitoring (Prometheus + Grafana)
+  # ====================
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: industrial-ai-prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus_data:/prometheus
+  #   networks:
+  #     - industrial-ai-network
+  #   restart: unless-stopped
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: industrial-ai-grafana
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   networks:
+  #     - industrial-ai-network
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - prometheus
+
+# ====================
+# Networks
+# ====================
+networks:
+  industrial-ai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ====================
+# Volumes
+# ====================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  # prometheus_data:
+  #   driver: local
+  # grafana_data:
+  #   driver: local

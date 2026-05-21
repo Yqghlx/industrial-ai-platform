@@ -1,0 +1,188 @@
+groups:
+  - name: health-checks
+    rules:
+      # === 应用健康告警 ===
+      
+      - alert: ApplicationNotReady
+        expr: up{job="backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: health
+        annotations:
+          summary: "Application not ready"
+          description: "Backend application {{ $labels.instance }} is not responding for 30 seconds"
+          runbook_url: "docs/runbook/health/ApplicationNotReady.md"
+      
+      - alert: ApplicationLivenessFailed
+        expr: increase(http_requests_total{path="/health/live",status!="200"}[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          category: health
+        annotations:
+          summary: "Application liveness probe failed"
+          description: "Backend liveness check failed {{ $value }} times in 5 minutes"
+          runbook_url: "docs/runbook/health/LivenessFailed.md"
+      
+      - alert: ApplicationReadinessFailed
+        expr: increase(http_requests_total{path="/health/ready",status!="200"}[5m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          category: health
+        annotations:
+          summary: "Application readiness probe failed"
+          description: "Backend readiness check failed {{ $value }} times in 5 minutes"
+          runbook_url: "docs/runbook/health/ReadinessFailed.md"
+      
+      # === 数据库健康告警 ===
+      
+      - alert: DatabaseHealthDegraded
+        expr: health_status{component="database"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          category: health
+        annotations:
+          summary: "Database health degraded"
+          description: "Database health check failed for 1 minute"
+          runbook_url: "docs/runbook/database/DatabaseHealthDegraded.md"
+      
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_usage_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "Connection pool usage is {{ $value }}%, approaching exhaustion"
+          runbook_url: "docs/runbook/database/ConnectionPoolExhausted.md"
+      
+      - alert: DatabaseHighLatency
+        expr: health_check_latency_ms{component="database"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database health check latency high"
+          description: "Database health check latency is {{ $value }}ms"
+          runbook_url: "docs/runbook/database/DatabaseHighLatency.md"
+      
+      # === Redis 健康告警 ===
+      
+      - alert: RedisHealthDegraded
+        expr: health_status{component="redis"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          category: health
+        annotations:
+          summary: "Redis health degraded"
+          description: "Redis health check failed for 1 minute"
+          runbook_url: "docs/runbook/cache/RedisHealthDegraded.md"
+      
+      - alert: RedisHighLatency
+        expr: health_check_latency_ms{component="redis"} > 50
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis health check latency high"
+          description: "Redis health check latency is {{ $value }}ms"
+          runbook_url: "docs/runbook/cache/RedisHighLatency.md"
+      
+      - alert: RedisMemoryExhausted
+        expr: redis_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis memory exhausted"
+          description: "Redis memory usage is {{ $value }}%, approaching limit"
+          runbook_url: "docs/runbook/cache/RedisMemoryExhausted.md"
+      
+      - alert: RedisCacheHitRateLow
+        expr: redis_hit_rate_percent < 80
+        for: 15m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis cache hit rate low"
+          description: "Cache hit rate is {{ $value }}%, below threshold 80%"
+          runbook_url: "docs/runbook/cache/CacheHitRateLow.md"
+      
+      # === 系统健康告警 ===
+      
+      - alert: HighGoroutineCount
+        expr: go_goroutines > 500
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High goroutine count"
+          description: "Goroutine count is {{ $value }}, potential goroutine leak"
+          runbook_url: "docs/runbook/system/HighGoroutineCount.md"
+      
+      - alert: HighMemoryUsage
+        expr: go_memstats_sys_bytes / 1024 / 1024 > 400
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High memory usage"
+          description: "Go runtime memory usage is {{ $value }}MB"
+          runbook_url: "docs/runbook/system/HighMemoryUsage.md"
+      
+      - alert: GCPressureHigh
+        expr: rate(go_gc_duration_seconds_count[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High GC pressure"
+          description: "GC rate is {{ $value }}/s, potential memory pressure"
+          runbook_url: "docs/runbook/system/GCPressureHigh.md"
+      
+      # === Pod 健康告警 ===
+      
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          category: kubernetes
+        annotations:
+          summary: "Pod crash looping"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting frequently"
+          runbook_url: "docs/runbook/kubernetes/PodCrashLooping.md"
+      
+      - alert: PodNotReady
+        expr: kube_pod_status_ready{condition="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is not ready for 5 minutes"
+          runbook_url: "docs/runbook/kubernetes/PodNotReady.md"
+      
+      - alert: PodPending
+        expr: kube_pod_status_phase{phase="Pending"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "Pod pending"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is pending for 10 minutes"
+          runbook_url: "docs/runbook/kubernetes/PodPending.md"

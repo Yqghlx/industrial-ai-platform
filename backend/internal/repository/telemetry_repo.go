@@ -1,0 +1,578 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/industrial-ai/platform/internal/model"
+)
+
+// TelemetryRepositoryInterface defines the interface for telemetry repository
+type TelemetryRepositoryInterface interface {
+	Insert(ctx context.Context, data *model.TelemetryData) error
+	GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error)
+	GetLatest(ctx context.Context) ([]model.TelemetryData, error)
+	GetStats(ctx context.Context, deviceID string, start, end time.Time) (*model.DeviceStats, error)
+}
+
+// TelemetryRepository handles telemetry data access
+type TelemetryRepository struct {
+	db *sql.DB
+}
+
+// NewTelemetryRepository creates a new telemetry repository
+func NewTelemetryRepository(db *sql.DB) *TelemetryRepository {
+	return &TelemetryRepository{db: db}
+}
+
+// Insert inserts telemetry data
+func (r *TelemetryRepository) Insert(ctx context.Context, data *model.TelemetryData) error {
+	query := `
+		INSERT INTO device_telemetry (device_id, time, temperature, pressure, vibration, humidity, power, status, message)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id
+	`
+	return r.db.QueryRowContext(ctx, query,
+		data.DeviceID, data.Timestamp, data.Temperature, data.Pressure,
+		data.Vibration, data.Humidity, data.Power, data.Status, data.Message,
+	).Scan(&data.ID)
+}
+
+// GetByDeviceID retrieves telemetry for a device within time range
+func (r *TelemetryRepository) GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error) {
+	query := `
+		SELECT id, device_id, time, temperature, pressure, vibration, humidity, power, status, message
+		FROM device_telemetry
+		WHERE device_id = $1 AND time >= $2 AND time <= $3
+		ORDER BY time DESC
+		LIMIT $4
+	`
+	rows, err := r.db.QueryContext(ctx, query, deviceID, start, end, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Initialize as empty slice, not nil
+	data := make([]model.TelemetryData, 0)
+	for rows.Next() {
+		var d model.TelemetryData
+		var temp, pressure, vibration, humidity, power sql.NullFloat64
+		var message sql.NullString
+		if err := rows.Scan(
+			&d.ID, &d.DeviceID, &d.Timestamp, &temp, &pressure,
+			&vibration, &humidity, &power, &d.Status, &message,
+		); err != nil {
+			return nil, err
+		}
+		d.Temperature = temp.Float64
+		d.Pressure = pressure.Float64
+		d.Vibration = vibration.Float64
+		d.Humidity = humidity.Float64
+		d.Power = power.Float64
+		d.Message = message.String
+		data = append(data, d)
+	}
+
+	return data, nil
+}
+
+// GetLatest retrieves latest telemetry for all devices
+func (r *TelemetryRepository) GetLatest(ctx context.Context) ([]model.TelemetryData, error) {
+	query := `
+		SELECT DISTINCT ON (device_id) id, device_id, time, temperature, pressure, vibration, humidity, power, status, message
+		FROM device_telemetry
+		ORDER BY device_id, time DESC
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Initialize as empty slice, not nil
+	data := make([]model.TelemetryData, 0)
+	for rows.Next() {
+		var d model.TelemetryData
+		var temp, pressure, vibration, humidity, power sql.NullFloat64
+		var message sql.NullString
+		if err := rows.Scan(
+			&d.ID, &d.DeviceID, &d.Timestamp, &temp, &pressure,
+			&vibration, &humidity, &power, &d.Status, &message,
+		); err != nil {
+			return nil, err
+		}
+		d.Temperature = temp.Float64
+		d.Pressure = pressure.Float64
+		d.Vibration = vibration.Float64
+		d.Humidity = humidity.Float64
+		d.Power = power.Float64
+		d.Message = message.String
+		data = append(data, d)
+	}
+
+	return data, nil
+}
+
+// GetStats retrieves aggregated statistics for a device
+func (r *TelemetryRepository) GetStats(ctx context.Context, deviceID string, start, end time.Time) (*model.DeviceStats, error) {
+	query := `
+		SELECT 
+			COALESCE(AVG(temperature), 0) as avg_temp,
+			COALESCE(AVG(pressure), 0) as avg_pressure,
+			COALESCE(AVG(vibration), 0) as avg_vibration,
+			COALESCE(MAX(temperature), 0) as max_temp,
+			COALESCE(MAX(pressure), 0) as max_pressure,
+			COALESCE(MAX(vibration), 0) as max_vibration,
+			COUNT(*) as count
+		FROM device_telemetry
+		WHERE device_id = $1 AND time >= $2 AND time <= $3
+	`
+	stats := &model.DeviceStats{DeviceID: deviceID}
+	err := r.db.QueryRowContext(ctx, query, deviceID, start, end).Scan(
+		&stats.AvgTemperature, &stats.AvgPressure, &stats.AvgVibration,
+		&stats.MaxTemperature, &stats.MaxPressure, &stats.MaxVibration,
+		&stats.DataPoints,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
+
+// WorkOrderRepositoryInterface defines the interface for work order repository
+type WorkOrderRepositoryInterface interface {
+	Create(ctx context.Context, wo *model.WorkOrder) error
+	GetByID(ctx context.Context, id int) (*model.WorkOrder, error)
+	List(ctx context.Context, status, deviceID string, page, pageSize int) ([]model.WorkOrder, int, error)
+	UpdateStatus(ctx context.Context, id int, status string) error
+}
+
+// WorkOrderRepository handles work order data access
+type WorkOrderRepository struct {
+	db *sql.DB
+}
+
+// NewWorkOrderRepository creates a new work order repository
+func NewWorkOrderRepository(db *sql.DB) *WorkOrderRepository {
+	return &WorkOrderRepository{db: db}
+}
+
+// Create creates a new work order
+func (r *WorkOrderRepository) Create(ctx context.Context, wo *model.WorkOrder) error {
+	query := `
+		INSERT INTO work_orders (title, description, device_id, priority, status, assigned_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`
+	return r.db.QueryRowContext(ctx, query,
+		wo.Title, wo.Description, wo.DeviceID, wo.Priority, wo.Status,
+		wo.AssignedTo, wo.CreatedAt, wo.UpdatedAt,
+	).Scan(&wo.ID)
+}
+
+// GetByID retrieves a work order by ID
+func (r *WorkOrderRepository) GetByID(ctx context.Context, id int) (*model.WorkOrder, error) {
+	query := `
+		SELECT id, title, description, device_id, priority, status, assigned_to, created_at, updated_at
+		FROM work_orders WHERE id = $1
+	`
+	wo := &model.WorkOrder{}
+	var assignedTo sql.NullInt64
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&wo.ID, &wo.Title, &wo.Description, &wo.DeviceID, &wo.Priority,
+		&wo.Status, &assignedTo, &wo.CreatedAt, &wo.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if assignedTo.Valid {
+		id := int(assignedTo.Int64)
+		wo.AssignedTo = &id
+	}
+	return wo, nil
+}
+
+// List retrieves work orders with filters
+func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string, page, pageSize int) ([]model.WorkOrder, int, error) {
+	// Build query with filters
+	whereClause := "WHERE 1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if status != "" {
+		whereClause += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+	if deviceID != "" {
+		whereClause += fmt.Sprintf(" AND device_id = $%d", argIdx)
+		args = append(args, deviceID)
+		argIdx++
+	}
+
+	// Count total
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM work_orders %s", whereClause)
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, title, description, device_id, priority, status, assigned_to, created_at, updated_at
+		FROM work_orders %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var orders []model.WorkOrder
+	for rows.Next() {
+		var wo model.WorkOrder
+		var assignedTo sql.NullInt64
+		if err := rows.Scan(
+			&wo.ID, &wo.Title, &wo.Description, &wo.DeviceID, &wo.Priority,
+			&wo.Status, &assignedTo, &wo.CreatedAt, &wo.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if assignedTo.Valid {
+			id := int(assignedTo.Int64)
+			wo.AssignedTo = &id
+		}
+		orders = append(orders, wo)
+	}
+
+	return orders, total, nil
+}
+
+// UpdateStatus updates work order status
+func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id int, status string) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE work_orders SET status = $1, updated_at = $2 WHERE id = $3",
+		status, time.Now(), id,
+	)
+	return err
+}
+
+// NotificationRepositoryInterface defines the interface for notification repository
+type NotificationRepositoryInterface interface {
+	Create(ctx context.Context, n *model.Notification) error
+	List(ctx context.Context, notifType string, unreadOnly bool, page, pageSize int) ([]model.Notification, int, error)
+	MarkRead(ctx context.Context, id int) error
+}
+
+// NotificationRepository handles notification data access
+type NotificationRepository struct {
+	db *sql.DB
+}
+
+// NewNotificationRepository creates a new notification repository
+func NewNotificationRepository(db *sql.DB) *NotificationRepository {
+	return &NotificationRepository{db: db}
+}
+
+// Create creates a new notification
+func (r *NotificationRepository) Create(ctx context.Context, n *model.Notification) error {
+	query := `
+		INSERT INTO notifications (type, title, message, device_id, read, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+	var deviceID interface{}
+	if n.DeviceID != nil {
+		deviceID = *n.DeviceID
+	}
+	return r.db.QueryRowContext(ctx, query,
+		n.Type, n.Title, n.Message, deviceID, n.Read, n.CreatedAt,
+	).Scan(&n.ID)
+}
+
+// List retrieves notifications with filters
+func (r *NotificationRepository) List(ctx context.Context, notifType string, unreadOnly bool, page, pageSize int) ([]model.Notification, int, error) {
+	whereClause := "WHERE 1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if notifType != "" {
+		whereClause += fmt.Sprintf(" AND type = $%d", argIdx)
+		args = append(args, notifType)
+		argIdx++
+	}
+	if unreadOnly {
+		whereClause += " AND read = false"
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM notifications %s", whereClause)
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, type, title, message, device_id, read, created_at
+		FROM notifications %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var notifications []model.Notification
+	for rows.Next() {
+		var n model.Notification
+		var deviceID sql.NullString
+		if err := rows.Scan(
+			&n.ID, &n.Type, &n.Title, &n.Message, &deviceID, &n.Read, &n.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if deviceID.Valid {
+			n.DeviceID = &deviceID.String
+		}
+		notifications = append(notifications, n)
+	}
+
+	return notifications, total, nil
+}
+
+// MarkRead marks a notification as read
+func (r *NotificationRepository) MarkRead(ctx context.Context, id int) error {
+	_, err := r.db.ExecContext(ctx, "UPDATE notifications SET read = true WHERE id = $1", id)
+	return err
+}
+
+// BlackBoxRepositoryInterface defines the interface for black box repository
+type BlackBoxRepositoryInterface interface {
+	Create(ctx context.Context, record *model.BlackBoxRecord) error
+	List(ctx context.Context, deviceID string, page, pageSize int) ([]model.BlackBoxRecord, int, error)
+}
+
+// BlackBoxRepository handles black box record data access
+type BlackBoxRepository struct {
+	db *sql.DB
+}
+
+// NewBlackBoxRepository creates a new black box repository
+func NewBlackBoxRepository(db *sql.DB) *BlackBoxRepository {
+	return &BlackBoxRepository{db: db}
+}
+
+// Create creates a new black box record
+func (r *BlackBoxRepository) Create(ctx context.Context, record *model.BlackBoxRecord) error {
+	query := `
+		INSERT INTO blackbox_records (device_id, trigger_type, start_time, end_time, summary, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+	return r.db.QueryRowContext(ctx, query,
+		record.DeviceID, record.TriggerType, record.StartTime, record.EndTime,
+		record.Summary, record.CreatedAt,
+	).Scan(&record.ID)
+}
+
+// List retrieves black box records
+func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pageSize int) ([]model.BlackBoxRecord, int, error) {
+	whereClause := ""
+	args := []interface{}{}
+	argIdx := 1
+
+	if deviceID != "" {
+		whereClause = fmt.Sprintf("WHERE device_id = $%d", argIdx)
+		args = append(args, deviceID)
+		argIdx++
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM blackbox_records %s", whereClause)
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, device_id, trigger_type, start_time, end_time, summary, created_at
+		FROM blackbox_records %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var records []model.BlackBoxRecord
+	for rows.Next() {
+		var r model.BlackBoxRecord
+		var summary sql.NullString
+		if err := rows.Scan(
+			&r.ID, &r.DeviceID, &r.TriggerType, &r.StartTime,
+			&r.EndTime, &summary, &r.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		r.Summary = summary.String
+		records = append(records, r)
+	}
+
+	return records, total, nil
+}
+
+// ReportRepositoryInterface defines the interface for report repository
+type ReportRepositoryInterface interface {
+	Create(ctx context.Context, report *model.Report) error
+	List(ctx context.Context, reportType string, page, pageSize int) ([]model.Report, int, error)
+}
+
+// ReportRepository handles report data access
+type ReportRepository struct {
+	db *sql.DB
+}
+
+// NewReportRepository creates a new report repository
+func NewReportRepository(db *sql.DB) *ReportRepository {
+	return &ReportRepository{db: db}
+}
+
+// Create creates a new report
+func (r *ReportRepository) Create(ctx context.Context, report *model.Report) error {
+	query := `
+		INSERT INTO reports (title, type, device_id, content, generated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`
+	var deviceID interface{}
+	if report.DeviceID != nil {
+		deviceID = *report.DeviceID
+	}
+	return r.db.QueryRowContext(ctx, query,
+		report.Title, report.Type, deviceID, report.Content, report.GeneratedAt,
+	).Scan(&report.ID)
+}
+
+// List retrieves reports
+func (r *ReportRepository) List(ctx context.Context, reportType string, page, pageSize int) ([]model.Report, int, error) {
+	whereClause := ""
+	args := []interface{}{}
+	argIdx := 1
+
+	if reportType != "" {
+		whereClause = fmt.Sprintf("WHERE type = $%d", argIdx)
+		args = append(args, reportType)
+		argIdx++
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM reports %s", whereClause)
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, title, type, device_id, content, generated_at
+		FROM reports %s ORDER BY generated_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var reports []model.Report
+	for rows.Next() {
+		var r model.Report
+		var deviceID sql.NullString
+		if err := rows.Scan(
+			&r.ID, &r.Title, &r.Type, &deviceID, &r.Content, &r.GeneratedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if deviceID.Valid {
+			r.DeviceID = &deviceID.String
+		}
+		reports = append(reports, r)
+	}
+
+	return reports, total, nil
+}
+
+// AgentTaskLogRepository handles AI agent task log data access
+type AgentTaskLogRepository struct {
+	db *sql.DB
+}
+
+// NewAgentTaskLogRepository creates a new agent task log repository
+func NewAgentTaskLogRepository(db *sql.DB) *AgentTaskLogRepository {
+	return &AgentTaskLogRepository{db: db}
+}
+
+// Create creates a new task log
+func (r *AgentTaskLogRepository) Create(ctx context.Context, log *model.AgentTaskLog) error {
+	query := `
+		INSERT INTO agent_task_logs (session_id, query, response, agent, executed_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`
+	return r.db.QueryRowContext(ctx, query,
+		log.SessionID, log.Query, log.Response, log.Agent, log.ExecutedAt,
+	).Scan(&log.ID)
+}
+
+// List retrieves task logs
+func (r *AgentTaskLogRepository) List(ctx context.Context, limit int) ([]model.AgentTaskLog, error) {
+	query := `
+		SELECT id, session_id, query, response, agent, executed_at
+		FROM agent_task_logs
+		ORDER BY executed_at DESC
+		LIMIT $1
+	`
+	rows, err := r.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Initialize as empty slice, not nil
+	logs := make([]model.AgentTaskLog, 0)
+	for rows.Next() {
+		var l model.AgentTaskLog
+		if err := rows.Scan(
+			&l.ID, &l.SessionID, &l.Query, &l.Response, &l.Agent, &l.ExecutedAt,
+		); err != nil {
+			return nil, err
+		}
+		logs = append(logs, l)
+	}
+
+	return logs, nil
+}
+
+// Helper to unmarshal JSON
+func unmarshalActions(actionsJSON string) []map[string]interface{} {
+	var actions []map[string]interface{}
+	if actionsJSON != "" {
+		json.Unmarshal([]byte(actionsJSON), &actions)
+	}
+	return actions
+}

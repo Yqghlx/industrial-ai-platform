@@ -1,0 +1,71 @@
+# Gitee to GitHub Auto-Sync
+# Triggered on schedule or manual dispatch
+
+name: Gitee Sync
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force full sync'
+        required: false
+        default: 'false'
+
+jobs:
+  sync:
+    name: Sync from Gitee
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "Gitee Sync Bot"
+          git config user.email "sync-bot@github.com"
+
+      - name: Add Gitee remote
+        run: |
+          git remote add gitee https://gitee.com/yangqinggang-it/industrial-ai-platform.git || true
+
+      - name: Fetch from Gitee
+        run: |
+          git fetch gitee main --depth=1 || git fetch gitee main
+
+      - name: Merge changes
+        run: |
+          # Check if there are new commits
+          GITEE_COMMIT=$(git rev-parse gitee/main)
+          GITHUB_COMMIT=$(git rev-parse origin/main)
+          
+          if [ "$GITEE_COMMIT" != "$GITHUB_COMMIT" ]; then
+            echo "New commits detected from Gitee"
+            echo "Gitee: $GITEE_COMMIT"
+            echo "GitHub: $GITHUB_COMMIT"
+            
+            # Merge with strategy
+            git merge gitee/main --allow-unrelated-histories -m "Sync from Gitee ($GITEE_COMMIT)"
+            
+            # Push to GitHub
+            git push origin main
+            echo "✅ Sync completed"
+          else
+            echo "No new commits to sync"
+          fi
+
+      - name: Sync status report
+        if: always()
+        run: |
+          echo "## Sync Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Gitee Commit:** $(git rev-parse gitee/main 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Commit:** $(git rev-parse origin/main)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY

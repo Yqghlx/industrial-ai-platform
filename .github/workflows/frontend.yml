@@ -1,0 +1,199 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+env:
+  NODE_VERSION: '20'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Check TypeScript
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Check for unused exports
+        working-directory: frontend
+        run: npx ts-prune || echo "ts-prune check completed with warnings"
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: frontend/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
+
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 30
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build production
+        working-directory: frontend
+        run: npm run build
+
+      - name: Analyze bundle size
+        working-directory: frontend
+        run: |
+          echo "=== Bundle Analysis ==="
+          echo "Total dist size:"
+          du -sh dist/
+          echo ""
+          echo "Assets breakdown:"
+          ls -lh dist/assets/ || true
+          echo ""
+          echo "JS files:"
+          find dist -name "*.js" -exec ls -lh {} \; | awk '{print $5, $9}'
+          echo ""
+          echo "CSS files:"
+          find dist -name "*.css" -exec ls -lh {} \; | awk '{print $5, $9}'
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+          retention-days: 7
+
+  bundle-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Check bundle size
+        run: |
+          # Alert if bundle is too large (> 5MB)
+          TOTAL_SIZE=$(du -sb frontend/dist | cut -f1)
+          if [ $TOTAL_SIZE -gt 5000000 ]; then
+            echo "Warning: Bundle size exceeds 5MB"
+            echo "Current size: $(echo $TOTAL_SIZE | numfmt --to=iec)"
+          else
+            echo "Bundle size OK: $(echo $TOTAL_SIZE | numfmt --to=iec)"
+          fi
+
+  # Summary job for branch protection rules
+  frontend-ci:
+    name: Frontend CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, bundle-check]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.test.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" ]]; then
+            echo "Frontend CI failed"
+            exit 1
+          fi
+          echo "Frontend CI passed"

@@ -1,0 +1,170 @@
+# Industrial AI Platform 备份配置
+# 用途: 配置自动备份策略
+
+# ============================================
+# 备份基本配置
+# ============================================
+
+backup:
+  # 备份目录
+  base_dir: /backup/industrial-ai
+  
+  # 保留天数
+  retention_days: 30
+  
+  # 备份时间 (每日)
+  schedule: "0 2 * * *"  # 每日凌晨 2 点
+  
+  # 备份类型
+  type: full  # full / incremental
+
+# ============================================
+# PostgreSQL 备份配置
+# ============================================
+
+postgresql:
+  # 数据库连接
+  host: postgres-primary
+  port: 5432
+  user: postgres
+  database: industrial_ai
+  
+  # 备份选项
+  format: plain  # plain / custom / tar
+  compression: gzip
+  
+  # 备份内容
+  include:
+    - schema
+    - data
+    - indexes
+    - triggers
+  
+  # 排除表 (可选)
+  exclude_tables:
+    - logs
+    - temp_data
+
+# ============================================
+# Redis 备份配置
+# ============================================
+
+redis:
+  # Redis 连接
+  host: redis
+  port: 6379
+  
+  # 备份选项
+  type: rdb  # rdb / aof
+  compression: gzip
+  
+  # RDB 备份配置
+  rdb:
+    save_interval: 60  # 秒
+    path: /var/lib/redis/dump.rdb
+
+# ============================================
+# 文件备份配置
+# ============================================
+
+files:
+  # 备份路径列表
+  paths:
+    - infra/postgresql/*.conf
+    - infra/redis/*.conf
+    - infra/k8s/*.yaml
+    - config.yaml
+    - .env
+  
+  # 排除路径
+  exclude:
+    - "*.log"
+    - "*.tmp"
+  
+  # 压缩选项
+  compression: tar.gz
+
+# ============================================
+# 远程存储配置
+# ============================================
+
+remote_storage:
+  # 是否启用远程存储
+  enabled: false
+  
+  # 存储类型
+  type: s3  # s3 / oss / nfs
+  
+  # S3 配置
+  s3:
+    bucket: s3://backup-bucket/industrial-ai
+    region: us-east-1
+    access_key: ${AWS_ACCESS_KEY_ID}
+    secret_key: ${AWS_SECRET_ACCESS_KEY}
+  
+  # OSS 配置 (阿里云)
+  oss:
+    bucket: oss://backup-bucket/industrial-ai
+    endpoint: oss-cn-shanghai.aliyuncs.com
+    access_key: ${OSS_ACCESS_KEY_ID}
+    secret_key: ${OSS_ACCESS_KEY_SECRET}
+  
+  # NFS 配置
+  nfs:
+    path: /mnt/backup/industrial-ai
+    server: backup-server.local
+
+# ============================================
+# 备份验证配置
+# ============================================
+
+verification:
+  # 是否验证备份完整性
+  enabled: true
+  
+  # 验证方法
+  methods:
+    - checksum  # 文件校验
+    - test_restore  # 测试恢复
+  
+  # 验证频率
+  schedule: "0 4 * * 0"  # 每周日凌晨 4 点
+
+# ============================================
+# 备份通知配置
+# ============================================
+
+notification:
+  # 是否启用通知
+  enabled: true
+  
+  # 通知类型
+  types:
+    - email
+    - webhook
+  
+  # Email 配置
+  email:
+    recipients:
+      - ops@example.com
+      - admin@example.com
+    subject: "Industrial AI Backup Report"
+  
+  # Webhook 配置
+  webhook:
+    url: https://hooks.slack.com/services/xxx
+    channel: "#ops-alerts"
+
+# ============================================
+# 备份日志配置
+# ============================================
+
+logging:
+  # 日志级别
+  level: info
+  
+  # 日志路径
+  path: /logs/backup.log
+  
+  # 日志保留
+  retention_days: 90

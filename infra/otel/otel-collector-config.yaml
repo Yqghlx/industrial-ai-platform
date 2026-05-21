@@ -1,0 +1,121 @@
+# OpenTelemetry Collector 配置
+# Industrial AI Platform - 分布式追踪数据收集
+
+# ============================================
+# 扩展配置
+# ============================================
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  
+  pprof:
+    endpoint: 0.0.0.0:1777
+  
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+# ============================================
+# 接收器配置
+# ============================================
+receivers:
+  # OTLP 接收器 (gRPC)
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 100
+      
+      # OTLP 接收器 (HTTP)
+      http:
+        endpoint: 0.0.0.0:4318
+        max_request_body_size: 100MiB
+
+# ============================================
+# 处理器配置
+# ============================================
+processors:
+  # 批处理
+  batch:
+    timeout: 5s
+    send_batch_size: 10000
+    send_batch_max_size: 10000
+  
+  # 内存限制
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+  
+  # 过滤器 (过滤健康检查)
+  filter:
+    traces:
+      span:
+        - 'attributes["http.route"] == "/health"'
+        - 'attributes["http.route"] == "/metrics"'
+        - 'attributes["http.route"] == "/ready"'
+  
+  # 属性处理器
+  attributes:
+    actions:
+      - key: environment
+        value: production
+        action: insert
+      - key: service.version
+        value: 1.0.0
+        action: insert
+
+# ============================================
+# 导出器配置
+# ============================================
+exporters:
+  # Jaeger 导出器
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+  
+  # Tempo 导出器 (OTLP)
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  
+  # Prometheus 导出器 (追踪指标)
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel_collector
+  
+  # 日志导出器 (调试)
+  logging:
+    loglevel: info
+    sampling_initial: 100
+    sampling_thereafter: 100
+
+# ============================================
+# 管道配置
+# ============================================
+service:
+  pipelines:
+    # 追踪管道
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter, batch]
+      exporters: [jaeger, otlp/tempo, prometheus]
+    
+    # 指标管道
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+  
+  extensions: [health_check, pprof, zpages]
+
+# ============================================
+# Telemetry 配置
+# ============================================
+telemetry:
+  logs:
+    level: info
+  metrics:
+    level: detailed
+    address: 0.0.0.0:8888

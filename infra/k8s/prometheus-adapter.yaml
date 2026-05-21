@@ -1,0 +1,180 @@
+# Prometheus Adapter 配置
+# 用途: 将 Prometheus 指标转换为 Kubernetes 自定义指标，支持 HPA
+
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+  labels:
+    app: prometheus-adapter
+spec:
+  service:
+    name: prometheus-adapter
+    namespace: monitoring
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+  labels:
+    app: prometheus-adapter
+spec:
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+  selector:
+    app: prometheus-adapter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-adapter
+  namespace: monitoring
+  labels:
+    app: prometheus-adapter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-adapter
+  template:
+    metadata:
+      labels:
+        app: prometheus-adapter
+    spec:
+      containers:
+        - name: prometheus-adapter
+          image: k8s.gcr.io/prometheus-adapter/prometheus-adapter:v0.10.0
+          args:
+            - /adapter
+            - --prometheus-url=http://prometheus:9090
+            - --metrics-relist-interval=30s
+            - --v=4
+            - --config=/etc/adapter/config.yaml
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: config
+              mountPath: /etc/adapter
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-adapter-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-adapter-config
+  namespace: monitoring
+  labels:
+    app: prometheus-adapter
+data:
+  config.yaml: |
+    # Prometheus Adapter 规则配置
+    rules:
+      # 自定义指标规则
+      custom:
+        # HTTP 请求数 (每秒)
+        - name: http_requests_per_second
+          seriesQuery: 'http_requests_total{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'sum(rate(http_requests_total{<<.LabelMatchers>>}[1m])) by (<<.GroupBy>>)'
+        
+        # HTTP 延迟 P95 (毫秒)
+        - name: http_latency_p95_ms
+          seriesQuery: 'http_request_duration_seconds_bucket{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{<<.LabelMatchers>>}[1m])) by (le, <<.GroupBy>>)) * 1000'
+        
+        # HTTP 延迟 P99 (毫秒)
+        - name: http_latency_p99_ms
+          seriesQuery: 'http_request_duration_seconds_bucket{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{<<.LabelMatchers>>}[1m])) by (le, <<.GroupBy>>)) * 1000'
+        
+        # 活跃连接数
+        - name: connections_active
+          seriesQuery: 'http_connections_active{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'sum(http_connections_active{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+        
+        # 设备在线数
+        - name: devices_online_count
+          seriesQuery: 'devices_online_total{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'sum(devices_online_total{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+        
+        # 告警活跃数
+        - name: alerts_active_count
+          seriesQuery: 'alerts_active_total{job="backend"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'sum(alerts_active_total{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+        
+        # AI 任务队列长度
+        - name: job_queue_length
+          seriesQuery: 'ai_job_queue_length{job="ai-worker"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+          metricsQuery: 'sum(ai_job_queue_length{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+        
+        # 缓存命中率
+        - name: cache_hit_rate_percent
+          seriesQuery: 'redis_hit_rate_percent{job="redis"}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+          metricsQuery: 'avg(redis_hit_rate_percent{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+      
+      # Resource 指标规则 (用于 VPA)
+      resource:
+        cpu:
+          seriesQuery: 'container_cpu_usage_seconds_total{container!="POD",pod!=""}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+              container: {resource: "container"}
+          metricsQuery: 'sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[1m])) by (<<.GroupBy>>)'
+        
+        memory:
+          seriesQuery: 'container_memory_working_set_bytes{container!="POD",pod!=""}'
+          resources:
+            overrides:
+              namespace: {resource: "namespace"}
+              pod: {resource: "pod"}
+              container: {resource: "container"}
+          metricsQuery: 'sum(container_memory_working_set_bytes{<<.LabelMatchers>>}) by (<<.GroupBy>>)'

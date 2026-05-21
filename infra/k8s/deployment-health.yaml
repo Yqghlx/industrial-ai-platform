@@ -1,0 +1,190 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: industrial-ai
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: industrial-ai
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: backend-sa
+      containers:
+        - name: backend
+          image: industrial-ai/backend:v1.0.0
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: metrics
+          
+          # === 健康检查探针配置 ===
+          
+          # Liveness Probe (存活探针)
+          # 用途: 检查应用进程是否存活
+          # 失败后果: 容器重启
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30   # 启动后 30 秒开始检查
+            periodSeconds: 10         # 每 10 秒检查一次
+            timeoutSeconds: 5         # 请求超时 5 秒
+            failureThreshold: 3       # 连续 3 次失败重启
+            successThreshold: 1       # 1 次成功即认为存活
+          
+          # Readiness Probe (就绪探针)
+          # 用途: 检查应用是否就绪接收流量
+          # 失败后果: 从 Service 移除，不接收流量
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10   # 启动后 10 秒开始检查
+            periodSeconds: 5          # 每 5 秒检查一次
+            timeoutSeconds: 3         # 请求超时 3 秒
+            failureThreshold: 3       # 连续 3 次失败移除
+            successThreshold: 1       # 1 次成功加入 Service
+          
+          # Startup Probe (启动探针)
+          # 用途: 保护慢启动应用，防止 livenessProbe 过早杀死
+          # 失败后果: 容器重启 (但等待更长时间)
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: http
+            initialDelaySeconds: 5    # 启动后 5 秒开始检查
+            periodSeconds: 10         # 每 10 秒检查一次
+            timeoutSeconds: 5         # 请求超时 5 秒
+            failureThreshold: 30      # 最多等待 300 秒 (30*10)
+            successThreshold: 1       # 1 次成功即认为启动完成
+          
+          # === 资源限制 ===
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          
+          # === 环境变量 ===
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: industrial-ai-secrets
+                  key: jwt-secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: industrial-ai-secrets
+                  key: database-url
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: industrial-ai-secrets
+                  key: redis-password
+          
+          # === 卷挂载 ===
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/ssl/industrial-ai
+              readOnly: true
+      
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: industrial-ai-tls-secret
+      
+      # === 优雅关闭配置 ===
+      terminationGracePeriodSeconds: 30  # 优雅关闭等待 30 秒
+      
+      # === Pod 反亲和性 (高可用) ===
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: industrial-ai
+                    component: backend
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+    - port: 9090
+      targetPort: metrics
+      name: metrics
+  selector:
+    app: industrial-ai
+    component: backend
+---
+# HorizontalPodAutoscaler (HPA) 配置
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: industrial-ai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 缩容稳定窗口 5 分钟
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15

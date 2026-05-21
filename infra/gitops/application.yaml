@@ -1,0 +1,204 @@
+# ArgoCD Application Configuration
+# Industrial AI Platform Main Application
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: industrial-ai-platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: industrial-ai-platform
+    app.kubernetes.io/component: main-application
+  annotations:
+    # Enable notifications
+    notifications.argoproj.io/subscribe.on-sync-status-change.slack: devops-team
+    # Auto-sync configuration
+    argocd-image-updater.argoproj.io/image-list: backend=gitee.com/yangqinggang-it/industrial-ai-backend:latest, frontend=gitee.com/yangqinggang-it/industrial-ai-frontend:latest
+    argocd-image-updater.argoproj.io/backend.update-strategy: semver
+    argocd-image-updater.argoproj.io/frontend.update-strategy: semver
+spec:
+  # Project reference
+  project: industrial-ai
+  
+  # Source configuration
+  source:
+    repoURL: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+    targetRevision: main
+    path: infra/k8s
+    
+    # Kustomize configuration
+    kustomize:
+      namePrefix: industrial-ai-
+      commonLabels:
+        app.kubernetes.io/part-of: industrial-ai-platform
+      commonAnnotations:
+        managed-by: argocd
+      
+      # Patches for different environments
+      patches:
+        - target:
+            kind: Deployment
+            name: backend
+          patch: |-
+            - op: replace
+              path: /spec/template/spec/containers/0/env/0/value
+              value: production
+        
+        - target:
+            kind: Deployment
+            name: frontend
+          patch: |-
+            - op: replace
+              path: /spec/template/spec/containers/0/env/0/value
+              value: production
+
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: industrial-ai
+
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - PrunePropagationPolicy=foreground
+      - Replace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Health checks
+  health:
+    ignoreDifferences:
+      - group: apps
+        kind: Deployment
+        jsonPointers:
+          - /spec/replicas
+    
+    # Custom health checks
+    rules:
+      - kind: Deployment
+        healthRule: |
+          status = obj.status
+          if status.observedGeneration != obj.metadata.generation then
+            return { status: "Progressing", message: "Waiting for rollout to complete" }
+          end
+          if status.unavailableReplicas > 0 then
+            return { status: "Degraded", message: "Deployment has unavailable replicas" }
+          end
+          if status.availableReplicas == status.replicas then
+            return { status: "Healthy", message: "Deployment is fully available" }
+          end
+          return { status: "Progressing", message: "Waiting for replicas to become available" }
+
+  # Revision history limit
+  revisionHistoryLimit: 10
+
+  # Info configuration
+  info:
+    - name: Description
+      value: Industrial AI Platform Production Deployment
+    - name: Owner
+      value: DevOps Team
+    - name: Contact
+      value: devops@industrial-ai.example.com
+
+---
+# Backend Application (sub-application)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: industrial-ai-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: industrial-ai-backend
+    app.kubernetes.io/component: backend
+spec:
+  project: industrial-ai
+  source:
+    repoURL: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+    targetRevision: main
+    path: infra/k8s
+    kustomize:
+      components:
+        - ../../components/backend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: industrial-ai
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# Frontend Application (sub-application)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: industrial-ai-frontend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: industrial-ai-frontend
+    app.kubernetes.io/component: frontend
+spec:
+  project: industrial-ai
+  source:
+    repoURL: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+    targetRevision: main
+    path: infra/k8s
+    kustomize:
+      components:
+        - ../../components/frontend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: industrial-ai
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# Infrastructure Application (secrets, configs)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: industrial-ai-infra
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: industrial-ai-infra
+    app.kubernetes.io/component: infrastructure
+spec:
+  project: industrial-ai
+  source:
+    repoURL: https://gitee.com/yangqinggang-it/industrial-ai-platform.git
+    targetRevision: main
+    path: infra/k8s
+    directory:
+      recurse: true
+      include: "*.yaml"
+      exclude: "deployment*.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: industrial-ai
+  syncPolicy:
+    # Infrastructure requires manual approval
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

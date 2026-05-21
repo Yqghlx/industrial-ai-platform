@@ -1,0 +1,200 @@
+groups:
+  - name: distributed-tracing
+    rules:
+      # === 追踪错误告警 ===
+      
+      - alert: HighTraceErrorRate
+        expr: 
+          sum(rate(traces_error_total{service="industrial-ai-backend"}[5m])) 
+          / sum(rate(traces_total{service="industrial-ai-backend"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "High trace error rate"
+          description: "Trace error rate is {{ $value | humanizePercentage }}. Check Jaeger for error traces."
+          runbook_url: "docs/runbook/tracing/HighTraceErrorRate.md"
+      
+      - alert: CriticalTraceErrorRate
+        expr: 
+          sum(rate(traces_error_total{service="industrial-ai-backend"}[5m])) 
+          / sum(rate(traces_total{service="industrial-ai-backend"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "Critical trace error rate"
+          description: "Trace error rate is {{ $value | humanizePercentage }}. Immediate investigation required."
+          runbook_url: "docs/runbook/tracing/CriticalTraceErrorRate.md"
+      
+      - alert: TraceErrorSpike
+        expr: rate(traces_error_total{service="industrial-ai-backend"}[1m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Trace error spike detected"
+          description: "{{ $value }} trace errors per second. Check for cascading failures."
+          runbook_url: "docs/runbook/tracing/TraceErrorSpike.md"
+      
+      # === 追踪延迟告警 ===
+      
+      - alert: SlowTraces
+        expr: 
+          histogram_quantile(0.95, 
+            sum(rate(trace_duration_seconds_bucket{service="industrial-ai-backend"}[5m])) by (le)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Slow traces detected"
+          description: "P95 trace duration is {{ $value }}s. Performance degraded."
+          runbook_url: "docs/runbook/tracing/SlowTraces.md"
+      
+      - alert: VerySlowTraces
+        expr: 
+          histogram_quantile(0.99, 
+            sum(rate(trace_duration_seconds_bucket{service="industrial-ai-backend"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "Very slow traces detected"
+          description: "P99 trace duration is {{ $value }}s. Critical performance issue."
+          runbook_url: "docs/runbook/tracing/VerySlowTraces.md"
+      
+      - alert: SlowSpan
+        expr: 
+          sum(rate(spans_duration_seconds_bucket{service="industrial-ai-backend",operation="DB"}[5m])) by (operation,le)
+          > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Slow database spans"
+          description: "Database span {{ $labels.operation }} P95 >100ms. DB performance issue."
+          runbook_url: "docs/runbook/tracing/SlowSpan.md"
+      
+      # === 追踪采样告警 ===
+      
+      - alert: LowTraceSampleRate
+        expr: 
+          sum(rate(traces_total{service="industrial-ai-backend"}[5m])) 
+          / sum(rate(http_requests_total{service="industrial-ai-backend"}[5m])) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Low trace sample rate"
+          description: "Trace sample rate {{ $value | humanizePercentage }} is below expected 10%. Adjust sampling config."
+          runbook_url: "docs/runbook/tracing/LowTraceSampleRate.md"
+      
+      - alert: NoTracesReceived
+        expr: sum(rate(traces_total{service="industrial-ai-backend"}[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "No traces received"
+          description: "No traces received in last 5 minutes. Tracing system may be broken."
+          runbook_url: "docs/runbook/tracing/NoTracesReceived.md"
+      
+      # === 追踪系统告警 ===
+      
+      - alert: JaegerDown
+        expr: absent(up{job="jaeger"}) or up{job="jaeger"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "Jaeger is down"
+          description: "Jaeger tracing UI is not available. Traces cannot be viewed."
+          runbook_url: "docs/runbook/tracing/JaegerDown.md"
+      
+      - alert: TempoDown
+        expr: absent(up{job="tempo"}) or up{job="tempo"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "Tempo is down"
+          description: "Tempo tracing backend is down. Traces cannot be stored."
+          runbook_url: "docs/runbook/tracing/TempoDown.md"
+      
+      - alert: OTELCollectorDown
+        expr: absent(up{job="otel-collector"}) or up{job="otel-collector"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: tracing
+        annotations:
+          summary: "OpenTelemetry Collector is down"
+          description: "OTEL Collector is down. Traces cannot be collected and exported."
+          runbook_url: "docs/runbook/tracing/OTELCollectorDown.md"
+      
+      - alert: OTELCollectorQueueFull
+        expr: otelcol_processor_queue_size > 10000
+        for: 5m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "OTEL Collector queue full"
+          description: "OTEL Collector queue size {{ $value }}. May drop traces."
+          runbook_url: "docs/runbook/tracing/OTELCollectorQueueFull.md"
+      
+      # === 追踪关联告警 ===
+      
+      - alert: TraceLogCorrelationMissing
+        expr: 
+          count_over_time({service="industrial-ai-backend"} !~ "trace_id" [5m]) 
+          / count_over_time({service="industrial-ai-backend"} [5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Trace-log correlation missing"
+          description: "{{ $value | humanizePercentage }} of logs missing trace_id. Correlation incomplete."
+          runbook_url: "docs/runbook/tracing/TraceLogCorrelationMissing.md"
+      
+      # === Span 数量告警 ===
+      
+      - alert: HighSpanCount
+        expr: rate(spans_total{service="industrial-ai-backend"}[1m]) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "High span count"
+          description: "{{ $value }} spans per second. May need to reduce span granularity."
+          runbook_url: "docs/runbook/tracing/HighSpanCount.md"
+      
+      - alert: SpanCountAnomaly
+        expr: 
+          abs(
+            (rate(spans_total{service="industrial-ai-backend"}[5m]) 
+            - rate(spans_total{service="industrial-ai-backend"}[5m] offset 1h))
+            / rate(spans_total{service="industrial-ai-backend"}[5m] offset 1h)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: tracing
+        annotations:
+          summary: "Span count anomaly"
+          description: "Span count changed {{ $value | humanizePercentage }} from 1 hour ago. Check for anomalies."
+          runbook_url: "docs/runbook/tracing/SpanCountAnomaly.md"

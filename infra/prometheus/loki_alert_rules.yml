@@ -1,0 +1,163 @@
+groups:
+  - name: loki-logs
+    rules:
+      # === 错误日志告警 ===
+      
+      - alert: HighErrorRate
+        expr: 
+          sum(rate({service="industrial-ai-backend", level="error"}[5m])) 
+          / sum(rate({service="industrial-ai-backend"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}. Check application logs for details."
+          runbook_url: "docs/runbook/logs/HighErrorRate.md"
+      
+      - alert: CriticalErrorRate
+        expr: 
+          sum(rate({service="industrial-ai-backend", level="error"}[5m])) 
+          / sum(rate({service="industrial-ai-backend"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          category: logs
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}. Immediate investigation required."
+          runbook_url: "docs/runbook/logs/CriticalErrorRate.md"
+      
+      - alert: ErrorLogSpike
+        expr: count_over_time({service="industrial-ai-backend", level="error"}[1m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          category: logs
+        annotations:
+          summary: "Error log spike detected"
+          description: "{{ $value }} error logs in last minute. Check for cascading failures."
+          runbook_url: "docs/runbook/logs/ErrorLogSpike.md"
+      
+      # === HTTP 请求告警 ===
+      
+      - alert: HighHTTPErrorRate
+        expr: 
+          sum(rate({service="industrial-ai-backend"} | json | http_status >= 500 [5m]))
+          / sum(rate({service="industrial-ai-backend"} | json [5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: http
+        annotations:
+          summary: "High HTTP error rate"
+          description: "HTTP 5xx error rate is {{ $value | humanizePercentage }}."
+          runbook_url: "docs/runbook/http/HighHTTPErrorRate.md"
+      
+      - alert: SlowHTTPRequests
+        expr: 
+          sum(rate({service="industrial-ai-backend"} | json | http_latency > 1000 [5m]))
+          / sum(rate({service="industrial-ai-backend"} | json [5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: http
+        annotations:
+          summary: "High slow HTTP request rate"
+          description: "{{ $value | humanizePercentage }} of requests took >1s. Performance degraded."
+          runbook_url: "docs/runbook/http/SlowHTTPRequests.md"
+      
+      - alert: HTTP5xxErrors
+        expr: count_over_time({service="industrial-ai-backend"} | json | http_status >= 500 [5m]) > 50
+        for: 5m
+        labels:
+          severity: critical
+          category: http
+        annotations:
+          summary: "HTTP 5xx errors detected"
+          description: "{{ $value }} HTTP 5xx errors in last 5 minutes. Service may be failing."
+          runbook_url: "docs/runbook/http/HTTP5xxErrors.md"
+      
+      # === 应用异常告警 ===
+      
+      - alert: ApplicationCrash
+        expr: count_over_time({service="industrial-ai-backend"} |= "panic" or "fatal" [10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Application crash detected"
+          description: "Application panic or fatal error detected. Check logs immediately."
+          runbook_url: "docs/runbook/application/ApplicationCrash.md"
+      
+      - alert: DatabaseConnectionError
+        expr: count_over_time({service="industrial-ai-backend"} |= "database connection failed" or "connection refused" [5m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Database connection errors"
+          description: "{{ $value }} database connection errors in last 5 minutes. DB may be down."
+          runbook_url: "docs/runbook/database/DatabaseConnectionError.md"
+      
+      - alert: RedisConnectionError
+        expr: count_over_time({service="industrial-ai-backend"} |= "redis connection failed" or "redis timeout" [5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: redis
+        annotations:
+          summary: "Redis connection errors"
+          description: "{{ $value }} Redis connection errors in last 5 minutes."
+          runbook_url: "docs/runbook/redis/RedisConnectionError.md"
+      
+      # === 安全告警 ===
+      
+      - alert: SecurityAlert
+        expr: count_over_time({service="industrial-ai-backend"} |= "authentication failed" or "unauthorized" or "forbidden" [5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} authentication failures in last 5 minutes. Possible attack."
+          runbook_url: "docs/runbook/security/AuthenticationFailures.md"
+      
+      - alert: TenantAccessViolation
+        expr: count_over_time({service="industrial-ai-backend"} |= "tenant violation" or "cross-tenant access" [1h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Tenant access violation detected"
+          description: "Cross-tenant access attempt detected. Immediate investigation required."
+          runbook_url: "docs/runbook/security/TenantViolation.md"
+      
+      # === Loki 系统告警 ===
+      
+      - alert: LokiDown
+        expr: absent({job="loki"} | line_format "{{ . }}" | count) or count_over_time({job="loki"}[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Loki is down"
+          description: "Loki logs are not being received. Log collection system may be down."
+          runbook_url: "docs/runbook/infrastructure/LokiDown.md"
+      
+      - alert: PromtailDown
+        expr: absent({job="promtail"} | line_format "{{ . }}" | count) or count_over_time({job="promtail"}[5m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Promtail is down"
+          description: "Promtail log collector is not sending logs. Logs may be missing."
+          runbook_url: "docs/runbook/infrastructure/PromtailDown.md"

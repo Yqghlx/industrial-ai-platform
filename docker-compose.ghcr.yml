@@ -1,0 +1,109 @@
+# Industrial AI Platform - GitHub Container Registry Deployment
+# Use pre-built images from GHCR
+
+version: '3.8'
+
+services:
+  # ====================
+  # Frontend (GHCR Image)
+  # ====================
+  frontend:
+    image: ghcr.io/${GITHUB_USER:-your-username}/industrial-ai-platform/frontend:${IMAGE_TAG:-main}
+    container_name: industrial-ai-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ====================
+  # Backend (GHCR Image)
+  # ====================
+  backend:
+    image: ghcr.io/${GITHUB_USER:-your-username}/industrial-ai-platform/backend:${IMAGE_TAG:-main}
+    container_name: industrial-ai-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-industrial_ai}?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin@123456}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-glm-5}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - ENV=${ENV:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ====================
+  # PostgreSQL
+  # ====================
+  postgres:
+    image: postgres:16-alpine
+    container_name: industrial-ai-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-industrial_ai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # Redis
+  # ====================
+  redis:
+    image: redis:7-alpine
+    container_name: industrial-ai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 256mb
+
+networks:
+  industrial-ai-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

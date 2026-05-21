@@ -1,0 +1,182 @@
+groups:
+  - name: waf-security
+    rules:
+      # === WAF 阻止统计告警 ===
+      
+      - alert: HighWAFBlockRate
+        expr: 
+          sum(rate(waf_blocked_requests_total[5m])) 
+          / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "High WAF block rate"
+          description: "WAF block rate is {{ $value | humanizePercentage }}. Many malicious requests detected."
+          runbook_url: "docs/runbook/waf/HighBlockRate.md"
+      
+      - alert: WAFBlockSpike
+        expr: rate(waf_blocked_requests_total[1m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "WAF block spike detected"
+          description: "{{ $value }} requests blocked per second. Possible attack in progress."
+          runbook_url: "docs/runbook/waf/BlockSpike.md"
+      
+      - alert: CriticalWAFBlockRate
+        expr: 
+          sum(rate(waf_blocked_requests_total[5m])) 
+          / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: waf
+        annotations:
+          summary: "Critical WAF block rate"
+          description: "WAF block rate is {{ $value | humanizePercentage }}. Immediate investigation required."
+          runbook_url: "docs/runbook/waf/CriticalBlockRate.md"
+      
+      # === SQL 注入告警 ===
+      
+      - alert: SQLInjectionAttackDetected
+        expr: rate(waf_sql_injection_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "SQL injection attacks detected"
+          description: "{{ $value }} SQL injection attempts per second. Check for database attack."
+          runbook_url: "docs/runbook/waf/SQLInjection.md"
+      
+      - alert: MassiveSQLInjectionAttack
+        expr: rate(waf_sql_injection_total[1m]) > 50
+        for: 1m
+        labels:
+          severity: critical
+          category: waf
+        annotations:
+          summary: "Massive SQL injection attack"
+          description: "{{ $value }} SQL injection attempts per second. Active attack in progress."
+          runbook_url: "docs/runbook/waf/MassiveSQLInjection.md"
+      
+      # === XSS 告警 ===
+      
+      - alert: XSSAttackDetected
+        expr: rate(waf_xss_attacks_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "XSS attacks detected"
+          description: "{{ $value }} XSS attempts per second. Check for cross-site scripting attack."
+          runbook_url: "docs/runbook/waf/XSSAttack.md"
+      
+      - alert: MassiveXSSAttack
+        expr: rate(waf_xss_attacks_total[1m]) > 50
+        for: 1m
+        labels:
+          severity: critical
+          category: waf
+        annotations:
+          summary: "Massive XSS attack"
+          description: "{{ $value }} XSS attempts per second. Active attack in progress."
+          runbook_url: "docs/runbook/waf/MassiveXSS.md"
+      
+      # === 路径遍历告警 ===
+      
+      - alert: PathTraversalDetected
+        expr: rate(waf_path_traversal_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "Path traversal attacks detected"
+          description: "{{ $value }} path traversal attempts per second. Check for directory access attempt."
+          runbook_url: "docs/runbook/waf/PathTraversal.md"
+      
+      # === 命令注入告警 ===
+      
+      - alert: CommandInjectionDetected
+        expr: rate(waf_command_injection_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          category: waf
+        annotations:
+          summary: "Command injection attacks detected"
+          description: "{{ $value }} command injection attempts per second. Critical security issue."
+          runbook_url: "docs/runbook/waf/CommandInjection.md"
+      
+      # === SSRF 告警 ===
+      
+      - alert: SSRFAttackDetected
+        expr: rate(waf_ssrf_attacks_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "SSRF attacks detected"
+          description: "{{ $value }} SSRF attempts per second. Check for server-side request forgery."
+          runbook_url: "docs/runbook/waf/SSRFAttack.md"
+      
+      # === 恶意文件上传告警 ===
+      
+      - alert: DangerousFileUploadDetected
+        expr: rate(waf_dangerous_uploads_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "Dangerous file uploads detected"
+          description: "{{ $value }} dangerous file uploads per second. Check for malware upload."
+          runbook_url: "docs/runbook/waf/DangerousUpload.md"
+      
+      # === 禁止 User-Agent 告警 ===
+      
+      - alert: BlockedUserAgentsDetected
+        expr: rate(waf_blocked_agents_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "Blocked User-Agent requests detected"
+          description: "{{ $value }} blocked User-Agent requests per second. Check for bot/scanner activity."
+          runbook_url: "docs/runbook/waf/BlockedAgent.md"
+      
+      # === IP 攻击来源告警 ===
+      
+      - alert: SingleIPHighAttackRate
+        expr: 
+          sum by (source_ip) (rate(waf_blocked_requests_total[5m])) 
+          > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: waf
+        annotations:
+          summary: "Single IP high attack rate"
+          description: "IP {{ $labels.source_ip }} has {{ $value }} blocked requests per second. May need to block."
+          runbook_url: "docs/runbook/waf/SingleIPAttack.md"
+      
+      - alert: SingleIPCriticalAttackRate
+        expr: 
+          sum by (source_ip) (rate(waf_blocked_requests_total[1m])) 
+          > 50
+        for: 1m
+        labels:
+          severity: critical
+          category: waf
+        annotations:
+          summary: "Single IP critical attack rate"
+          description: "IP {{ $labels.source_ip }} has {{ $value }} blocked requests per second. Block immediately."
+          runbook_url: "docs/runbook/waf/CriticalIPAttack.md"

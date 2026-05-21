@@ -1,0 +1,90 @@
+scope: industrial-ai-cluster
+namespace: /db/
+name: postgres-primary
+
+# ============================================
+# REST API 配置
+# ============================================
+restapi:
+  listen: 0.0.0.0:8008
+  connect: postgres-primary:8008
+
+# ============================================
+# PostgreSQL 配置
+# ============================================
+postgresql:
+  listen: 0.0.0.0:5432
+  connect: postgres-primary:5432
+  data_dir: /var/lib/postgresql/data
+  
+  # 认证配置
+  authentication:
+    superuser:
+      username: postgres
+      password: <POSTGRES_PASSWORD>
+    replication:
+      username: replicator
+      password: <REPLICATION_PASSWORD>
+  
+  # PostgreSQL 参数
+  parameters:
+    wal_level: replica
+    max_wal_senders: 10
+    wal_keep_size: 1GB
+    max_replication_slots: 10
+    hot_standby: on
+    synchronous_commit: on
+    max_connections: 200
+    shared_buffers: 1GB
+    work_mem: 64MB
+  
+  # 复制方法
+  create_replica_methods:
+    - pg_basebackup
+  
+  pg_basebackup:
+    command: pg_basebackup -h postgres-primary -U replicator -D /var/lib/postgresql/data -P -R
+    keep_data: true
+
+# ============================================
+# Bootstrap 配置
+# ============================================
+bootstrap:
+  # DCS 配置
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576  # 1MB 最大延迟
+    
+    postgresql:
+      use_pg_rewind: true
+      
+      parameters:
+        wal_level: replica
+        max_wal_senders: 10
+        wal_keep_size: 1GB
+        max_replication_slots: 10
+        hot_standby: on
+        synchronous_commit: on
+        max_connections: 200
+        shared_buffers: 1GB
+  
+  # 初始化方法
+  initdb:
+    - encoding: UTF8
+    - locale: en_US.UTF-8
+    - data-checksums
+
+# ============================================
+# DCS 配置 (Etcd)
+# ============================================
+etcd:
+  hosts: etcd:2379
+  
+# ============================================
+# 健康检查配置
+# ============================================
+tags:
+  failover_priority: 1
+  synchronous: true

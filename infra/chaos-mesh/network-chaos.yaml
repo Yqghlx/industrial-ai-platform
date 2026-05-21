@@ -1,0 +1,425 @@
+# 网络故障注入实验 - Industrial AI Platform
+# 用途: 模拟网络故障，验证超时处理和降级机制
+
+---
+# ================================
+# 实验 1: 网络延迟 - 单向延迟
+# ================================
+# 验证: 应用对网络延迟的容忍度和超时处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-delay
+    chaos-mesh.org/target: backend
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "100ms"     # 延迟 100ms
+    jitter: "10ms"       # 抖动 10ms
+    correlation: "50"    # 相关性 50%
+  direction: to          # 单向: 从 backend 发出的流量
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+
+---
+# ================================
+# 实验 2: 网络延迟 - 双向延迟
+# ================================
+# 验证: 双向延迟下的服务通信
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-both-directions
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-delay-bidirectional
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "200ms"
+    jitter: "20ms"
+    correlation: "75"
+  direction: both  # 双向延迟
+  duration: "3m"
+
+---
+# ================================
+# 实验 3: 网络丢包
+# ================================
+# 验证: 丢包情况下的重试机制和可靠性
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-loss-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-loss
+    chaos-mesh.org/target: backend
+spec:
+  action: loss
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  loss:
+    loss: "20"           # 20% 丢包率
+    correlation: "50"    # 相关性 50%
+  direction: to
+  duration: "2m"
+  scheduler:
+    cron: "@every 15m"
+
+---
+# ================================
+# 实验 4: 网络丢包 - 高丢包率
+# ================================
+# 验证: 极端网络条件下的降级
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-loss-severe
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-loss-severe
+spec:
+  action: loss
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  loss:
+    loss: "50"           # 50% 丢包率
+    correlation: "25"
+  direction: both
+  duration: "60s"        # 极端条件持续时间较短
+
+---
+# ================================
+# 实验 5: 网络延迟 + 丢包组合
+# ================================
+# 验证: 复杂网络故障场景
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-and-loss
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-combined
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "150ms"
+    jitter: "30ms"
+    correlation: "60"
+  loss:
+    loss: "10"
+    correlation: "40"
+  direction: both
+  duration: "3m"
+
+---
+# ================================
+# 实验 6: 网络分区 - 服务隔离
+# ================================
+# 验证: 服务隔离时的降级处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-partition-backend-db
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-partition
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  direction: both
+  target:
+    selector:
+      namespaces:
+        - industrial-ai
+      labelSelectors:
+        app: postgres  # 假设数据库有此标签
+    mode: all
+  duration: "60s"
+  # 注意: 此实验会完全切断 backend 和数据库的连接
+  # 用于测试数据库故障时的降级机制
+
+---
+# ================================
+# 实验 7: 网络分区 - 微服务隔离
+# ================================
+# 验证: 微服务间通信中断时的容错
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-partition-services
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-partition-services
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  direction: both
+  target:
+    selector:
+      namespaces:
+        - industrial-ai
+      labelSelectors:
+        app: ai-worker  # AI Worker 服务
+    mode: all
+  duration: "90s"
+
+---
+# ================================
+# 实验 8: 网络带宽限制
+# ================================
+# 验证: 低带宽情况下的服务性能
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-bandwidth-limit
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-bandwidth
+spec:
+  action: bandwidth
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  bandwidth:
+    rate: "1mbps"        # 限制带宽为 1Mbps
+    limit: 1000          # 队列长度
+    buffer: 2000         # 缓冲区大小
+  direction: both
+  duration: "5m"
+
+---
+# ================================
+# 实验 9: 网络重复包
+# ================================
+# 验证: 重复包情况下的幂等性处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-duplicate
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-duplicate
+spec:
+  action: duplicate
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duplicate:
+    duplicate: "10"      # 10% 的包会重复
+    correlation: "25"
+  direction: both
+  duration: "2m"
+
+---
+# ================================
+# 实验 10: 网络乱序
+# ================================
+# 验证: 包乱序情况下的 TCP 重组和应用处理
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-reorder
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-reorder
+spec:
+  action: reorder
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  reorder:
+    reorder: "25"       # 25% 的包会乱序
+    correlation: "50"
+    gap: 2              # 间隔
+  direction: both
+  duration: "2m"
+
+---
+# ================================
+# 实验 11: 特定端口网络故障
+# ================================
+# 验证: 特定服务端口的网络问题
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-database-port
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: network-port-specific
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  delay:
+    latency: "500ms"    # 数据库查询延迟模拟
+    jitter: "100ms"
+  direction: both
+  externalTargets:
+    - "postgres-service.industrial-ai.svc.cluster.local"  # 数据库服务
+  duration: "3m"
+
+---
+# ================================
+# 实验 12: 网络故障工作流
+# ================================
+# 按顺序执行多种网络故障实验
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: network-chaos-workflow
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Serial
+      deadline: 30m
+      children:
+        - network-delay-phase
+        - wait-recovery
+        - network-loss-phase
+        - wait-recovery
+        - network-partition-phase
+        - final-check
+    
+    - name: network-delay-phase
+      templateType: NetworkChaos
+      deadline: 5m
+      networkChaos:
+        action: delay
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        delay:
+          latency: "200ms"
+          jitter: "30ms"
+        direction: both
+        duration: "3m"
+    
+    - name: network-loss-phase
+      templateType: NetworkChaos
+      deadline: 3m
+      networkChaos:
+        action: loss
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        loss:
+          loss: "15"
+        direction: both
+        duration: "2m"
+    
+    - name: network-partition-phase
+      templateType: NetworkChaos
+      deadline: 2m
+      networkChaos:
+        action: partition
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        direction: both
+        target:
+          selector:
+            namespaces:
+              - industrial-ai
+            labelSelectors:
+              app: redis
+          mode: all
+        duration: "60s"
+    
+    - name: wait-recovery
+      templateType: Suspend
+      deadline: 2m
+    
+    - name: final-check
+      templateType: Suspend
+      deadline: 1m

@@ -1,0 +1,233 @@
+# Pod 故障注入实验 - Industrial AI Platform
+# 用途: 模拟 Pod 故障，验证自动恢复和 HPA 弹性
+
+---
+# ================================
+# 实验 1: Pod Kill - 随机杀死 Pod
+# ================================
+# 验证: Pod 自动重建和 HPA 响应
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: pod-kill
+    chaos-mesh.org/target: backend
+spec:
+  action: pod-kill
+  mode: one  # 每次杀死一个 Pod
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+    # 排除特定 Pod (如正在执行迁移的 Pod)
+    expressionSelectors:
+      - key: "app.kubernetes.io/component"
+        operator: NotIn
+        values: ["migration"]
+  duration: "60s"
+  scheduler:
+    cron: "@every 5m"  # 每 5 分钟执行一次
+
+---
+# ================================
+# 实验 2: Pod Failure - Pod 故障
+# ================================
+# 验证: Pod 故障检测和恢复
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-failure-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: pod-failure
+    chaos-mesh.org/target: backend
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duration: "120s"  # 故障持续 2 分钟
+  # 注意: pod-failure 会导致 Pod 内所有容器失败
+  # 用于测试应用在容器重启后的恢复能力
+
+---
+# ================================
+# 实验 3: Container Kill - 容器杀死
+# ================================
+# 验证: 容器级别的恢复能力
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: container-kill-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: container-kill
+    chaos-mesh.org/target: backend
+spec:
+  action: container-kill
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  containerNames:
+    - backend  # 只杀死 backend 容器
+  duration: "30s"
+  scheduler:
+    cron: "@every 10m"
+
+---
+# ================================
+# 实验 4: Frontend Pod Kill
+# ================================
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-frontend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: pod-kill
+    chaos-mesh.org/target: frontend
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: frontend
+  duration: "60s"
+  scheduler:
+    cron: "@every 10m"
+
+---
+# ================================
+# 实验 5: 多 Pod 杀死 (压力测试)
+# ================================
+# 验证: 多副本故障下的服务可用性
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-multiple-backend
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: pod-kill-stress
+    chaos-mesh.org/target: backend
+spec:
+  action: pod-kill
+  mode: fixed-percent
+  value: "50"  # 杀死 50% 的 Pod
+  selector:
+    namespaces:
+      - industrial-ai
+    labelSelectors:
+      app: backend
+  duration: "30s"
+  # 注意: 此实验较为激进，请在测试环境使用
+  # 生产环境请确保有足够的副本数和 PDB
+
+---
+# ================================
+# 实验 6: 定时 Pod 杀死 (混沌工程)
+# ================================
+# 验证: 定期故障注入下的服务稳定性
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: scheduled-pod-kill
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+    chaos-mesh.org/experiment-type: scheduled
+spec:
+  schedule: "0 */2 * * *"  # 每 2 小时执行一次
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: PodChaos
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces:
+        - industrial-ai
+      labelSelectors:
+        app: backend
+    duration: "60s"
+
+---
+# ================================
+# 实验 7: 工作流实验 (组合测试)
+# ================================
+# 按顺序执行多个 Pod 故障实验
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: pod-chaos-workflow
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Serial
+      deadline: 30m
+      children:
+        - kill-one-pod
+        - wait-recovery
+        - kill-multiple-pods
+        - final-check
+    
+    - name: kill-one-pod
+      templateType: PodChaos
+      deadline: 2m
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        duration: "60s"
+    
+    - name: wait-recovery
+      templateType: Suspend
+      deadline: 2m
+    
+    - name: kill-multiple-pods
+      templateType: PodChaos
+      deadline: 2m
+      podChaos:
+        action: pod-kill
+        mode: fixed-percent
+        value: "30"
+        selector:
+          namespaces:
+            - industrial-ai
+          labelSelectors:
+            app: backend
+        duration: "30s"
+    
+    - name: final-check
+      templateType: Suspend
+      deadline: 1m

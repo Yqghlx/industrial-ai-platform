@@ -1,0 +1,167 @@
+# Chaos Mesh 配置 - Industrial AI Platform
+# 文档: https://chaos-mesh.org/docs/
+
+---
+# Chaos Mesh Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chaos-mesh
+  labels:
+    app.kubernetes.io/name: chaos-mesh
+    app.kubernetes.io/component: chaos-engineering
+
+---
+# Chaos Mesh Helm Values (参考配置)
+# 安装命令: helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh -f values.yaml
+#
+# values.yaml 内容:
+# chaosDaemon:
+#   runtime: containerd
+#   socketPath: /run/containerd/containerd.sock
+# 
+# dashboard:
+#   create: true
+#   securityMode: false  # 生产环境建议启用
+# 
+# prometheus:
+#   create: true
+#   serviceMonitor: true
+#
+# webhook:
+#   certManager:
+#     enabled: false
+#   timeoutSeconds: 10
+
+---
+# Chaos Mesh RBAC 配置
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chaos-mesh-cluster-role
+  labels:
+    app.kubernetes.io/name: chaos-mesh
+    app.kubernetes.io/component: rbac
+rules:
+  # Pod 故障注入
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/status
+    verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+  
+  # 网络故障注入
+  - apiGroups: [""]
+    resources:
+      - services
+      - endpoints
+      - networkpolicies
+    verbs: ["get", "list", "watch"]
+  
+  # Stress 故障注入
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/status
+    verbs: ["get", "list", "watch"]
+  
+  # Chaos Mesh CRDs
+  - apiGroups: ["chaos-mesh.org"]
+    resources:
+      - podchaos
+      - networkchaos
+      - iochaos
+      - stresschaos
+      - timechaos
+      - kernelchaos
+      - dnschaos
+      - jvmchaos
+      - httpchaos
+      - blockchaos
+      - physicalmachinechaos
+      - schedule
+      - workflow
+    verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+
+---
+# Chaos Mesh ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-mesh-sa
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: chaos-mesh
+    app.kubernetes.io/component: service-account
+
+---
+# Chaos Mesh ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chaos-mesh-cluster-role-binding
+  labels:
+    app.kubernetes.io/name: chaos-mesh
+    app.kubernetes.io/component: rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chaos-mesh-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: chaos-mesh-sa
+    namespace: industrial-ai
+
+---
+# Chaos 实验配置 ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaos-experiment-config
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+data:
+  # 实验默认配置
+  DEFAULT_DURATION: "5m"
+  DEFAULT_NAMESPACE: "industrial-ai"
+  
+  # Pod 杀死实验配置
+  POD_KILL_MODE: "one"
+  POD_KILL_DURATION: "60s"
+  POD_KILL_INTERVAL: "30s"
+  
+  # 网络延迟配置
+  NETWORK_DELAY: "100ms"
+  NETWORK_DELAY_JITTER: "10ms"
+  NETWORK_DELAY_DURATION: "5m"
+  
+  # 网络丢包配置
+  NETWORK_LOSS_RATE: "20"
+  NETWORK_LOSS_DURATION: "2m"
+  
+  # DNS 故障配置
+  DNS_ERROR_TYPE: "random"
+  DNS_ERROR_DURATION: "3m"
+  
+  # Stress 测试配置
+  STRESS_CPU_WORKERS: "4"
+  STRESS_MEMORY_SIZE: "256MB"
+  STRESS_DURATION: "3m"
+
+---
+# Chaos 实验安全策略
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: industrial-ai-pdb
+  namespace: industrial-ai
+  labels:
+    app.kubernetes.io/name: industrial-ai
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  minAvailable: 1  # Chaos 实验期间至少保持 1 个 Pod 运行
+  selector:
+    matchLabels:
+      app: backend

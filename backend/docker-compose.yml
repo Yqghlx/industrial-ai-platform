@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: industrial-ai-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/industrial_ai?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - CACHE_ENABLED=true
+      - CACHE_PREFIX=iai:
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-glm-5}
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      - ENV=production
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: industrial-ai-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=industrial_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: industrial-ai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # Optional: TimescaleDB extension
+  # Uncomment if using TimescaleDB
+  # timescaledb:
+  #   image: timescale/timescaledb:latest-pg15
+  #   container_name: industrial-ai-timescaledb
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=industrial_ai
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - timescale_data:/var/lib/postgresql/data
+  #   networks:
+  #     - industrial-ai-network
+
+networks:
+  industrial-ai-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  # timescale_data:

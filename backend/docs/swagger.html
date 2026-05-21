@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Industrial AI Platform - API Docs</title>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css">
+  <style>
+    html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { 
+      margin:0;
+      background: #1a1a2e;
+      padding: 0;
+    }
+    #swagger-ui {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* Dark theme overrides */
+    .swagger-ui .topbar { background-color: #16213e; }
+    .swagger-ui .information-container .info .title { color: #0fbcf9; }
+    .swagger-ui .scheme-container { background: #1f2937; }
+    .swagger-ui .opblock-tag { border-bottom: 1px solid #374151; color: #9ca3af; }
+    .swagger-ui .opblock .opblock-summary-description { color: #e5e7eb; }
+    .swagger-ui .opblock-body { background: #1f2937; }
+    .swagger-ui table thead tr th, .swagger-ui table tbody tr td { 
+      border-color: #374151; 
+      color: #e5e7eb;
+    }
+    .swagger-ui .parameter__name, .swagger-ui .parameter__type, .swagger-ui .response-col_description { 
+      color: #9ca3af; 
+    }
+    .swagger-ui .model-box { background: #1f2937; }
+    .swagger-ui .model-box .model { color: #e5e7eb; }
+    .swagger-ui section.models .model-container { background: #1f2937; }
+    .swagger-ui .model-title { color: #9ca3af; }
+    .swagger-ui .prop-type { color: #10b981; }
+    .swagger-ui .prop-name { color: #60a5fa; }
+    .swagger-ui .btn.execute { background-color: #3b82f6; }
+    .swagger-ui .btn.execute:hover { background-color: #2563eb; }
+    .information-container {
+      background: #1f2937;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 10px;
+    }
+    .swagger-ui .information-container .info .title pre.version { color: #9ca3af; }
+  </style>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+<script>
+window.onload = function() {
+  const ui = SwaggerUIBundle({
+    url: "openapi.yaml",
+    dom_id: '#swagger-ui',
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    layout: "StandaloneLayout",
+    deepLinking: true,
+    displayOperationId: false,
+    defaultModelsExpandDepth: 1,
+    defaultModelExpandDepth: 1,
+    displayRequestDuration: true,
+    docExpansion: 'list',
+    filter: true,
+    tryItOutEnabled: true,
+    requestSnippetsEnabled: true,
+    requestSnippets: {
+      generators: {
+        curl_bash: { title: 'cURL (bash)', default: true },
+        curl_powershell: { title: 'cURL (PowerShell)', default: false },
+        curl_cmd: { title: 'cURL (CMD)', default: false }
+      }
+    }
+  });
+  window.ui = ui;
+};
+</script>
+</body>
+</html>

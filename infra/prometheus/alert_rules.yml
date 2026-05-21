@@ -1,0 +1,216 @@
+groups:
+  - name: industrial-ai-http-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: http
+        annotations:
+          summary: "High HTTP Error Rate"
+          description: "HTTP error rate is {{ $value | humanizePercentage }} (threshold: 5%). This indicates potential issues with the API server."
+
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+          category: http
+        annotations:
+          summary: "High HTTP Response Time"
+          description: "P95 response time is {{ $value | humanizeDuration }}s (threshold: 1s). Users may experience slow responses."
+
+      - alert: TooManyInFlightRequests
+        expr: sum(http_requests_in_flight) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: http
+        annotations:
+          summary: "Too Many In-Flight Requests"
+          description: "Current in-flight requests: {{ $value }} (threshold: 100). Server may be overloaded."
+
+  - name: industrial-ai-websocket-alerts
+    rules:
+      - alert: WebSocketConnectionsDropped
+        expr: |
+          rate(websocket_connections_total[5m]) - 
+          rate(websocket_connections_active[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: websocket
+        annotations:
+          summary: "WebSocket Connections Dropping"
+          description: "WebSocket connections are dropping at {{ $value | humanize }} connections/s. Check network stability."
+
+      - alert: TooManyWebSocketConnections
+        expr: websocket_connections_active > 200
+        for: 10m
+        labels:
+          severity: warning
+          category: websocket
+        annotations:
+          summary: "Too Many WebSocket Connections"
+          description: "Active WebSocket connections: {{ $value }} (threshold: 200). Consider scaling."
+
+  - name: industrial-ai-database-alerts
+    rules:
+      - alert: HighDatabaseQueryTime
+        expr: |
+          histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High Database Query Time"
+          description: "P95 database query time is {{ $value | humanizeDuration }}s (threshold: 500ms). Database may need optimization."
+
+      - alert: TooManyDatabaseConnections
+        expr: db_connections_active > 50
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Too Many Database Connections"
+          description: "Active database connections: {{ $value }} (threshold: 50). Connection pool may be exhausted."
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connections_active > 100
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Database Connection Pool Exhausted"
+          description: "Database connections reached {{ $value }}. Immediate attention required."
+
+  - name: industrial-ai-cache-alerts
+    rules:
+      - alert: LowCacheHitRate
+        expr: |
+          redis_cache_hits_total / (redis_cache_hits_total + redis_cache_misses_total) < 0.7
+        for: 15m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Low Cache Hit Rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 70%). Cache may need tuning."
+
+      - alert: RedisUnavailable
+        expr: redis_cache_hits_total == 0 and redis_cache_misses_total == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis Cache Unavailable"
+          description: "No Redis operations detected in the last 5 minutes. Redis may be down."
+
+  - name: industrial-ai-device-alerts
+    rules:
+      - alert: LowDeviceOnlineRate
+        expr: |
+          sum(devices_online) / sum(devices_total) < 0.5
+        for: 30m
+        labels:
+          severity: warning
+          category: devices
+        annotations:
+          summary: "Low Device Online Rate"
+          description: "Only {{ $value | humanizePercentage }} of devices are online (threshold: 50%). Check device connectivity."
+
+      - alert: NoTelemetryReceived
+        expr: rate(telemetry_received_total[10m]) == 0
+        for: 15m
+        labels:
+          severity: critical
+          category: devices
+        annotations:
+          summary: "No Telemetry Data Received"
+          description: "No telemetry data received in the last 15 minutes. Devices may be offline or data pipeline broken."
+
+  - name: industrial-ai-alert-alerts
+    rules:
+      - alert: TooManyActiveCriticalAlerts
+        expr: sum(alerts_active{severity="critical"}) > 5
+        for: 5m
+        labels:
+          severity: critical
+          category: alerts
+        annotations:
+          summary: "Too Many Critical Alerts"
+          description: "{{ $value }} critical alerts are active. Immediate investigation required."
+
+      - alert: HighAlertTriggerRate
+        expr: rate(alerts_triggered_total[1h]) > 50
+        for: 30m
+        labels:
+          severity: warning
+          category: alerts
+        annotations:
+          summary: "High Alert Trigger Rate"
+          description: "{{ $value | humanize }} alerts triggered per hour (threshold: 50). Alert rules may need adjustment."
+
+  - name: industrial-ai-ai-alerts
+    rules:
+      - alert: HighAIQueryTime
+        expr: |
+          histogram_quantile(0.95, sum(rate(ai_query_duration_seconds_bucket[5m])) by (le)) > 60
+        for: 10m
+        labels:
+          severity: warning
+          category: ai
+        annotations:
+          summary: "High AI Query Time"
+          description: "P95 AI query time is {{ $value | humanizeDuration }}s (threshold: 60s). AI service may be slow."
+
+      - alert: AIServiceUnavailable
+        expr: rate(ai_queries_total[10m]) == 0 and sum(http_requests_total{path=~"/api/v1/agent.*"}) > 0
+        for: 15m
+        labels:
+          severity: critical
+          category: ai
+        annotations:
+          summary: "AI Service Unavailable"
+          description: "No AI queries despite incoming requests. AI service may be down."
+
+      - alert: HighTokenUsage
+        expr: |
+          sum(rate(ai_tokens_used_total[1h])) > 100000
+        for: 1h
+        labels:
+          severity: warning
+          category: ai
+        annotations:
+          summary: "High Token Usage"
+          description: "Token usage is {{ $value | humanize }} tokens/hour (threshold: 100K). May need cost optimization."
+
+  - name: industrial-ai-system-alerts
+    rules:
+      - alert: ServiceDown
+        expr: up{job="backend"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Backend Service Down"
+          description: "Backend service has been down for more than 5 minutes. Immediate restart required."
+
+      - alert: PrometheusTargetMissing
+        expr: up == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Prometheus Target Missing"
+          description: "Prometheus target {{ $labels.job }} is down. Metrics collection may be incomplete."

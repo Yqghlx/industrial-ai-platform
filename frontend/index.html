@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    
+    <!-- Mobile-optimized viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS web app meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Industrial AI">
+    
+    <!-- Android Chrome meta tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+    
+    <!-- App description -->
+    <meta name="description" content="工业AI代理平台 - 智能设备监控与预测性维护">
+    
+    <!-- Disable tap highlight on Android -->
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Format detection -->
+    <meta name="format-detection" content="telephone=no">
+    
+    <title>Industrial AI Platform</title>
+    
+    <!-- 预加载关键 JS -->
+    <link rel="modulepreload" href="/src/index.tsx">
+    <link rel="modulepreload" href="/src/main.tsx">
+    
+    <!-- 预加载关键 CSS -->
+    <link rel="preload" href="/src/index.css" as="style">
+    
+    <!-- Preconnect to fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- 使用 font-display:swap 避免字体阻塞渲染 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <!-- 系统字体 fallback -->
+    <style>
+      @font-face {
+        font-family: 'Inter-fallback';
+        src: local('system-ui'), local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI');
+      }
+    </style>
+    
+    <!-- Critical CSS for mobile (inline for fast rendering) -->
+    <style>
+      /* Prevent iOS bounce scroll */
+      html, body {
+        overscroll-behavior: none;
+        overflow: hidden;
+        position: fixed;
+        height: 100%;
+        width: 100%;
+      }
+      
+      /* Allow scroll on content */
+      #root {
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Safe area variables */
+      :root {
+        --safe-area-top: env(safe-area-inset-top, 0px);
+        --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-left: env(safe-area-inset-left, 0px);
+        --safe-area-right: env(safe-area-inset-right, 0px);
+        --vh: 1vh;
+      }
+      
+      /* Loading screen */
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        background: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(59, 130, 246, 0.3);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body class="bg-slate-900 text-slate-100 antialiased">
+    <!-- Loading screen for mobile -->
+    <div class="loading-screen" id="loading">
+      <div class="loading-spinner"></div>
+    </div>
+    
+    <div id="root"></div>
+    
+    <!-- Hide loading screen after app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        var loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.opacity = '0';
+          loading.style.transition = 'opacity 0.3s';
+          setTimeout(function() {
+            loading.style.display = 'none';
+          }, 300);
+        }
+      });
+    </script>
+    
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,166 @@
+groups:
+  - name: audit-security
+    rules:
+      # === 认证安全告警 ===
+      
+      - alert: HighAuthenticationFailureRate
+        expr: 
+          sum(rate(traces_total{event_type="auth.failed"}[5m])) 
+          / sum(rate(traces_total{event_type="auth.login"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is {{ $value | humanizePercentage }}. May be brute force attack."
+          runbook_url: "docs/runbook/audit/HighAuthFailure.md"
+      
+      - alert: BruteForceAttackDetected
+        expr: count_over_time({event_type="auth.failed"}[1m]) > 100
+        for: 1m
+        labels:
+          severity: critical
+          category: audit
+        annotations:
+          summary: "Brute force attack detected"
+          description: "{{ $value }} authentication failures in last minute. Possible brute force attack."
+          runbook_url: "docs/runbook/audit/BruteForceAttack.md"
+      
+      - alert: MultipleIPAuthFailures
+        expr: 
+          sum by (ip_address) (count_over_time({event_type="auth.failed"}[5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Multiple auth failures from single IP"
+          description: "IP {{ $labels.ip_address }} has {{ $value }} auth failures. May need to block."
+          runbook_url: "docs/runbook/audit/MultipleIPFailures.md"
+      
+      # === 权限安全告警 ===
+      
+      - alert: HighPermissionViolationRate
+        expr: rate(traces_total{event_type="security.violation"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "High permission violation rate"
+          description: "{{ $value }} permission violations per second. Check authorization config."
+          runbook_url: "docs/runbook/audit/PermissionViolation.md"
+      
+      - alert: TenantIsolationViolation
+        expr: count_over_time({event_type="security.violation",operation=~"Tenant.*"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: audit
+        annotations:
+          summary: "Tenant isolation violation detected"
+          description: "Cross-tenant access attempt detected. Immediate investigation required."
+          runbook_url: "docs/runbook/audit/TenantViolation.md"
+      
+      # === 数据访问告警 ===
+      
+      - alert: HighDataDeleteRate
+        expr: rate(traces_total{event_type="data.delete"}[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "High data deletion rate"
+          description: "{{ $value }} data deletions per second. May be mass deletion operation."
+          runbook_url: "docs/runbook/audit/HighDataDelete.md"
+      
+      - alert: LargeDataExport
+        expr: 
+          sum by (user_id) (count_over_time({event_type="data.export"}[1h])) > 100
+        for: 1h
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Large data export detected"
+          description: "User {{ $labels.user_id }} exported {{ $value }} times. May need review."
+          runbook_url: "docs/runbook/audit/LargeDataExport.md"
+      
+      - alert: SensitiveResourceAccess
+        expr: count_over_time({resource_type="config"}[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Sensitive resource access detected"
+          description: "{{ $value }} config resource accesses. May be unauthorized access."
+          runbook_url: "docs/runbook/audit/SensitiveAccess.md"
+      
+      # === 异常行为告警 ===
+      
+      - alert: AbnormalUserActivity
+        expr: 
+          sum by (user_id) (rate(traces_total{user_id}[5m])) 
+          > 2 * avg(rate(traces_total[5m]))
+        for: 10m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Abnormal user activity detected"
+          description: "User {{ $labels.user_id }} activity rate is {{ $value }}x average. May be compromised."
+          runbook_url: "docs/runbook/audit/AbnormalUserActivity.md"
+      
+      - alert: AbnormalIPAddressActivity
+        expr: 
+          sum by (ip_address) (rate(traces_total{ip_address}[5m])) 
+          > 2 * avg(rate(traces_total[5m]))
+        for: 10m
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Abnormal IP address activity"
+          description: "IP {{ $labels.ip_address }} activity rate is {{ $value }}x average. May need investigation."
+          runbook_url: "docs/runbook/audit/AbnormalIPActivity.md"
+      
+      - alert: OffHoursActivity
+        expr: 
+          count_over_time({timestamp=~"02:.*|03:.*|04:.*"}[1h]) > 100
+        for: 1h
+        labels:
+          severity: warning
+          category: audit
+        annotations:
+          summary: "Off-hours activity detected"
+          description: "{{ $value }} audit logs during off-hours (2-5 AM). May be unauthorized access."
+          runbook_url: "docs/runbook/audit/OffHoursActivity.md"
+      
+      # === 审计系统告警 ===
+      
+      - alert: AuditLogGap
+        expr: 
+          count_over_time({event_category="audit"}[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: audit
+        annotations:
+          summary: "Audit log gap detected"
+          description: "No audit logs received in last 5 minutes. Audit system may be broken."
+          runbook_url: "docs/runbook/audit/AuditLogGap.md"
+      
+      - alert: AuditLogStorageFull
+        expr: 
+          pg_database_size('industrial_ai') / pg_database_size_limit > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          category: audit
+        annotations:
+          summary: "Audit log storage nearly full"
+          description: "Database storage usage {{ $value | humanizePercentage }}. Need cleanup."
+          runbook_url: "docs/runbook/audit/StorageFull.md"

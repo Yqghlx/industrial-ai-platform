@@ -1,0 +1,155 @@
+groups:
+  - name: partition-performance
+    rules:
+      # === 分区状态告警 ===
+      
+      - alert: PartitionNotFound
+        expr: 
+          count(pg_tables{tablename=~"telemetry_data_.*"}) < 12
+        for: 1h
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition not found for current month"
+          description: "Expected 12 partitions but found {{ $value }}. May need to create new partition."
+          runbook_url: "docs/runbook/partition/PartitionNotFound.md"
+      
+      - alert: PartitionSizeExceeded
+        expr: 
+          pg_total_relation_size{tablename=~"telemetry_data_.*"} > 100000000000
+        for: 5m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition size exceeded 100GB"
+          description: "Partition {{ $labels.tablename }} size is {{ $value }} bytes. May need to archive."
+          runbook_url: "docs/runbook/partition/PartitionSizeExceeded.md"
+      
+      - alert: PartitionRowCountExceeded
+        expr: 
+          pg_table_count{tablename=~"telemetry_data_.*"} > 100000000
+        for: 5m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition row count exceeded 100M"
+          description: "Partition {{ $labels.tablename }} has {{ $value }} rows. May need to split."
+          runbook_url: "docs/runbook/partition/RowCountExceeded.md"
+      
+      # === 分区查询性能告警 ===
+      
+      - alert: PartitionQuerySlow
+        expr: 
+          avg(pg_query_time{table="telemetry_data"}) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition query slow"
+          description: "Average query time on telemetry_data is {{ $value }}ms. May need optimization."
+          runbook_url: "docs/runbook/partition/QuerySlow.md"
+      
+      - alert: PartitionScanFull
+        expr: 
+          rate(pg_scan_full{table="telemetry_data"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Full partition scan detected"
+          description: "{{ $value }} full scans per second on telemetry_data. Query not using partition pruning."
+          runbook_url: "docs/runbook/partition/FullScan.md"
+      
+      - alert: PartitionPruningFailed
+        expr: 
+          pg_partition_pruning_ratio < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition pruning failed"
+          description: "Partition pruning ratio is {{ $value | humanizePercentage }}. Queries scanning too many partitions."
+          runbook_url: "docs/runbook/partition/PruningFailed.md"
+      
+      # === 分区维护告警 ===
+      
+      - alert: PartitionArchiveFailed
+        expr: 
+          pg_archive_status{status="failed"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition archive failed"
+          description: "Partition archive operation failed. Check archive logs."
+          runbook_url: "docs/runbook/partition/ArchiveFailed.md"
+      
+      - alert: PartitionRetentionExceeded
+        expr: 
+          count(pg_tables{tablename=~"telemetry_data_.*",created_at<NOW()-INTERVAL'12months'}) > 0
+        for: 1h
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Old partitions not deleted"
+          description: "{{ $value }} partitions older than 12 months still exist. Run cleanup script."
+          runbook_url: "docs/runbook/partition/RetentionExceeded.md"
+      
+      - alert: PartitionStorageFull
+        expr: 
+          pg_database_size{database="industrial_ai"} / pg_database_size_limit > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          category: partition
+        annotations:
+          summary: "Partition storage nearly full"
+          description: "Database storage usage {{ $value | humanizePercentage }}. Need to delete old partitions."
+          runbook_url: "docs/runbook/partition/StorageFull.md"
+      
+      # === 分区数据质量告警 ===
+      
+      - alert: PartitionDataQualityLow
+        expr: 
+          avg(telemetry_quality_ratio) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition data quality low"
+          description: "Average data quality ratio is {{ $value | humanizePercentage }}. Many bad/uncertain readings."
+          runbook_url: "docs/runbook/partition/DataQualityLow.md"
+      
+      - alert: PartitionDataGap
+        expr: 
+          count_over_time(telemetry_insert_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: critical
+          category: partition
+        annotations:
+          summary: "Partition data gap detected"
+          description: "No telemetry data inserted in last hour. Data collection may be broken."
+          runbook_url: "docs/runbook/partition/DataGap.md"
+      
+      - alert: PartitionDataSkew
+        expr: 
+          stddev(pg_table_count{tablename=~"telemetry_data_.*"}) 
+          / avg(pg_table_count{tablename=~"telemetry_data_.*"}) > 0.3
+        for: 1h
+        labels:
+          severity: warning
+          category: partition
+        annotations:
+          summary: "Partition data skew detected"
+          description: "Data distribution skewed across partitions. May need to rebalance."
+          runbook_url: "docs/runbook/partition/DataSkew.md"

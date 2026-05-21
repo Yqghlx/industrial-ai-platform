@@ -1,0 +1,678 @@
+# Alertmanager Configuration
+# P2-002: Monitoring Alert Tuning - Alert Threshold Tuning
+# Industrial AI Platform - Production Configuration
+
+# ==========================================
+# Global Configuration
+# ==========================================
+global:
+  # Resolve timeout - How long before an alert is considered resolved
+  resolve_timeout: 5m
+  
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alerts@industrial-ai.example.com'
+  smtp_auth_username: 'alerts@industrial-ai.example.com'
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp-password
+  smtp_require_tls: true
+  
+  # Slack configuration
+  slack_api_url_file: /etc/alertmanager/secrets/slack-api-url
+  
+  # PagerDuty configuration (optional)
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# ==========================================
+# Templates
+# ==========================================
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ==========================================
+# Route Configuration - Optimized Routing
+# ==========================================
+route:
+  # Group alerts by these labels
+  group_by: ['severity', 'category', 'service', 'namespace']
+  
+  # How long to wait before sending initial notification for a new group
+  # Optimized: 10s for critical, 30s for others (handled in sub-routes)
+  group_wait: 30s
+  
+  # How long to wait before sending notification about new alerts added to existing group
+  group_interval: 5m
+  
+  # How long to wait before resending a notification
+  repeat_interval: 4h
+  
+  # Default receiver
+  receiver: 'default-receiver'
+  
+  # Continue routing even after match (for multi-receiver alerts)
+  continue: false
+  
+  # ==========================================
+  # Sub-Routes by Severity
+  # ==========================================
+  routes:
+    # -----------------------------------------
+    # CRITICAL Alerts - Immediate Notification
+    # -----------------------------------------
+    - match:
+        severity: critical
+      receiver: 'critical-pagerduty'
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      continue: true
+      
+    - match:
+        severity: critical
+      receiver: 'critical-slack'
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      continue: false
+    
+    # -----------------------------------------
+    # WARNING Alerts - Standard Notification
+    # -----------------------------------------
+    - match:
+        severity: warning
+      receiver: 'warning-slack'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 4h
+      continue: false
+    
+    # -----------------------------------------
+    # INFO Alerts - Low Priority
+    # -----------------------------------------
+    - match:
+        severity: info
+      receiver: 'info-slack'
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 24h
+      continue: false
+    
+    # ==========================================
+    # Category-Based Routing
+    # ==========================================
+    
+    # -----------------------------------------
+    # Database Alerts - Specialized Handling
+    # -----------------------------------------
+    - match:
+        category: database
+      receiver: 'database-team'
+      group_by: ['severity', 'database', 'instance']
+      group_wait: 30s
+      group_interval: 3m
+      repeat_interval: 2h
+      routes:
+        # Database connection exhaustion - Critical
+        - match:
+            alertname: DatabaseConnectionPoolExhausted
+          receiver: 'database-critical'
+          group_wait: 15s
+          repeat_interval: 30m
+        # PostgreSQL HA issues
+        - match:
+            alertname: PostgreSQLReplicationLag
+          receiver: 'database-critical'
+          severity: critical
+    
+    # -----------------------------------------
+    # Performance Alerts - SRE Team
+    # -----------------------------------------
+    - match:
+        category: performance
+      receiver: 'performance-team'
+      group_by: ['severity', 'service', 'endpoint']
+      group_wait: 1m
+      routes:
+        # High latency alerts
+        - match:
+            alertname: HighResponseTime
+          receiver: 'performance-warning'
+        - match:
+            alertname: VeryHighResponseTime
+          receiver: 'performance-critical'
+          severity: critical
+    
+    # -----------------------------------------
+    # Cache Alerts - Infrastructure Team
+    # -----------------------------------------
+    - match:
+        category: cache
+      receiver: 'cache-team'
+      group_by: ['severity', 'cache_type', 'instance']
+      group_wait: 1m
+      routes:
+        # Cache high miss rate
+        - match:
+            alertname: CacheHighMissRate
+          receiver: 'cache-warning'
+        # Cache unavailable
+        - match:
+            alertname: CacheUnavailable
+          receiver: 'cache-critical'
+          severity: critical
+    
+    # -----------------------------------------
+    # WebSocket Alerts - Real-time Monitoring
+    # -----------------------------------------
+    - match:
+        category: websocket
+      receiver: 'websocket-team'
+      group_wait: 30s
+      routes:
+        # WebSocket connection issues
+        - match:
+            alertname: WebSocketConnectionDrop
+          receiver: 'websocket-warning'
+        # High connection count
+        - match:
+            alertname: WebSocketConnectionLimit
+          receiver: 'websocket-warning'
+    
+    # -----------------------------------------
+    # Security Alerts - Immediate Response
+    # -----------------------------------------
+    - match:
+        category: security
+      receiver: 'security-team'
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 30m
+      routes:
+        # Auth bypass attempts
+        - match:
+            alertname: AuthBypassAttempt
+          receiver: 'security-critical'
+          severity: critical
+        # SQL injection attempts
+        - match:
+            alertname: SQLInjectionAttempt
+          receiver: 'security-critical'
+          severity: critical
+        # Rate limit exceeded (potential attack)
+        - match:
+            alertname: RateLimitExceededAttack
+          receiver: 'security-warning'
+    
+    # -----------------------------------------
+    # Circuit Breaker Alerts - Reliability Team
+    # -----------------------------------------
+    - match:
+        category: circuitbreaker
+      receiver: 'reliability-team'
+      group_wait: 30s
+      routes:
+        # Circuit breaker opened
+        - match:
+            alertname: CircuitBreakerOpened
+          receiver: 'circuitbreaker-critical'
+          severity: critical
+        # Circuit breaker half-open
+        - match:
+            alertname: CircuitBreakerHalfOpen
+          receiver: 'circuitbreaker-warning'
+    
+    # -----------------------------------------
+    # Chaos Engineering Alerts (Testing)
+    # -----------------------------------------
+    - match:
+        category: chaos
+      receiver: 'chaos-team'
+      group_wait: 30s
+      routes:
+        - match:
+            severity: critical
+          receiver: 'chaos-warning' # Don't escalate chaos alerts
+    
+    # -----------------------------------------
+    # Kubernetes Infrastructure Alerts
+    # -----------------------------------------
+    - match:
+        category: kubernetes
+      receiver: 'infrastructure-team'
+      group_by: ['severity', 'namespace', 'pod']
+      routes:
+        # Pod crash loops
+        - match:
+            alertname: PodCrashLooping
+          receiver: 'kubernetes-critical'
+          severity: critical
+        # Node issues
+        - match:
+            alertname: NodeNotReady
+          receiver: 'kubernetes-critical'
+          severity: critical
+        # HPA scaling issues
+        - match:
+            alertname: HPAMaxReplicasReached
+          receiver: 'kubernetes-warning'
+    
+    # -----------------------------------------
+    # Observability Stack Alerts
+    # -----------------------------------------
+    - match:
+        category: observability
+      receiver: 'observability-team'
+      group_wait: 1m
+      routes:
+        # Prometheus issues
+        - match:
+            alertname: PrometheusDown
+          receiver: 'observability-critical'
+          severity: critical
+        # Loki/Tempo issues
+        - match:
+            alertname: LokiDown
+          receiver: 'observability-warning'
+
+# ==========================================
+# Inhibition Rules - Prevent Alert Noise
+# ==========================================
+inhibit_rules:
+  # Inhibit warning alerts if critical is firing for same service
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ['namespace', 'service', 'alertname']
+  
+  # Inhibit downstream alerts when upstream is down
+  - source_matchers:
+      - alertname = "ServiceDown"
+      - severity = "critical"
+    target_matchers:
+      - category = "performance"
+      - severity =~ "warning|info"
+    equal: ['namespace', 'service']
+  
+  # Inhibit cache alerts when database is down
+  - source_matchers:
+      - alertname = "DatabaseConnectionPoolExhausted"
+      - severity = "critical"
+    target_matchers:
+      - category = "cache"
+      - severity = "warning"
+    equal: ['namespace']
+  
+  # Inhibit API alerts when circuit breaker is open
+  - source_matchers:
+      - alertname = "CircuitBreakerOpened"
+      - severity = "critical"
+    target_matchers:
+      - alertname =~ "HighResponseTime|VeryHighResponseTime|HighErrorRate"
+    equal: ['service']
+  
+  # Inhibit node alerts when Kubernetes cluster is degraded
+  - source_matchers:
+      - alertname = "KubernetesClusterDegraded"
+      - severity = "critical"
+    target_matchers:
+      - category = "kubernetes"
+      - severity = "warning"
+    equal: ['cluster']
+  
+  # Inhibit application alerts during chaos testing
+  - source_matchers:
+      - alertname = "ChaosExperimentRunning"
+    target_matchers:
+      - severity =~ "warning|info"
+    equal: ['namespace']
+
+# ==========================================
+# Receivers Configuration
+# ==========================================
+receivers:
+  # -----------------------------------------
+  # Default Receiver
+  # -----------------------------------------
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://backend:8080/api/v1/alerts/webhook'
+        send_resolved: true
+        max_alerts: 100
+        http_config:
+          headers:
+            Content-Type: application/json
+            Authorization: 'Bearer ${ALERT_WEBHOOK_TOKEN}'
+  
+  # -----------------------------------------
+  # Critical Alert Receivers
+  # -----------------------------------------
+  - name: 'critical-pagerduty'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-service-key
+        severity: critical
+        description: '{{ .GroupLabels.alertname }}: {{ .GroupLabels.service }}'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+          resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+          num_firing: '{{ .Alerts.Firing | len }}'
+          num_resolved: '{{ .Alerts.Resolved | len }}'
+  
+  - name: 'critical-slack'
+    slack_configs:
+      - channel: '#alerts-critical'
+        send_resolved: true
+        username: 'Industrial AI Alert Bot'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        title_link: 'https://grafana.industrial-ai.local/d/alert-dashboard'
+        text: >-
+          {{ range .Alerts }}
+          **Service:** {{ .Labels.service }}
+          **Category:** {{ .Labels.category }}
+          **Description:** {{ .Annotations.description }}
+          **Started:** {{ .StartsAt }}
+          {{ end }}
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: 'https://grafana.industrial-ai.local/d/alert-dashboard'
+          - type: button
+            text: 'Silence Alert'
+            url: 'https://alertmanager.industrial-ai.local/api/v2/silences'
+        fields:
+          - title: Severity
+            value: '{{ .GroupLabels.severity }}'
+            short: true
+          - title: Service
+            value: '{{ .GroupLabels.service }}'
+            short: true
+          - title: Instance
+            value: '{{ .GroupLabels.instance }}'
+            short: true
+  
+  # -----------------------------------------
+  # Warning Alert Receivers
+  # -----------------------------------------
+  - name: 'warning-slack'
+    slack_configs:
+      - channel: '#alerts-warning'
+        send_resolved: true
+        username: 'Industrial AI Alert Bot'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+          **Service:** {{ .Labels.service }}
+          **Description:** {{ .Annotations.description }}
+          {{ end }}
+  
+  # -----------------------------------------
+  # Info Alert Receivers
+  # -----------------------------------------
+  - name: 'info-slack'
+    slack_configs:
+      - channel: '#alerts-info'
+        send_resolved: false
+        username: 'Industrial AI Alert Bot'
+        color: 'good'
+        title: 'ℹ️ INFO: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+  
+  # -----------------------------------------
+  # Team-Specific Receivers
+  # -----------------------------------------
+  - name: 'database-team'
+    slack_configs:
+      - channel: '#alerts-database'
+        send_resolved: true
+        username: 'Database Alert Bot'
+        title: '📊 Database Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}**Instance:** {{ .Labels.instance }}\n**Description:** {{ .Annotations.description }}{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:8080/api/v1/alerts/database'
+        send_resolved: true
+  
+  - name: 'database-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-database-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-database-critical'
+        send_resolved: true
+        color: 'danger'
+        title: '🚨 DATABASE CRITICAL: {{ .GroupLabels.alertname }}'
+  
+  - name: 'performance-team'
+    slack_configs:
+      - channel: '#alerts-performance'
+        send_resolved: true
+        title: '📈 Performance Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'performance-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-performance-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-performance-critical'
+        send_resolved: true
+        color: 'danger'
+  
+  - name: 'cache-team'
+    slack_configs:
+      - channel: '#alerts-cache'
+        send_resolved: true
+        title: '💾 Cache Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'cache-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-cache-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-cache-critical'
+        send_resolved: true
+        color: 'danger'
+  
+  - name: 'websocket-team'
+    slack_configs:
+      - channel: '#alerts-websocket'
+        send_resolved: true
+        title: '🔌 WebSocket Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'websocket-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-websocket-key
+        severity: critical
+  
+  - name: 'security-team'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-security-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-security'
+        send_resolved: true
+        color: 'danger'
+        title: '🔒 Security Alert: {{ .GroupLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+          **Alert:** {{ .Labels.alertname }}
+          **Description:** {{ .Annotations.description }}
+          **Timestamp:** {{ .StartsAt }}
+          {{ end }}
+  
+  - name: 'security-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-security-key
+        severity: critical
+        description: 'SECURITY ALERT: {{ .GroupLabels.alertname }}'
+    slack_configs:
+      - channel: '#alerts-security-critical'
+        send_resolved: true
+        color: 'danger'
+        title: '🚨🚨 SECURITY CRITICAL: {{ .GroupLabels.alertname }}'
+  
+  - name: 'reliability-team'
+    slack_configs:
+      - channel: '#alerts-reliability'
+        send_resolved: true
+        title: '🔄 Circuit Breaker Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'circuitbreaker-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-reliability-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-circuitbreaker-critical'
+        send_resolved: true
+        color: 'danger'
+        title: '🚨 Circuit Breaker Opened: {{ .Labels.service }}'
+  
+  - name: 'chaos-team'
+    slack_configs:
+      - channel: '#chaos-testing'
+        send_resolved: true
+        color: 'warning'
+        title: '🧪 Chaos Alert: {{ .GroupLabels.alertname }}'
+        text: 'Chaos experiment detected. This is a controlled test.'
+  
+  - name: 'infrastructure-team'
+    slack_configs:
+      - channel: '#alerts-infrastructure'
+        send_resolved: true
+        title: '🏗️ Infrastructure Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'kubernetes-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-infrastructure-key
+        severity: critical
+    slack_configs:
+      - channel: '#alerts-kubernetes-critical'
+        send_resolved: true
+        color: 'danger'
+        title: '🚨 Kubernetes Critical: {{ .GroupLabels.alertname }}'
+  
+  - name: 'observability-team'
+    slack_configs:
+      - channel: '#alerts-observability'
+        send_resolved: true
+        title: '👁️ Observability Alert: {{ .GroupLabels.alertname }}'
+  
+  - name: 'observability-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-observability-key
+        severity: critical
+
+# ==========================================
+# Alert Templates
+# ==========================================
+# Custom templates for alert formatting
+# File: /etc/alertmanager/templates/default.tmpl
+
+# Template definitions (inline for reference)
+templates_content:
+  default.tmpl: |
+    {{ define "slack.title" }}
+    {{ if eq .Status "firing" }}
+    🚨 {{ .GroupLabels.alertname }} ({{ .Alerts.Firing | len }} firing)
+    {{ else }}
+    ✅ {{ .GroupLabels.alertname }} ({{ .Alerts.Resolved | len }} resolved)
+    {{ end }}
+    {{ end }}
+    
+    {{ define "slack.text" }}
+    {{ range .Alerts }}
+    {{ if eq .Status "firing" }}
+    **Alert:** {{ .Labels.alertname }}
+    **Severity:** {{ .Labels.severity }}
+    **Service:** {{ .Labels.service }}
+    **Description:** {{ .Annotations.description }}
+    **Started:** {{ .StartsAt }}
+    {{ else }}
+    **Resolved:** {{ .Labels.alertname }}
+    **Service:** {{ .Labels.service }}
+    **Ended:** {{ .EndsAt }}
+    {{ end }}
+    ---
+    {{ end }}
+    {{ end }}
+    
+    {{ define "pagerduty.default.instances" }}
+    {{ range .Alerts }}
+    Instance: {{ .Labels.instance }}
+    Summary: {{ .Annotations.summary }}
+    {{ end }}
+    {{ end }}
+
+# ==========================================
+# Time Intervals (for silences)
+# ==========================================
+time_intervals:
+  - name: business_hours
+    time_intervals:
+      - weekdays: ['monday:friday']
+        times:
+          - start_time: '09:00'
+            end_time: '18:00'
+  
+  - name: off_hours
+    time_intervals:
+      - weekdays: ['monday:friday']
+        times:
+          - start_time: '00:00'
+            end_time: '09:00'
+          - start_time: '18:00'
+            end_time: '24:00'
+      - weekdays: ['saturday', 'sunday']
+
+# ==========================================
+# Mute Time Intervals
+# ==========================================
+# Define when certain alerts should be muted
+mute_time_intervals:
+  - name: maintenance_window
+    time_intervals:
+      - weekdays: ['sunday']
+        times:
+          - start_time: '02:00'
+            end_time: '06:00'
+
+# ==========================================
+# Alert Threshold Configurations
+# ==========================================
+# Reference thresholds used in alert rules
+thresholds:
+  # Response time thresholds
+  response_time:
+    warning_p95: 500ms    # 500ms P95 triggers warning
+    critical_p95: 2s      # 2s P95 triggers critical
+    max_allowed: 10s      # 10s is max acceptable
+  
+  # Error rate thresholds
+  error_rate:
+    warning: 1%           # 1% error rate triggers warning
+    critical: 5%          # 5% error rate triggers critical
+    max_allowed: 10%      # 10% is max acceptable
+  
+  # Connection thresholds
+  connections:
+    db_pool_warning: 80   # 80% pool usage triggers warning
+    db_pool_critical: 95  # 95% pool usage triggers critical
+    ws_max: 500           # Max WebSocket connections
+  
+  # Cache thresholds
+  cache:
+    hit_rate_warning: 60% # <60% hit rate triggers warning
+    hit_rate_critical: 40% # <40% hit rate triggers critical
+    memory_warning: 80%   # 80% memory usage triggers warning
+    memory_critical: 95%  # 95% memory usage triggers critical
+  
+  # Circuit breaker thresholds
+  circuit_breaker:
+    failure_threshold: 10 # 10 failures to open circuit
+    success_threshold: 5  # 5 successes to close circuit
+    timeout: 30s          # 30s timeout before half-open
+  
+  # Rate limiting thresholds
+  rate_limit:
+    warning: 80%          # 80% of limit triggers warning
+    critical: 95%         # 95% of limit triggers critical
+    burst_multiplier: 2   # Allow 2x burst above limit

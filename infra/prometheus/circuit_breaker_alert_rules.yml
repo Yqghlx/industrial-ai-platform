@@ -1,0 +1,125 @@
+groups:
+  - name: circuit-breaker
+    rules:
+      # === 熔断器状态告警 ===
+      
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state == 1
+        for: 30s
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} is open"
+          description: "Circuit breaker for {{ $labels.name }} has been open for 30 seconds. Service requests are being rejected."
+          runbook_url: "docs/runbook/reliability/CircuitBreakerOpen.md"
+      
+      - alert: CircuitBreakerOpenCritical
+        expr: circuit_breaker_state{name="database"} == 1 or circuit_breaker_state{name="redis"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: "Critical circuit breaker {{ $labels.name }} is open"
+          description: "Critical service {{ $labels.name }} circuit breaker is open for 1 minute. This affects core functionality."
+          runbook_url: "docs/runbook/reliability/CircuitBreakerOpen.md"
+      
+      # === 失败率告警 ===
+      
+      - alert: HighFailureRate
+        expr: circuit_breaker_failures / circuit_breaker_requests > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "High failure rate for {{ $labels.name }}"
+          description: "Failure rate for {{ $labels.name }} is {{ $value | humanizePercentage }}. Circuit breaker may open soon."
+          runbook_url: "docs/runbook/reliability/HighFailureRate.md"
+      
+      - alert: CriticalFailureRate
+        expr: circuit_breaker_failures / circuit_breaker_requests > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: "Critical failure rate for {{ $labels.name }}"
+          description: "Failure rate for {{ $labels.name }} is {{ $value | humanizePercentage }}. Immediate investigation required."
+          runbook_url: "docs/runbook/reliability/CriticalFailureRate.md"
+      
+      # === 熔断器恢复告警 ===
+      
+      - alert: CircuitBreakerRecovered
+        expr: circuit_breaker_state == 0 and circuit_breaker_opens > 0
+        for: 1m
+        labels:
+          severity: info
+          category: reliability
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} recovered"
+          description: "Circuit breaker for {{ $labels.name }} has recovered to closed state after {{ $value }} opens."
+      
+      # === 降级模式告警 ===
+      
+      - alert: ServiceInDegradedMode
+        expr: service_degraded_mode == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Service {{ $labels.name }} in degraded mode"
+          description: "Service {{ $labels.name }} is operating in degraded mode for 5 minutes. Fallback data may be used."
+          runbook_url: "docs/runbook/reliability/ServiceDegraded.md"
+      
+      - alert: LongDegradedMode
+        expr: service_degraded_mode == 1
+        for: 30m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: "Service {{ $labels.name }} in long degraded mode"
+          description: "Service {{ $labels.name }} has been in degraded mode for 30 minutes. Root cause investigation required."
+          runbook_url: "docs/runbook/reliability/ServiceDegraded.md"
+      
+      # === 降级响应告警 ===
+      
+      - alert: HighFallbackRate
+        expr: rate(http_requests_total{status="503"}[5m]) / rate(http_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "High fallback response rate"
+          description: "{{ $value | humanizePercentage }} of requests are returning fallback responses (503 status)."
+          runbook_url: "docs/runbook/reliability/HighFallbackRate.md"
+      
+      # === 熔断器频繁开关告警 ===
+      
+      - alert: CircuitBreakerFlapping
+        expr: rate(circuit_breaker_opens[5m]) > 0.2 and rate(circuit_breaker_recovers[5m]) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} is flapping"
+          description: "Circuit breaker {{ $labels.name }} is frequently opening and recovering. Indicates unstable service."
+          runbook_url: "docs/runbook/reliability/CircuitBreakerFlapping.md"
+      
+      # === 熔断器半开状态超时告警 ===
+      
+      - alert: CircuitBreakerHalfOpenStuck
+        expr: circuit_breaker_state == 2
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} stuck in half-open"
+          description: "Circuit breaker {{ $labels.name }} is stuck in half-open state for 5 minutes. Manual intervention may be needed."
+          runbook_url: "docs/runbook/reliability/CircuitBreakerHalfOpen.md"

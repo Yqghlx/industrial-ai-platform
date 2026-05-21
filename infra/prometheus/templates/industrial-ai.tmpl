@@ -1,0 +1,44 @@
+{{ define "industrial-ai.title" }}
+Industrial AI Alert: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "industrial-ai.subject" }}
+[{{ .Status | toUpper }}] {{ .GroupLabels.severity | toUpper }}: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "industrial-ai.body" }}
+**Alert Name:** {{ .GroupLabels.alertname }}
+**Severity:** {{ .GroupLabels.severity }}
+**Category:** {{ .GroupLabels.category }}
+**Status:** {{ .Status | toUpper }}
+
+**Summary:** {{ .CommonAnnotations.summary }}
+**Description:** {{ .CommonAnnotations.description }}
+
+**Details:**
+{{ range .Alerts }}
+- Alert: {{ .Labels.alertname }}
+  Value: {{ .Value | humanize }}
+  Started: {{ .StartsAt | since }}
+{{ end }}
+
+**Runbook:** https://docs.industrial-ai.example.com/runbooks/{{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.title" }}
+{{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }} {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.text" }}
+**Severity:** {{ .GroupLabels.severity | toUpper }}
+**Category:** {{ .GroupLabels.category }}
+
+{{ .CommonAnnotations.description }}
+
+**Value:** {{ (index .Alerts 0).Value | humanize }}
+**Duration:** {{ (index .Alerts 0).StartsAt | since }}
+{{ end }}
+
+{{ define "pagerduty.description" }}
+{{ .GroupLabels.alertname }} - {{ .CommonAnnotations.summary }}
+{{ end }}
