@@ -8,6 +8,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // ReportServiceInterface defines the interface for report service
@@ -59,7 +60,7 @@ func (s *ReportService) GenerateReport(ctx context.Context, reportType string, d
 		content.WriteString(s.generateDailyReport(ctx))
 	case "device":
 		if deviceID == "" {
-			return nil, fmt.Errorf("device_id is required for device report")
+			return nil, errors.NewAppError(errors.ErrCodeInvalidInput, "Device ID is required for device report", "")
 		}
 		title = fmt.Sprintf("设备分析报告 - %s - %s", deviceID, today)
 		content.WriteString(s.generateDeviceReport(ctx, deviceID))
@@ -249,13 +250,13 @@ func (s *ReportService) ListReports(ctx context.Context, reportType string, page
 // GetReportByID retrieves a report by ID
 func (s *ReportService) GetReportByID(ctx context.Context, id int) (*model.Report, error) {
 	// This would need to be implemented in the repository
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.NewAppError(errors.ErrCodeService, "Feature not implemented", "")
 }
 
 // DeleteReport deletes a report
 func (s *ReportService) DeleteReport(ctx context.Context, id int) error {
 	// This would need to be implemented in the repository
-	return fmt.Errorf("not implemented")
+	return errors.NewAppError(errors.ErrCodeService, "Feature not implemented", "")
 }
 
 // GetROIStats calculates ROI statistics
