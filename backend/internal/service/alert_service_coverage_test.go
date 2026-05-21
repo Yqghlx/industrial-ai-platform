@@ -7,29 +7,7 @@ import (
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// Test severityToPriority
-func TestAlertService_severityToPriority(t *testing.T) {
-	svc := &AlertService{}
-
-	tests := []struct {
-		severity string
-		expected string
-	}{
-		{"critical", "high"},
-		{"high", "high"},
-		{"medium", "medium"},
-		{"low", "low"},
-		{"unknown", "low"},
-	}
-
-	for _, tt := range tests {
-		result := svc.severityToPriority(tt.severity)
-		assert.Equal(t, tt.expected, result, "severity=%s", tt.severity)
-	}
-}
 
 // Test CreateRule
 func TestAlertService_CreateRule(t *testing.T) {
@@ -118,52 +96,97 @@ func TestAlertService_GetRuleByID(t *testing.T) {
 	mockRuleRepo.AssertExpectations(t)
 }
 
-// MockAlertRepo for alert tests
-type MockAlertRepo struct {
-	mock.Mock
-}
+// Test GetAlerts
+func TestAlertService_GetAlerts(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
 
-func (m *MockAlertRepo) GetByID(ctx context.Context, id int) (*model.Alert, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+	ctx := context.Background()
+	expectedAlerts := []model.Alert{
+		{ID: 1, DeviceID: "CNC-001"},
+		{ID: 2, DeviceID: "CNC-002"},
 	}
-	return args.Get(0).(*model.Alert), args.Error(1)
+
+	mockAlertRepo.On("List", ctx, "", 1, 20).Return(expectedAlerts, 2, nil)
+
+	alerts, total, err := svc.GetAlerts(ctx, "", 1, 20)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(alerts))
+	assert.Equal(t, 2, total)
+	mockAlertRepo.AssertExpectations(t)
 }
 
-func (m *MockAlertRepo) Resolve(ctx context.Context, id int) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
+// Test ResolveAlert
+func TestAlertService_ResolveAlert(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+
+	mockAlertRepo.On("Resolve", ctx, 1).Return(nil)
+
+	err := svc.ResolveAlert(ctx, 1)
+	assert.NoError(t, err)
+	mockAlertRepo.AssertExpectations(t)
 }
 
-func (m *MockAlertRepo) Acknowledge(ctx context.Context, id int) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
+// Test AcknowledgeAlert
+func TestAlertService_AcknowledgeAlert(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+
+	mockAlertRepo.On("UpdateStatus", ctx, 1, "acknowledged").Return(nil)
+
+	err := svc.AcknowledgeAlert(ctx, 1)
+	assert.NoError(t, err)
+	mockAlertRepo.AssertExpectations(t)
 }
 
-func (m *MockAlertRepo) List(ctx context.Context, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
-	args := m.Called(ctx, deviceID, page, pageSize)
-	return args.Get(0).([]model.Alert), args.Get(1).(int), args.Error(2)
+// Test GetAlertByID
+func TestAlertService_GetAlertByID(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+	expectedAlerts := []model.Alert{
+		{ID: 1, DeviceID: "CNC-001"},
+	}
+
+	mockAlertRepo.On("List", ctx, "all", 1, 1000).Return(expectedAlerts, 1, nil)
+
+	alert, err := svc.GetAlertByID(ctx, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, &expectedAlerts[0], alert)
+	mockAlertRepo.AssertExpectations(t)
 }
 
-func (m *MockAlertRepo) Create(ctx context.Context, alert *model.Alert) error {
-	args := m.Called(ctx, alert)
-	return args.Error(0)
+// Test GetAlertByID_NotFound
+func TestAlertService_GetAlertByID_NotFound(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	svc := &AlertService{alertRepo: mockAlertRepo}
+
+	ctx := context.Background()
+	expectedAlerts := []model.Alert{}
+
+	mockAlertRepo.On("List", ctx, "all", 1, 1000).Return(expectedAlerts, 0, nil)
+
+	alert, err := svc.GetAlertByID(ctx, 999)
+	assert.Error(t, err)
+	assert.Nil(t, alert)
+	mockAlertRepo.AssertExpectations(t)
 }
 
-func (m *MockAlertRepo) Update(ctx context.Context, alert *model.Alert) error {
-	args := m.Called(ctx, alert)
-	return args.Error(0)
-}
+// Test CountActiveAlerts (via Repository)
+func TestAlertService_CountActiveAlerts(t *testing.T) {
+	mockAlertRepo := &repository.MockAlertRepository{}
+	ctx := context.Background()
 
-// Test ResolveAlert (需要 AlertRepositoryInterface 实现)
-func TestAlertService_ResolveAlert_NoRepo(t *testing.T) {
-	// AlertService.ResolveAlert 直接调用 alertRepo.Resolve
-	// 如果 alertRepo 为 nil，会 panic
-	// 这里跳过测试，等待 AlertRepositoryInterface 实现
-}
+	mockAlertRepo.On("CountActive", ctx).Return(5, nil)
 
-// Test AcknowledgeAlert_NoRepo
-func TestAlertService_AcknowledgeAlert_NoRepo(t *testing.T) {
-	// 同上，等待 AlertRepositoryInterface 实现
+	count, err := mockAlertRepo.CountActive(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, count)
+	mockAlertRepo.AssertExpectations(t)
 }

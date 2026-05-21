@@ -14,6 +14,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test NewDeviceServiceWithDB
+func TestDeviceService_NewDeviceServiceWithDB(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+	dbWrapper := database.NewDBWrapper(db)
+
+	svc := NewDeviceServiceWithDB(deviceRepo, userRepo, dbWrapper)
+	assert.NotNil(t, svc)
+	assert.NotNil(t, svc.db)
+}
+
+// Test NewDeviceServiceWithDB_NilDB
+func TestDeviceService_NewDeviceServiceWithDB_NilDB(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+
+	svc := NewDeviceServiceWithDB(deviceRepo, userRepo, nil)
+	assert.NotNil(t, svc)
+	assert.Nil(t, svc.db)
+}
+
 func TestDeviceService_Create_Success(t *testing.T) {
 	// Setup mock database
 	db, mock, err := sqlmock.New()
