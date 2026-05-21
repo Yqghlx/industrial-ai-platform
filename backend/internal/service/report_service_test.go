@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"testing"
@@ -17,11 +18,11 @@ func newTestReportService(t *testing.T) (*ReportService, sqlmock.Sqlmock, *sql.D
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	reportRepo := repository.NewReportRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	notificationRepo := repository.NewNotificationRepository(db)
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
 
 	svc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
 
@@ -38,11 +39,11 @@ func TestNewReportService(t *testing.T) {
 	defer db.Close()
 
 	svc := NewReportService(
-		repository.NewReportRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewDeviceRepository(db),
-		repository.NewWorkOrderRepository(db),
-		repository.NewNotificationRepository(db),
+		repository.NewReportRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
+		repository.NewNotificationRepository(database.NewDBWrapper(db)),
 	)
 	assert.NotNil(t, svc)
 }

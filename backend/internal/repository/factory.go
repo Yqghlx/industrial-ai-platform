@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // ============================================
@@ -11,12 +13,12 @@ import (
 // RepositoryFactory Repository 工厂
 // 简化版：主要用于测试场景，通过 Set 方法注入 Mock
 type RepositoryFactory struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewRepositoryFactory 创建 Repository 工厂
 func NewRepositoryFactory(db *sql.DB) *RepositoryFactory {
-	return &RepositoryFactory{db: db}
+	return &RepositoryFactory{db: database.NewDBWrapper(db)}
 }
 
 // GetDeviceRepository 获取设备 Repository

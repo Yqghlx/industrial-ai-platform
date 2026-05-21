@@ -1,11 +1,14 @@
 package repository
 
 import (
+	"context"
+
 	"database/sql"
 	"errors"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // Additional error definitions for role_repo
@@ -13,11 +16,11 @@ var ErrRoleAlreadyExists = errors.New("role already exists")
 
 // RoleRepo handles role data access
 type RoleRepo struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewRoleRepo creates a new role repository
-func NewRoleRepo(db *sql.DB) *RoleRepo {
+func NewRoleRepo(db database.DatabaseInterface) *RoleRepo {
 	return &RoleRepo{db: db}
 }
 
@@ -32,7 +35,7 @@ func (r *RoleRepo) Create(role *model.Role) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	return r.db.QueryRow(query,
+	return r.db.QueryRow(context.Background(), query,
 		role.Name,
 		role.Description,
 		role.TenantID,
@@ -50,7 +53,7 @@ func (r *RoleRepo) GetByID(id int) (*model.Role, error) {
 		WHERE id = $1
 	`
 	role := &model.Role{}
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRow(context.Background(), query, id).Scan(
 		&role.ID,
 		&role.Name,
 		&role.Description,
@@ -76,7 +79,7 @@ func (r *RoleRepo) GetByName(tenantID, name string) (*model.Role, error) {
 		WHERE tenant_id = $1 AND name = $2
 	`
 	role := &model.Role{}
-	err := r.db.QueryRow(query, tenantID, name).Scan(
+	err := r.db.QueryRow(context.Background(), query, tenantID, name).Scan(
 		&role.ID,
 		&role.Name,
 		&role.Description,
@@ -102,7 +105,7 @@ func (r *RoleRepo) ListByTenant(tenantID string) ([]model.Role, error) {
 		WHERE tenant_id = $1 OR tenant_id = ''
 		ORDER BY created_at DESC
 	`
-	rows, err := r.db.Query(query, tenantID)
+	rows, err := r.db.Query(context.Background(), query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +139,7 @@ func (r *RoleRepo) Update(role *model.Role) error {
 		SET name = $2, description = $3, updated_at = $4
 		WHERE id = $1 AND is_system = false
 	`
-	result, err := r.db.Exec(query,
+	result, err := r.db.Exec(context.Background(), query,
 		role.ID,
 		role.Name,
 		role.Description,
@@ -167,19 +170,19 @@ func (r *RoleRepo) Delete(id int) error {
 	}
 
 	// Delete role permissions first
-	_, err = r.db.Exec("DELETE FROM role_permissions WHERE role_id = $1", id)
+	_, err = r.db.Exec(context.Background(), "DELETE FROM role_permissions WHERE role_id = $1", id)
 	if err != nil {
 		return err
 	}
 
 	// Delete user role assignments
-	_, err = r.db.Exec("DELETE FROM user_roles WHERE role_id = $1", id)
+	_, err = r.db.Exec(context.Background(), "DELETE FROM user_roles WHERE role_id = $1", id)
 	if err != nil {
 		return err
 	}
 
 	// Delete the role
-	result, err := r.db.Exec("DELETE FROM roles WHERE id = $1", id)
+	result, err := r.db.Exec(context.Background(), "DELETE FROM roles WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -197,7 +200,7 @@ func (r *RoleRepo) Delete(id int) error {
 func (r *RoleRepo) AssignRoleToUser(userID, roleID int, tenantID string) error {
 	// Check if already assigned
 	var exists bool
-	err := r.db.QueryRow(
+	err := r.db.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM user_roles WHERE user_id = $1 AND role_id = $2)",
 		userID, roleID,
 	).Scan(&exists)
@@ -212,13 +215,13 @@ func (r *RoleRepo) AssignRoleToUser(userID, roleID int, tenantID string) error {
 		INSERT INTO user_roles (user_id, role_id, tenant_id, assigned_at)
 		VALUES ($1, $2, $3, $4)
 	`
-	_, err = r.db.Exec(query, userID, roleID, tenantID, time.Now())
+	_, err = r.db.Exec(context.Background(), query, userID, roleID, tenantID, time.Now())
 	return err
 }
 
 // RemoveRoleFromUser removes a role from a user
 func (r *RoleRepo) RemoveRoleFromUser(userID, roleID int) error {
-	result, err := r.db.Exec(
+	result, err := r.db.Exec(context.Background(),
 		"DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2",
 		userID, roleID,
 	)
@@ -244,7 +247,7 @@ func (r *RoleRepo) GetUserRoles(userID int) ([]model.Role, error) {
 		WHERE ur.user_id = $1
 		ORDER BY r.created_at DESC
 	`
-	rows, err := r.db.Query(query, userID)
+	rows, err := r.db.Query(context.Background(), query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +282,7 @@ func (r *RoleRepo) GetRolePermissions(roleID int) ([]model.Permission, error) {
 		WHERE rp.role_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.Query(query, roleID)
+	rows, err := r.db.Query(context.Background(), query, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -311,13 +314,13 @@ func (r *RoleRepo) AssignPermissionToRole(roleID, permissionID int) error {
 		VALUES ($1, $2)
 		ON CONFLICT (role_id, permission_id) DO NOTHING
 	`
-	_, err := r.db.Exec(query, roleID, permissionID)
+	_, err := r.db.Exec(context.Background(), query, roleID, permissionID)
 	return err
 }
 
 // RemovePermissionFromRole removes a permission from a role
 func (r *RoleRepo) RemovePermissionFromRole(roleID, permissionID int) error {
-	result, err := r.db.Exec(
+	result, err := r.db.Exec(context.Background(),
 		"DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2",
 		roleID, permissionID,
 	)
@@ -344,7 +347,7 @@ func (r *RoleRepo) GetUserPermissions(userID int) ([]model.Permission, error) {
 		WHERE ur.user_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.Query(query, userID)
+	rows, err := r.db.Query(context.Background(), query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +384,7 @@ func (r *RoleRepo) CheckUserPermission(userID int, resource, action string) (boo
 		)
 	`
 	var hasPermission bool
-	err := r.db.QueryRow(query, userID, resource, action).Scan(&hasPermission)
+	err := r.db.QueryRow(context.Background(), query, userID, resource, action).Scan(&hasPermission)
 	if err != nil {
 		return false, err
 	}

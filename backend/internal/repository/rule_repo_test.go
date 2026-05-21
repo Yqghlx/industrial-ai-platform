@@ -9,6 +9,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,9 +22,9 @@ func TestRuleRepository_NewRuleRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestRuleRepository_Create_Success(t *testing.T) {
@@ -30,7 +32,7 @@ func TestRuleRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -67,7 +69,7 @@ func TestRuleRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	rule := &model.AlertRule{
@@ -96,7 +98,7 @@ func TestRuleRepository_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -126,7 +128,7 @@ func TestRuleRepository_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM alert_rules WHERE id = \$1`).
@@ -145,7 +147,7 @@ func TestRuleRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -174,7 +176,7 @@ func TestRuleRepository_List_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{
@@ -197,7 +199,7 @@ func TestRuleRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM alert_rules ORDER BY created_at DESC`).
@@ -214,7 +216,7 @@ func TestRuleRepository_ListEnabled_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -241,7 +243,7 @@ func TestRuleRepository_ListEnabled_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM alert_rules WHERE enabled = true`).
@@ -258,7 +260,7 @@ func TestRuleRepository_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	rule := &model.AlertRule{
@@ -294,7 +296,7 @@ func TestRuleRepository_Update_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	rule := &model.AlertRule{
@@ -316,7 +318,7 @@ func TestRuleRepository_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`DELETE FROM alert_rules WHERE id = \$1`).
@@ -333,7 +335,7 @@ func TestRuleRepository_Delete_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`DELETE FROM alert_rules WHERE id = \$1`).
@@ -350,7 +352,7 @@ func TestRuleRepository_ToggleEnabled_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE alert_rules SET enabled = \$1, updated_at = \$2 WHERE id = \$3`).
@@ -367,7 +369,7 @@ func TestRuleRepository_ToggleEnabled_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRuleRepository(db)
+	repo := NewRuleRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE alert_rules SET enabled =`).
@@ -385,9 +387,9 @@ func TestAlertRepository_NewAlertRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestAlertRepository_Create_Success(t *testing.T) {
@@ -395,7 +397,7 @@ func TestAlertRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -426,7 +428,7 @@ func TestAlertRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	alert := &model.Alert{
@@ -451,7 +453,7 @@ func TestAlertRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -482,7 +484,7 @@ func TestAlertRepository_List_WithStatus(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -513,7 +515,7 @@ func TestAlertRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM alerts`).
@@ -531,7 +533,7 @@ func TestAlertRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM alerts`).
@@ -552,7 +554,7 @@ func TestAlertRepository_CountActive_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM alerts WHERE status = 'active'`).
@@ -569,7 +571,7 @@ func TestAlertRepository_CountActive_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM alerts WHERE status = 'active'`).
@@ -586,7 +588,7 @@ func TestAlertRepository_Resolve_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE alerts SET status = 'resolved', resolved_at = \$1 WHERE id = \$2`).
@@ -603,7 +605,7 @@ func TestAlertRepository_Resolve_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE alerts SET status = 'resolved'`).
@@ -619,7 +621,7 @@ func TestAlertRepository_GetRecentByDevice_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -645,7 +647,7 @@ func TestAlertRepository_GetRecentByDevice_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM alerts WHERE device_id = \$1 AND rule_id = \$2`).
@@ -663,7 +665,7 @@ func TestAlertRepository_GetRecentByDevice_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM alerts WHERE device_id =`).
@@ -680,7 +682,7 @@ func TestAlertRepository_GetRecentByDevice_WithResolvedAt(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAlertRepository(db)
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()

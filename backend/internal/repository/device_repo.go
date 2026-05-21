@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // DeviceRepositoryInterface defines the interface for device repository
@@ -21,11 +21,11 @@ type DeviceRepositoryInterface interface {
 
 // DeviceRepository handles device data access
 type DeviceRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewDeviceRepository creates a new device repository
-func NewDeviceRepository(db *sql.DB) *DeviceRepository {
+func NewDeviceRepository(db database.DatabaseInterface) *DeviceRepository {
 	return &DeviceRepository{db: db}
 }
 
@@ -42,7 +42,7 @@ func (r *DeviceRepository) Create(ctx context.Context, device *model.Device) err
 			description = EXCLUDED.description,
 			updated_at = EXCLUDED.updated_at
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.Exec(ctx, query,
 		device.ID, device.Name, device.Type, device.Location,
 		device.Status, device.Description, device.CreatedAt, device.UpdatedAt,
 	)
@@ -56,7 +56,7 @@ func (r *DeviceRepository) GetByID(ctx context.Context, id string) (*model.Devic
 		FROM devices WHERE id = $1
 	`
 	device := &model.Device{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&device.ID, &device.Name, &device.Type, &device.Location,
 		&device.Status, &device.Description, &device.CreatedAt, &device.UpdatedAt,
 	)
@@ -70,7 +70,7 @@ func (r *DeviceRepository) GetByID(ctx context.Context, id string) (*model.Devic
 func (r *DeviceRepository) List(ctx context.Context, page, pageSize int) ([]model.Device, int, error) {
 	// Count total
 	var total int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM devices").Scan(&total)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM devices").Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -81,7 +81,7 @@ func (r *DeviceRepository) List(ctx context.Context, page, pageSize int) ([]mode
 		SELECT id, name, type, location, status, description, created_at, updated_at
 		FROM devices ORDER BY created_at DESC LIMIT $1 OFFSET $2
 	`
-	rows, err := r.db.QueryContext(ctx, query, pageSize, offset)
+	rows, err := r.db.Query(ctx, query, pageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -111,7 +111,7 @@ func (r *DeviceRepository) Update(ctx context.Context, device *model.Device) err
 		WHERE id = $7
 	`
 	device.UpdatedAt = time.Now()
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.Exec(ctx, query,
 		device.Name, device.Type, device.Location, device.Status,
 		device.Description, device.UpdatedAt, device.ID,
 	)
@@ -120,13 +120,13 @@ func (r *DeviceRepository) Update(ctx context.Context, device *model.Device) err
 
 // Delete removes a device
 func (r *DeviceRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM devices WHERE id = $1", id)
+	_, err := r.db.Exec(ctx, "DELETE FROM devices WHERE id = $1", id)
 	return err
 }
 
 // UpdateStatus updates only the status of a device
 func (r *DeviceRepository) UpdateStatus(ctx context.Context, id, status string) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE devices SET status = $1, updated_at = $2 WHERE id = $3",
 		status, time.Now(), id,
 	)
@@ -136,17 +136,17 @@ func (r *DeviceRepository) UpdateStatus(ctx context.Context, id, status string) 
 // Count returns total device count
 func (r *DeviceRepository) Count(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM devices").Scan(&count)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM devices").Scan(&count)
 	return count, err
 }
 
 // UserRepository handles user data access
 type UserRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewUserRepository creates a new user repository
-func NewUserRepository(db *sql.DB) *UserRepository {
+func NewUserRepository(db database.DatabaseInterface) *UserRepository {
 	return &UserRepository{db: db}
 }
 
@@ -157,7 +157,7 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		user.Username, user.Password, user.Email, user.Role,
 		user.CreatedAt, user.UpdatedAt,
 	).Scan(&user.ID)
@@ -170,7 +170,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id int) (*model.User, erro
 		FROM users WHERE id = $1
 	`
 	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email,
 		&user.Role, &user.TokenVersion, &user.TenantID, &user.CreatedAt, &user.UpdatedAt,
 	)
@@ -188,7 +188,7 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*m
 		FROM users WHERE username = $1
 	`
 	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, username).Scan(
+	err := r.db.QueryRow(ctx, query, username).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email,
 		&user.Role, &user.TokenVersion, &user.TenantID, &user.CreatedAt, &user.UpdatedAt,
 	)
@@ -206,7 +206,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 		FROM users WHERE email = $1
 	`
 	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
+	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Email,
 		&user.Role, &user.TokenVersion, &user.TenantID, &user.CreatedAt, &user.UpdatedAt,
 	)
@@ -220,7 +220,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 // List retrieves all users with pagination
 func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
 	var total int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&total)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -230,7 +230,7 @@ func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.
 		SELECT id, username, password_hash, email, role, created_at, updated_at
 		FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2
 	`
-	rows, err := r.db.QueryContext(ctx, query, pageSize, offset)
+	rows, err := r.db.Query(ctx, query, pageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -259,7 +259,7 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 		WHERE id = $5
 	`
 	user.UpdatedAt = time.Now()
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.Exec(ctx, query,
 		user.Username, user.Email, user.Role, user.UpdatedAt, user.ID,
 	)
 	return err
@@ -267,7 +267,7 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 
 // UpdatePassword updates user password
 func (r *UserRepository) UpdatePassword(ctx context.Context, id int, passwordHash string) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3",
 		passwordHash, time.Now(), id,
 	)
@@ -276,21 +276,21 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id int, passwordHas
 
 // Delete removes a user
 func (r *UserRepository) Delete(ctx context.Context, id int) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	_, err := r.db.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
 	return err
 }
 
 // Count returns total user count
 func (r *UserRepository) Count(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
 	return count, err
 }
 
 // GetTokenVersion 获取用户的 Token 版本号
 func (r *UserRepository) GetTokenVersion(ctx context.Context, userID int) (int, error) {
 	var version int
-	err := r.db.QueryRowContext(ctx,
+	err := r.db.QueryRow(ctx,
 		"SELECT token_version FROM users WHERE id = $1",
 		userID,
 	).Scan(&version)
@@ -302,7 +302,7 @@ func (r *UserRepository) GetTokenVersion(ctx context.Context, userID int) (int, 
 
 // UpdateTokenVersion 递增用户的 Token 版本号 (撤销所有旧 Token)
 func (r *UserRepository) UpdateTokenVersion(ctx context.Context, userID int) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE users SET token_version = token_version + 1, updated_at = $1 WHERE id = $2",
 		time.Now(), userID,
 	)

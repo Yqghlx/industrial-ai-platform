@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"errors"
 	"net/http"
@@ -28,8 +29,8 @@ func TestNewTelemetryService(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	assert.NotNil(t, svc)
@@ -44,15 +45,15 @@ func TestInitTelemetryService(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
 
 	// Create alert service
-	ruleRepo := repository.NewRuleRepository(db)
-	notificationRepo := repository.NewNotificationRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	blackBoxRepo := repository.NewBlackBoxRepository(db)
+	ruleRepo := repository.NewRuleRepository(database.NewDBWrapper(db))
+	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	blackBoxRepo := repository.NewBlackBoxRepository(database.NewDBWrapper(db))
 	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo)
 
 	svc := InitTelemetryService(alertSvc, telemetryRepo, deviceRepo)
@@ -229,8 +230,8 @@ func TestTelemetryService_GetROIStats_DBError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	ctx := context.Background()
@@ -251,8 +252,8 @@ func TestTelemetryService_GetSystemStatus(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	ctx := context.Background()
@@ -276,8 +277,8 @@ func TestTelemetryService_GetSystemStatus_DBError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	ctx := context.Background()
@@ -298,15 +299,15 @@ func TestTelemetryService_Ingest_WithAlertService(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	// Create alert service
-	ruleRepo := repository.NewRuleRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	notificationRepo := repository.NewNotificationRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	blackBoxRepo := repository.NewBlackBoxRepository(db)
+	ruleRepo := repository.NewRuleRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	blackBoxRepo := repository.NewBlackBoxRepository(database.NewDBWrapper(db))
 	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo)
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertSvc)
@@ -341,8 +342,8 @@ func TestTelemetryService_Ingest_StatusWarning(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	ctx := context.Background()
@@ -367,8 +368,8 @@ func TestTelemetryService_Ingest_StatusFault(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
 	ctx := context.Background()

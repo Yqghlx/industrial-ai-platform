@@ -8,15 +8,16 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // RuleRepository handles alert rule data access
 type RuleRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewRuleRepository creates a new rule repository
-func NewRuleRepository(db *sql.DB) *RuleRepository {
+func NewRuleRepository(db database.DatabaseInterface) *RuleRepository {
 	return &RuleRepository{db: db}
 }
 
@@ -28,7 +29,7 @@ func (r *RuleRepository) Create(ctx context.Context, rule *model.AlertRule) erro
 		RETURNING id
 	`
 	actionsJSON, _ := json.Marshal(rule.Actions)
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		rule.Name, rule.DeviceType, rule.Metric, rule.Operator, rule.Threshold,
 		rule.Severity, string(actionsJSON), rule.Enabled, rule.CooldownSec,
 		rule.CreatedAt, rule.UpdatedAt,
@@ -43,7 +44,7 @@ func (r *RuleRepository) GetByID(ctx context.Context, id int) (*model.AlertRule,
 	`
 	rule := &model.AlertRule{}
 	var actionsJSON string
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&rule.ID, &rule.Name, &rule.DeviceType, &rule.Metric, &rule.Operator,
 		&rule.Threshold, &rule.Severity, &actionsJSON, &rule.Enabled, &rule.CooldownSec,
 		&rule.CreatedAt, &rule.UpdatedAt,
@@ -61,7 +62,7 @@ func (r *RuleRepository) List(ctx context.Context) ([]model.AlertRule, error) {
 		SELECT id, name, device_type, metric, operator, threshold, severity, actions, enabled, cooldown_sec, created_at, updated_at
 		FROM alert_rules ORDER BY created_at DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +92,7 @@ func (r *RuleRepository) ListEnabled(ctx context.Context) ([]model.AlertRule, er
 		SELECT id, name, device_type, metric, operator, threshold, severity, actions, enabled, cooldown_sec, created_at, updated_at
 		FROM alert_rules WHERE enabled = true ORDER BY created_at DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func (r *RuleRepository) Update(ctx context.Context, rule *model.AlertRule) erro
 	`
 	actionsJSON, _ := json.Marshal(rule.Actions)
 	rule.UpdatedAt = time.Now()
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.Exec(ctx, query,
 		rule.Name, rule.DeviceType, rule.Metric, rule.Operator, rule.Threshold,
 		rule.Severity, string(actionsJSON), rule.Enabled, rule.CooldownSec,
 		rule.UpdatedAt, rule.ID,
@@ -135,13 +136,13 @@ func (r *RuleRepository) Update(ctx context.Context, rule *model.AlertRule) erro
 
 // Delete removes an alert rule
 func (r *RuleRepository) Delete(ctx context.Context, id int) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM alert_rules WHERE id = $1", id)
+	_, err := r.db.Exec(ctx, "DELETE FROM alert_rules WHERE id = $1", id)
 	return err
 }
 
 // ToggleEnabled enables or disables a rule
 func (r *RuleRepository) ToggleEnabled(ctx context.Context, id int, enabled bool) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE alert_rules SET enabled = $1, updated_at = $2 WHERE id = $3",
 		enabled, time.Now(), id,
 	)
@@ -150,11 +151,11 @@ func (r *RuleRepository) ToggleEnabled(ctx context.Context, id int, enabled bool
 
 // AlertRepository handles alert data access
 type AlertRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewAlertRepository creates a new alert repository
-func NewAlertRepository(db *sql.DB) *AlertRepository {
+func NewAlertRepository(db database.DatabaseInterface) *AlertRepository {
 	return &AlertRepository{db: db}
 }
 
@@ -165,7 +166,7 @@ func (r *AlertRepository) Create(ctx context.Context, alert *model.Alert) error 
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		alert.RuleID, alert.DeviceID, alert.Message, alert.Severity,
 		alert.Status, alert.TriggeredAt,
 	).Scan(&alert.ID)
@@ -185,7 +186,7 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -197,7 +198,7 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 		FROM alerts %s ORDER BY triggered_at DESC LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
-	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	rows, err := r.db.Query(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -225,7 +226,7 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 // CountActive counts active alerts
 func (r *AlertRepository) CountActive(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx,
+	err := r.db.QueryRow(ctx,
 		"SELECT COUNT(*) FROM alerts WHERE status = 'active'",
 	).Scan(&count)
 	return count, err
@@ -234,7 +235,7 @@ func (r *AlertRepository) CountActive(ctx context.Context) (int, error) {
 // Resolve resolves an alert
 func (r *AlertRepository) Resolve(ctx context.Context, id int) error {
 	now := time.Now()
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE alerts SET status = 'resolved', resolved_at = $1 WHERE id = $2",
 		now, id,
 	)
@@ -243,7 +244,7 @@ func (r *AlertRepository) Resolve(ctx context.Context, id int) error {
 
 // UpdateStatus updates alert status (for acknowledge, etc.)
 func (r *AlertRepository) UpdateStatus(ctx context.Context, id int, status string) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE alerts SET status = $1 WHERE id = $2",
 		status, id,
 	)
@@ -260,7 +261,7 @@ func (r *AlertRepository) GetRecentByDevice(ctx context.Context, deviceID string
 	`
 	var a model.Alert
 	var resolvedAt sql.NullTime
-	err := r.db.QueryRowContext(ctx, query, deviceID, ruleID, cooldownSec).Scan(
+	err := r.db.QueryRow(ctx, query, deviceID, ruleID, cooldownSec).Scan(
 		&a.ID, &a.RuleID, &a.DeviceID, &a.Message, &a.Severity,
 		&a.Status, &a.TriggeredAt, &resolvedAt,
 	)

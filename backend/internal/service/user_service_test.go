@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"errors"
@@ -17,7 +18,7 @@ import (
 func newTestUserService(t *testing.T) (*UserService, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	repo := repository.NewUserRepository(db)
+	repo := repository.NewUserRepository(database.NewDBWrapper(db))
 	svc := NewUserService(repo)
 	return svc, mock
 }

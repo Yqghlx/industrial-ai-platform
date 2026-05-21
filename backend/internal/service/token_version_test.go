@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestTokenVersionValidation(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 
 	// 设置 UserTokenStore
 	SetUserTokenStore(userRepo)
@@ -106,7 +107,7 @@ func TestChangePasswordRevokesTokens(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	SetUserTokenStore(userRepo)
 
 	// 初始数据
@@ -180,7 +181,7 @@ func TestRefreshTokenWithVersion(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	SetUserTokenStore(userRepo)
 
 	userID := 1

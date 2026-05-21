@@ -1,11 +1,13 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // ErrPermissionExists for permission_repo
@@ -13,11 +15,11 @@ var ErrPermissionExists = errors.New("permission already exists")
 
 // PermissionRepo handles permission data access
 type PermissionRepo struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewPermissionRepo creates a new permission repository
-func NewPermissionRepo(db *sql.DB) *PermissionRepo {
+func NewPermissionRepo(db database.DatabaseInterface) *PermissionRepo {
 	return &PermissionRepo{db: db}
 }
 
@@ -30,7 +32,7 @@ func (r *PermissionRepo) Create(perm *model.Permission) error {
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
-	return r.db.QueryRow(query,
+	return r.db.QueryRow(context.Background(), query,
 		perm.Name,
 		perm.Resource,
 		perm.Action,
@@ -47,7 +49,7 @@ func (r *PermissionRepo) GetByID(id int) (*model.Permission, error) {
 		WHERE id = $1
 	`
 	perm := &model.Permission{}
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRow(context.Background(), query, id).Scan(
 		&perm.ID,
 		&perm.Name,
 		&perm.Resource,
@@ -72,7 +74,7 @@ func (r *PermissionRepo) GetByResourceAction(resource, action string) (*model.Pe
 		WHERE resource = $1 AND action = $2
 	`
 	perm := &model.Permission{}
-	err := r.db.QueryRow(query, resource, action).Scan(
+	err := r.db.QueryRow(context.Background(), query, resource, action).Scan(
 		&perm.ID,
 		&perm.Name,
 		&perm.Resource,
@@ -97,7 +99,7 @@ func (r *PermissionRepo) GetByName(name string) (*model.Permission, error) {
 		WHERE name = $1
 	`
 	perm := &model.Permission{}
-	err := r.db.QueryRow(query, name).Scan(
+	err := r.db.QueryRow(context.Background(), query, name).Scan(
 		&perm.ID,
 		&perm.Name,
 		&perm.Resource,
@@ -121,7 +123,7 @@ func (r *PermissionRepo) List() ([]model.Permission, error) {
 		FROM permissions
 		ORDER BY resource, action
 	`
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(context.Background(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +156,7 @@ func (r *PermissionRepo) ListByResource(resource string) ([]model.Permission, er
 		WHERE resource = $1
 		ORDER BY action
 	`
-	rows, err := r.db.Query(query, resource)
+	rows, err := r.db.Query(context.Background(), query, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +184,12 @@ func (r *PermissionRepo) ListByResource(resource string) ([]model.Permission, er
 // Delete removes a permission by ID
 func (r *PermissionRepo) Delete(id int) error {
 	// First remove all role assignments
-	_, err := r.db.Exec("DELETE FROM role_permissions WHERE permission_id = $1", id)
+	_, err := r.db.Exec(context.Background(), "DELETE FROM role_permissions WHERE permission_id = $1", id)
 	if err != nil {
 		return err
 	}
 
-	result, err := r.db.Exec("DELETE FROM permissions WHERE id = $1", id)
+	result, err := r.db.Exec(context.Background(), "DELETE FROM permissions WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -229,7 +231,7 @@ func (r *PermissionRepo) GetByIDs(ids []int) ([]model.Permission, error) {
 		WHERE id = ANY($1)
 		ORDER BY resource, action
 	`
-	rows, err := r.db.Query(query, ids)
+	rows, err := r.db.Query(context.Background(), query, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +260,7 @@ func (r *PermissionRepo) GetByIDs(ids []int) ([]model.Permission, error) {
 func (r *PermissionRepo) Count() (int, error) {
 	query := `SELECT COUNT(*) FROM permissions`
 	var count int
-	err := r.db.QueryRow(query).Scan(&count)
+	err := r.db.QueryRow(context.Background(), query).Scan(&count)
 	return count, err
 }
 
@@ -271,7 +273,7 @@ func (r *PermissionRepo) ListByRoleID(roleID int) ([]model.Permission, error) {
 		WHERE rp.role_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.Query(query, roleID)
+	rows, err := r.db.Query(context.Background(), query, roleID)
 	if err != nil {
 		return nil, err
 	}

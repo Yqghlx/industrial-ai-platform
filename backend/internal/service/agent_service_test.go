@@ -8,6 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,9 +19,9 @@ func TestAgentService_Query_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 	ctx := context.Background()
@@ -54,9 +55,9 @@ func TestAgentService_Query_GeneratesSessionID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 	ctx := context.Background()
@@ -87,9 +88,9 @@ func TestAgentService_DetermineAgent_DeviceExpert(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -113,9 +114,9 @@ func TestAgentService_DetermineAgent_MaintenanceExpert(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -138,9 +139,9 @@ func TestAgentService_DetermineAgent_PredictExpert(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -163,9 +164,9 @@ func TestAgentService_DetermineAgent_OptimizeExpert(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -188,9 +189,9 @@ func TestAgentService_DetermineAgent_DefaultAgent(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -213,9 +214,9 @@ func TestAgentService_MockResponse(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -234,9 +235,9 @@ func TestAgentService_GetTaskLogs_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 	ctx := context.Background()
@@ -265,9 +266,9 @@ func TestAgentService_GetTaskLogs_DefaultLimit(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 	ctx := context.Background()
@@ -294,9 +295,9 @@ func TestAgentService_AnalyzeQuery_ExtractDeviceID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -312,9 +313,9 @@ func TestAgentService_AnalyzeQuery_ExtractIntent(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 
@@ -342,9 +343,9 @@ func TestAgentService_BuildSystemPrompt(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
 

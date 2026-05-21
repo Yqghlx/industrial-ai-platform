@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"testing"
 	"time"
@@ -17,12 +18,12 @@ func newTestExportService(t *testing.T) (*ExportService, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
-	notificationRepo := repository.NewNotificationRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
+	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
 
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
 

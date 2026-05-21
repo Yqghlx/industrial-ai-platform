@@ -8,6 +8,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestTenantRepo_Create(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("success", func(t *testing.T) {
 		tenant := &model.Tenant{
@@ -66,7 +68,7 @@ func TestTenantRepo_GetByID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("found", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -99,7 +101,7 @@ func TestTenantRepo_GetBySlug(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("found", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -130,7 +132,7 @@ func TestTenantRepo_Update(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("success", func(t *testing.T) {
 		tenant := &model.Tenant{
@@ -175,7 +177,7 @@ func TestTenantRepo_Delete(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("success", func(t *testing.T) {
 		mock.ExpectExec(`DELETE FROM tenants WHERE id`).
@@ -202,7 +204,7 @@ func TestTenantRepo_List(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	t.Run("with_pagination", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -236,7 +238,7 @@ func TestTenantRepo_Count(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTenantRepo(db)
+	repo := NewTenantRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"count"}).AddRow(5)
 

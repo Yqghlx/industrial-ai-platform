@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ func TestDeviceRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -61,7 +62,7 @@ func TestDeviceRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	device := &model.Device{
@@ -93,7 +94,7 @@ func TestDeviceRepository_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -126,7 +127,7 @@ func TestDeviceRepository_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning no rows
@@ -149,7 +150,7 @@ func TestDeviceRepository_GetByID_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning database error
@@ -172,7 +173,7 @@ func TestDeviceRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -208,7 +209,7 @@ func TestDeviceRepository_List_SecondPage(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -240,7 +241,7 @@ func TestDeviceRepository_List_EmptyResult(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -269,7 +270,7 @@ func TestDeviceRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query returning error
@@ -292,7 +293,7 @@ func TestDeviceRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -320,7 +321,7 @@ func TestDeviceRepository_List_ScanError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -350,7 +351,7 @@ func TestDeviceRepository_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -391,7 +392,7 @@ func TestDeviceRepository_Update_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	device := &model.Device{
@@ -423,7 +424,7 @@ func TestDeviceRepository_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect DELETE query
@@ -444,7 +445,7 @@ func TestDeviceRepository_Delete_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect DELETE query returning error
@@ -466,7 +467,7 @@ func TestDeviceRepository_UpdateStatus_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE status query
@@ -487,7 +488,7 @@ func TestDeviceRepository_UpdateStatus_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE status query returning error
@@ -508,7 +509,7 @@ func TestDeviceRepository_Count_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -529,7 +530,7 @@ func TestDeviceRepository_Count_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query returning error
@@ -551,7 +552,7 @@ func TestDeviceRepository_Count_ZeroDevices(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query returning zero
@@ -574,7 +575,7 @@ func TestDeviceRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewDeviceRepository(db)
+		repo := NewDeviceRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		device := &model.Device{
@@ -602,7 +603,7 @@ func TestDeviceRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewDeviceRepository(db)
+		repo := NewDeviceRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		now := time.Now()
@@ -625,7 +626,7 @@ func TestDeviceRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewDeviceRepository(db)
+		repo := NewDeviceRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		// Verify COUNT query pattern
@@ -654,7 +655,7 @@ func TestDeviceRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewDeviceRepository(db)
+		repo := NewDeviceRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		device := &model.Device{
@@ -680,7 +681,7 @@ func TestDeviceRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewDeviceRepository(db)
+		repo := NewDeviceRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		// Verify the SQL pattern matches DELETE with WHERE id = $1
@@ -700,7 +701,7 @@ func TestDeviceRepository_ContextCancellation(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewDeviceRepository(db)
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel the context immediately
 

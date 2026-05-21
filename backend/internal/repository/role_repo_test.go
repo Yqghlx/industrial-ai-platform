@@ -8,6 +8,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestRoleRepo_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	role := &model.Role{
 		Name:        "operator",
@@ -43,7 +45,7 @@ func TestRoleRepo_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	role := &model.Role{
 		Name:        "operator",
@@ -65,7 +67,7 @@ func TestRoleRepo_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -87,7 +89,7 @@ func TestRoleRepo_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
 		WithArgs(999).
@@ -104,7 +106,7 @@ func TestRoleRepo_GetByName_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -125,7 +127,7 @@ func TestRoleRepo_GetByName_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id = .* AND name = .*`).
 		WithArgs("tenant-001", "nonexistent").
@@ -142,7 +144,7 @@ func TestRoleRepo_ListByTenant_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -164,7 +166,7 @@ func TestRoleRepo_ListByTenant_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"})
 
@@ -182,7 +184,7 @@ func TestRoleRepo_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	role := &model.Role{
 		ID:          1,
@@ -203,7 +205,7 @@ func TestRoleRepo_Update_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	role := &model.Role{
 		ID:          999,
@@ -224,7 +226,7 @@ func TestRoleRepo_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	// First, GetByID call
 	now := time.Now()
@@ -258,7 +260,7 @@ func TestRoleRepo_Delete_SystemRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	// First, GetByID returns a system role
 	now := time.Now()
@@ -278,7 +280,7 @@ func TestRoleRepo_AssignRoleToUser_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	// Check if already assigned - returns false
 	rows := sqlmock.NewRows([]string{"exists"}).AddRow(false)
@@ -300,7 +302,7 @@ func TestRoleRepo_AssignRoleToUser_AlreadyAssigned(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	// Check if already assigned - returns true
 	rows := sqlmock.NewRows([]string{"exists"}).AddRow(true)
@@ -317,7 +319,7 @@ func TestRoleRepo_RemoveRoleFromUser_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectExec(`DELETE FROM user_roles WHERE user_id = .* AND role_id = .*`).
 		WithArgs(1, 2).
@@ -332,7 +334,7 @@ func TestRoleRepo_RemoveRoleFromUser_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectExec(`DELETE FROM user_roles WHERE user_id = .* AND role_id = .*`).
 		WithArgs(1, 999).
@@ -348,7 +350,7 @@ func TestRoleRepo_GetUserRoles_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -369,7 +371,7 @@ func TestRoleRepo_GetRolePermissions_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now()).
@@ -389,7 +391,7 @@ func TestRoleRepo_AssignPermissionToRole_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectExec(`INSERT INTO role_permissions`).
 		WithArgs(1, 2).
@@ -404,7 +406,7 @@ func TestRoleRepo_RemovePermissionFromRole_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .* AND permission_id = .*`).
 		WithArgs(1, 2).
@@ -419,7 +421,7 @@ func TestRoleRepo_RemovePermissionFromRole_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .* AND permission_id = .*`).
 		WithArgs(1, 999).
@@ -435,7 +437,7 @@ func TestRoleRepo_GetUserPermissions_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now()).
@@ -455,7 +457,7 @@ func TestRoleRepo_CheckUserPermission_HasPermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"exists"}).AddRow(true)
 	mock.ExpectQuery(`SELECT EXISTS\( SELECT 1 FROM permissions p INNER JOIN`).
@@ -472,7 +474,7 @@ func TestRoleRepo_CheckUserPermission_NoPermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"exists"}).AddRow(false)
 	mock.ExpectQuery(`SELECT EXISTS\( SELECT 1 FROM permissions`).
@@ -489,7 +491,7 @@ func TestRoleRepo_GetByIDWithPermissions_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRoleRepo(db)
+	repo := NewRoleRepo(database.NewDBWrapper(db))
 
 	now := time.Now()
 	// GetByID

@@ -12,6 +12,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // ============================================
@@ -23,9 +24,9 @@ func TestNewAgentServiceWithConfig_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{
 		HTTPTimeout:         30 * time.Second,
@@ -52,9 +53,9 @@ func TestNewAgentServiceWithConfig_NilConfig(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	// Nil config should use defaults
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, nil)
@@ -73,9 +74,9 @@ func TestAgentService_GetDeviceContext_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -101,9 +102,9 @@ func TestAgentService_GetDeviceContext_DeviceNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -126,9 +127,9 @@ func TestAgentService_GetDeviceContext_TelemetryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -159,9 +160,9 @@ func TestAgentService_callLLM_NoAPIKey(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{
 		LLMAPIKey:  "", // No API key
@@ -186,9 +187,9 @@ func TestAgentService_Query_WithSessionID2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{
 		LLMAPIKey: "", // No API key, use mock response
@@ -232,9 +233,9 @@ func TestAgentService_MockResponse_AllAgents2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -256,9 +257,9 @@ func TestAgentService_GetTaskLogs_NegativeLimit2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -278,9 +279,9 @@ func TestAgentService_GetTaskLogs_ZeroLimit2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -303,9 +304,9 @@ func TestAgentService_AnalyzeQuery2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)
@@ -325,9 +326,9 @@ func TestAgentService_BuildSystemPrompt2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	taskLogRepo := repository.NewAgentTaskLogRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
+	taskLogRepo := repository.NewAgentTaskLogRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
 	config := &AgentServiceConfig{LLMAPIKey: ""}
 	svc := NewAgentServiceWithConfig(taskLogRepo, deviceRepo, telemetryRepo, config)

@@ -8,6 +8,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestTelemetryRepository_Insert_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -64,7 +66,7 @@ func TestTelemetryRepository_Insert_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	data := &model.TelemetryData{
@@ -97,7 +99,7 @@ func TestTelemetryRepository_GetByDeviceID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -131,7 +133,7 @@ func TestTelemetryRepository_GetByDeviceID_EmptyResult(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -160,7 +162,7 @@ func TestTelemetryRepository_GetByDeviceID_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -186,7 +188,7 @@ func TestTelemetryRepository_GetByDeviceID_ScanError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -214,7 +216,7 @@ func TestTelemetryRepository_GetLatest_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -245,7 +247,7 @@ func TestTelemetryRepository_GetLatest_EmptyResult(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning empty rows
@@ -269,7 +271,7 @@ func TestTelemetryRepository_GetLatest_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning error
@@ -291,7 +293,7 @@ func TestTelemetryRepository_GetStats_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -328,7 +330,7 @@ func TestTelemetryRepository_GetStats_NoData(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -360,7 +362,7 @@ func TestTelemetryRepository_GetStats_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -387,7 +389,7 @@ func TestTelemetryRepository_GetByDeviceID_NullFields(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -426,7 +428,7 @@ func TestTelemetryRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewTelemetryRepository(db)
+		repo := NewTelemetryRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		data := &model.TelemetryData{
@@ -454,7 +456,7 @@ func TestTelemetryRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewTelemetryRepository(db)
+		repo := NewTelemetryRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		now := time.Now()
@@ -475,7 +477,7 @@ func TestTelemetryRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewTelemetryRepository(db)
+		repo := NewTelemetryRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		rows := sqlmock.NewRows([]string{"id", "device_id", "time", "temperature", "pressure", "vibration", "humidity", "power", "status", "message"})
@@ -494,7 +496,7 @@ func TestTelemetryRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewTelemetryRepository(db)
+		repo := NewTelemetryRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		now := time.Now()
@@ -518,7 +520,7 @@ func TestTelemetryRepository_ContextCancellation(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewTelemetryRepository(db)
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel the context immediately
 

@@ -8,6 +8,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestPermissionRepo_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	perm := &model.Permission{
 		Name:        "device:create",
@@ -43,7 +45,7 @@ func TestPermissionRepo_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	perm := &model.Permission{
 		Name:        "device:create",
@@ -65,7 +67,7 @@ func TestPermissionRepo_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now())
@@ -85,7 +87,7 @@ func TestPermissionRepo_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	mock.ExpectQuery(`SELECT .* FROM permissions WHERE id = .*`).
 		WithArgs(999).
@@ -102,7 +104,7 @@ func TestPermissionRepo_GetByResourceAction_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now())
@@ -123,7 +125,7 @@ func TestPermissionRepo_GetByResourceAction_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	mock.ExpectQuery(`SELECT .* FROM permissions WHERE resource = .* AND action = .*`).
 		WithArgs("nonexistent", "action").
@@ -140,7 +142,7 @@ func TestPermissionRepo_GetByName_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now())
@@ -160,7 +162,7 @@ func TestPermissionRepo_GetByName_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	mock.ExpectQuery(`SELECT .* FROM permissions WHERE name = .*`).
 		WithArgs("nonexistent").
@@ -177,7 +179,7 @@ func TestPermissionRepo_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now()).
@@ -197,7 +199,7 @@ func TestPermissionRepo_List_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"})
 
@@ -214,7 +216,7 @@ func TestPermissionRepo_ListByResource_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now()).
@@ -234,7 +236,7 @@ func TestPermissionRepo_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	// Delete role_permissions
 	mock.ExpectExec(`DELETE FROM role_permissions WHERE permission_id = .*`).
@@ -255,7 +257,7 @@ func TestPermissionRepo_Delete_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	// Delete role_permissions
 	mock.ExpectExec(`DELETE FROM role_permissions WHERE permission_id = .*`).
@@ -277,7 +279,7 @@ func TestPermissionRepo_CreateIfNotExists_NewPermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	perm := &model.Permission{
 		Name:        "device:create",
@@ -306,7 +308,7 @@ func TestPermissionRepo_CreateIfNotExists_ExistingPermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	perm := &model.Permission{
 		Name:        "device:create",
@@ -334,7 +336,7 @@ func TestPermissionRepo_GetByIDs_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read", time.Now()).
@@ -361,7 +363,7 @@ func TestPermissionRepo_GetByIDs_EmptyInput(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	// No query expected for empty input
 	perms, err := repo.GetByIDs([]int{})
@@ -375,7 +377,7 @@ func TestPermissionRepo_Count_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"count"}).AddRow(15)
 
@@ -392,7 +394,7 @@ func TestPermissionRepo_ListByRoleID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
 		AddRow(1, "device:read", "device", "read", "Read devices", time.Now()).
@@ -412,7 +414,7 @@ func TestPermissionRepo_ListByRoleID_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewPermissionRepo(db)
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"})
 

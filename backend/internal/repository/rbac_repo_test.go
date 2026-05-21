@@ -9,6 +9,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +22,7 @@ func TestRBACRepo_ListRoles(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -57,7 +59,7 @@ func TestRBACRepo_GetRoleByID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -90,7 +92,7 @@ func TestRBACRepo_CreateRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -119,7 +121,7 @@ func TestRBACRepo_GetRolePermissions(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -145,7 +147,7 @@ func TestRBACRepo_GetUserRoles(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -181,7 +183,7 @@ func TestRBACRepo_AssignRoleToUser(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -208,7 +210,7 @@ func TestRBACRepo_RemoveRoleFromUser(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -235,7 +237,7 @@ func TestRBACRepo_CheckPermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("has_permission", func(t *testing.T) {
@@ -268,7 +270,7 @@ func TestRBACRepo_ListPermissions(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -290,7 +292,7 @@ func TestRBACRepo_AssignPermissionToRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -317,7 +319,7 @@ func TestRBACRepo_DeleteRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -344,7 +346,7 @@ func TestRBACRepo_UpdateRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -369,7 +371,7 @@ func TestRBACRepo_GetUserPermissions(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -392,7 +394,7 @@ func TestRBACRepo_GetRoleByName(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -437,7 +439,7 @@ func TestRBACRepo_CreatePermission(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -481,7 +483,7 @@ func TestRBACRepo_GetPermissionByID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -526,7 +528,7 @@ func TestRBACRepo_RemovePermissionFromRole(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -562,7 +564,7 @@ func TestRBACRepo_AssignRoleToUser_AlreadyAssigned(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// ON CONFLICT DO NOTHING returns 0 rows affected
@@ -580,7 +582,7 @@ func TestRBACRepo_AssignPermissionToRole_AlreadyAssigned(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// ON CONFLICT DO NOTHING returns 0 rows affected
@@ -598,7 +600,7 @@ func TestRBACRepo_ListRoles_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id`).
@@ -616,7 +618,7 @@ func TestRBACRepo_ListRoles_ScanError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Return malformed data that will cause scan error
@@ -637,7 +639,7 @@ func TestRBACRepo_GetRolePermissions_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT p\.id, p\.name, p\.resource, p\.action, p\.description, p\.created_at FROM permissions p JOIN role_permissions`).
@@ -655,7 +657,7 @@ func TestRBACRepo_GetUserRoles_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM roles r`).
@@ -673,7 +675,7 @@ func TestRBACRepo_ListPermissions_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT id, name, resource, action, description, created_at FROM permissions`).
@@ -690,7 +692,7 @@ func TestRBACRepo_CheckPermission_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT`).
@@ -707,7 +709,7 @@ func TestRBACRepo_GetUserPermissions_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT DISTINCT p\.id, p\.name, p\.resource, p\.action, p\.description, p\.created_at`).
@@ -725,7 +727,7 @@ func TestRBACRepo_UpdateRole_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	role := &model.Role{
@@ -750,7 +752,7 @@ func TestRBACRepo_DeleteRole_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`DELETE FROM roles WHERE id`).
@@ -769,7 +771,7 @@ func TestRBACRepo_InitializeDefaultRBAC_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Mock permission checks (not found - so they will be created)
@@ -826,7 +828,7 @@ func TestRBACRepo_InitializeDefaultRBAC_PermissionAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Mock first permission check (already exists)
@@ -889,7 +891,7 @@ func TestRBACRepo_InitializeDefaultRBAC_CreatePermissionError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Mock permission check (not found)
@@ -913,7 +915,7 @@ func TestRBACRepo_InitializeDefaultRBAC_CreateRoleError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewRBACRepository(db)
+	repo := NewRBACRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Mock permission checks and creates

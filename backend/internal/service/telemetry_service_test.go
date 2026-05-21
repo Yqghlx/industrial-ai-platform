@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"testing"
@@ -19,8 +20,8 @@ func TestTelemetryService_Ingest_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	// For telemetry service, we need alert service too, but we'll skip alert evaluation for simplicity
 	// In a real scenario, you'd mock the alert service as well
@@ -68,8 +69,8 @@ func TestTelemetryService_Ingest_WarningStatus(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -109,8 +110,8 @@ func TestTelemetryService_Ingest_FaultStatus(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -150,8 +151,8 @@ func TestTelemetryService_Ingest_VibrationWarning(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -191,8 +192,8 @@ func TestTelemetryService_GetByDeviceID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -228,8 +229,8 @@ func TestTelemetryService_GetByDeviceID_DefaultLimit(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -262,8 +263,8 @@ func TestTelemetryService_GetLatest_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -297,8 +298,8 @@ func TestTelemetryService_GetStats_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -337,8 +338,8 @@ func TestTelemetryService_GetROIStats_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -370,8 +371,8 @@ func TestTelemetryService_GetSystemStatus_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -402,8 +403,8 @@ func TestTelemetryService_GetSystemStatus_UnhealthyDB(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -432,8 +433,8 @@ func TestTelemetryService_GetHistoricalData_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,
@@ -466,8 +467,8 @@ func TestTelemetryService_GetHistoricalData_DefaultLimit(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	deviceRepo := repository.NewDeviceRepository(db)
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
 		telemetryRepo: telemetryRepo,

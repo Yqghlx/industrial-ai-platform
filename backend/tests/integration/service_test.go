@@ -11,6 +11,8 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/database"
+
 	"github.com/industrial-ai/platform/internal/service"
 )
 
@@ -21,7 +23,7 @@ import (
 func TestUserService_Integration_Create(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
 	_ = service.NewUserService(userRepo)
 
 	username := "integration_user"
@@ -46,7 +48,7 @@ func TestUserService_Integration_Create(t *testing.T) {
 func TestUserService_Integration_GetByID(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
 	userService := service.NewUserService(userRepo)
 
 	var userID int
@@ -66,7 +68,7 @@ func TestUserService_Integration_GetByID(t *testing.T) {
 func TestUserService_Integration_GetTokenVersion(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
 	userService := service.NewUserService(userRepo)
 
 	var userID int
@@ -85,7 +87,7 @@ func TestUserService_Integration_GetTokenVersion(t *testing.T) {
 func TestUserService_Integration_UpdateTokenVersion(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
 	userService := service.NewUserService(userRepo)
 
 	var userID int
@@ -111,7 +113,7 @@ func TestUserService_Integration_UpdateTokenVersion(t *testing.T) {
 func TestUserService_Integration_UpdatePassword(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
 	userService := service.NewUserService(userRepo)
 
 	var userID int
@@ -142,7 +144,7 @@ func TestUserService_Integration_UpdatePassword(t *testing.T) {
 func TestDeviceService_Integration_Create(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	deviceRepo := repository.NewDeviceRepository(testDB)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
 	deviceService := service.NewDeviceService(deviceRepo, nil)
 
 	device := &model.Device{
@@ -169,7 +171,7 @@ func TestDeviceService_Integration_Create(t *testing.T) {
 func TestDeviceService_Integration_GetByID(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	deviceRepo := repository.NewDeviceRepository(testDB)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
 	deviceService := service.NewDeviceService(deviceRepo, nil)
 
 	_, err := testDB.ExecContext(ctx,
@@ -188,7 +190,7 @@ func TestDeviceService_Integration_GetByID(t *testing.T) {
 func TestDeviceService_Integration_Delete(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	deviceRepo := repository.NewDeviceRepository(testDB)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
 	deviceService := service.NewDeviceService(deviceRepo, nil)
 
 	_, err := testDB.ExecContext(ctx,
@@ -213,7 +215,7 @@ func TestDeviceService_Integration_Delete(t *testing.T) {
 func TestDeviceService_Integration_List(t *testing.T) {
 	truncateAllTables(t)
 	ctx := context.Background()
-	deviceRepo := repository.NewDeviceRepository(testDB)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
 	deviceService := service.NewDeviceService(deviceRepo, nil)
 
 	for i := 1; i <= 5; i++ {

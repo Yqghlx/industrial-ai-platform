@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"errors"
@@ -25,9 +26,9 @@ var testTime = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 func newTestRBACServiceWithRBACRepo(t *testing.T) (*RBACService, sqlmock.Sqlmock, *sql.DB) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	rbacRepo := repository.NewRBACRepository(db)
-	userRepo := repository.NewUserRepository(db)
-	tenantRepo := repository.NewTenantRepo(db)
+	rbacRepo := repository.NewRBACRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+	tenantRepo := repository.NewTenantRepo(database.NewDBWrapper(db))
 	svc := NewRBACServiceWithRBACRepo(rbacRepo, userRepo, tenantRepo)
 	t.Cleanup(func() {
 		mock.ExpectationsWereMet()
@@ -39,10 +40,10 @@ func newTestRBACServiceWithRBACRepo(t *testing.T) (*RBACService, sqlmock.Sqlmock
 func newTestRBACService(t *testing.T) (*RBACService, sqlmock.Sqlmock, *sql.DB) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	roleRepo := repository.NewRoleRepo(db)
-	permRepo := repository.NewPermissionRepo(db)
-	userRepo := repository.NewUserRepository(db)
-	tenantRepo := repository.NewTenantRepo(db)
+	roleRepo := repository.NewRoleRepo(database.NewDBWrapper(db))
+	permRepo := repository.NewPermissionRepo(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+	tenantRepo := repository.NewTenantRepo(database.NewDBWrapper(db))
 	svc := NewRBACService(roleRepo, permRepo, userRepo, tenantRepo)
 	t.Cleanup(func() {
 		mock.ExpectationsWereMet()
@@ -57,10 +58,10 @@ func TestNewRBACService(t *testing.T) {
 	defer db.Close()
 
 	svc := NewRBACService(
-		repository.NewRoleRepo(db),
-		repository.NewPermissionRepo(db),
-		repository.NewUserRepository(db),
-		repository.NewTenantRepo(db),
+		repository.NewRoleRepo(database.NewDBWrapper(db)),
+		repository.NewPermissionRepo(database.NewDBWrapper(db)),
+		repository.NewUserRepository(database.NewDBWrapper(db)),
+		repository.NewTenantRepo(database.NewDBWrapper(db)),
 	)
 	assert.NotNil(t, svc)
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // TelemetryRepositoryInterface defines the interface for telemetry repository
@@ -20,11 +21,11 @@ type TelemetryRepositoryInterface interface {
 
 // TelemetryRepository handles telemetry data access
 type TelemetryRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewTelemetryRepository creates a new telemetry repository
-func NewTelemetryRepository(db *sql.DB) *TelemetryRepository {
+func NewTelemetryRepository(db database.DatabaseInterface) *TelemetryRepository {
 	return &TelemetryRepository{db: db}
 }
 
@@ -35,7 +36,7 @@ func (r *TelemetryRepository) Insert(ctx context.Context, data *model.TelemetryD
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		data.DeviceID, data.Timestamp, data.Temperature, data.Pressure,
 		data.Vibration, data.Humidity, data.Power, data.Status, data.Message,
 	).Scan(&data.ID)
@@ -50,7 +51,7 @@ func (r *TelemetryRepository) GetByDeviceID(ctx context.Context, deviceID string
 		ORDER BY time DESC
 		LIMIT $4
 	`
-	rows, err := r.db.QueryContext(ctx, query, deviceID, start, end, limit)
+	rows, err := r.db.Query(ctx, query, deviceID, start, end, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (r *TelemetryRepository) GetLatest(ctx context.Context) ([]model.TelemetryD
 		FROM device_telemetry
 		ORDER BY device_id, time DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +133,7 @@ func (r *TelemetryRepository) GetStats(ctx context.Context, deviceID string, sta
 		WHERE device_id = $1 AND time >= $2 AND time <= $3
 	`
 	stats := &model.DeviceStats{DeviceID: deviceID}
-	err := r.db.QueryRowContext(ctx, query, deviceID, start, end).Scan(
+	err := r.db.QueryRow(ctx, query, deviceID, start, end).Scan(
 		&stats.AvgTemperature, &stats.AvgPressure, &stats.AvgVibration,
 		&stats.MaxTemperature, &stats.MaxPressure, &stats.MaxVibration,
 		&stats.DataPoints,
@@ -153,11 +154,11 @@ type WorkOrderRepositoryInterface interface {
 
 // WorkOrderRepository handles work order data access
 type WorkOrderRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewWorkOrderRepository creates a new work order repository
-func NewWorkOrderRepository(db *sql.DB) *WorkOrderRepository {
+func NewWorkOrderRepository(db database.DatabaseInterface) *WorkOrderRepository {
 	return &WorkOrderRepository{db: db}
 }
 
@@ -168,7 +169,7 @@ func (r *WorkOrderRepository) Create(ctx context.Context, wo *model.WorkOrder) e
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		wo.Title, wo.Description, wo.DeviceID, wo.Priority, wo.Status,
 		wo.AssignedTo, wo.CreatedAt, wo.UpdatedAt,
 	).Scan(&wo.ID)
@@ -182,7 +183,7 @@ func (r *WorkOrderRepository) GetByID(ctx context.Context, id int) (*model.WorkO
 	`
 	wo := &model.WorkOrder{}
 	var assignedTo sql.NullInt64
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&wo.ID, &wo.Title, &wo.Description, &wo.DeviceID, &wo.Priority,
 		&wo.Status, &assignedTo, &wo.CreatedAt, &wo.UpdatedAt,
 	)
@@ -217,7 +218,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string,
 	// Count total
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM work_orders %s", whereClause)
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -230,7 +231,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string,
 		FROM work_orders %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
-	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	rows, err := r.db.Query(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -258,7 +259,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string,
 
 // UpdateStatus updates work order status
 func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id int, status string) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.db.Exec(ctx,
 		"UPDATE work_orders SET status = $1, updated_at = $2 WHERE id = $3",
 		status, time.Now(), id,
 	)
@@ -274,11 +275,11 @@ type NotificationRepositoryInterface interface {
 
 // NotificationRepository handles notification data access
 type NotificationRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewNotificationRepository creates a new notification repository
-func NewNotificationRepository(db *sql.DB) *NotificationRepository {
+func NewNotificationRepository(db database.DatabaseInterface) *NotificationRepository {
 	return &NotificationRepository{db: db}
 }
 
@@ -293,7 +294,7 @@ func (r *NotificationRepository) Create(ctx context.Context, n *model.Notificati
 	if n.DeviceID != nil {
 		deviceID = *n.DeviceID
 	}
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		n.Type, n.Title, n.Message, deviceID, n.Read, n.CreatedAt,
 	).Scan(&n.ID)
 }
@@ -315,7 +316,7 @@ func (r *NotificationRepository) List(ctx context.Context, notifType string, unr
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM notifications %s", whereClause)
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -327,7 +328,7 @@ func (r *NotificationRepository) List(ctx context.Context, notifType string, unr
 		FROM notifications %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
-	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	rows, err := r.db.Query(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -353,7 +354,7 @@ func (r *NotificationRepository) List(ctx context.Context, notifType string, unr
 
 // MarkRead marks a notification as read
 func (r *NotificationRepository) MarkRead(ctx context.Context, id int) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE notifications SET read = true WHERE id = $1", id)
+	_, err := r.db.Exec(ctx, "UPDATE notifications SET read = true WHERE id = $1", id)
 	return err
 }
 
@@ -365,11 +366,11 @@ type BlackBoxRepositoryInterface interface {
 
 // BlackBoxRepository handles black box record data access
 type BlackBoxRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewBlackBoxRepository creates a new black box repository
-func NewBlackBoxRepository(db *sql.DB) *BlackBoxRepository {
+func NewBlackBoxRepository(db database.DatabaseInterface) *BlackBoxRepository {
 	return &BlackBoxRepository{db: db}
 }
 
@@ -380,7 +381,7 @@ func (r *BlackBoxRepository) Create(ctx context.Context, record *model.BlackBoxR
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		record.DeviceID, record.TriggerType, record.StartTime, record.EndTime,
 		record.Summary, record.CreatedAt,
 	).Scan(&record.ID)
@@ -400,7 +401,7 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM blackbox_records %s", whereClause)
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -412,7 +413,7 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 		FROM blackbox_records %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
-	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	rows, err := r.db.Query(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -443,11 +444,11 @@ type ReportRepositoryInterface interface {
 
 // ReportRepository handles report data access
 type ReportRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewReportRepository creates a new report repository
-func NewReportRepository(db *sql.DB) *ReportRepository {
+func NewReportRepository(db database.DatabaseInterface) *ReportRepository {
 	return &ReportRepository{db: db}
 }
 
@@ -462,7 +463,7 @@ func (r *ReportRepository) Create(ctx context.Context, report *model.Report) err
 	if report.DeviceID != nil {
 		deviceID = *report.DeviceID
 	}
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		report.Title, report.Type, deviceID, report.Content, report.GeneratedAt,
 	).Scan(&report.ID)
 }
@@ -481,7 +482,7 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM reports %s", whereClause)
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -493,7 +494,7 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 		FROM reports %s ORDER BY generated_at DESC LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
-	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	rows, err := r.db.Query(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -519,11 +520,11 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 
 // AgentTaskLogRepository handles AI agent task log data access
 type AgentTaskLogRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewAgentTaskLogRepository creates a new agent task log repository
-func NewAgentTaskLogRepository(db *sql.DB) *AgentTaskLogRepository {
+func NewAgentTaskLogRepository(db database.DatabaseInterface) *AgentTaskLogRepository {
 	return &AgentTaskLogRepository{db: db}
 }
 
@@ -534,7 +535,7 @@ func (r *AgentTaskLogRepository) Create(ctx context.Context, log *model.AgentTas
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		log.SessionID, log.Query, log.Response, log.Agent, log.ExecutedAt,
 	).Scan(&log.ID)
 }
@@ -547,7 +548,7 @@ func (r *AgentTaskLogRepository) List(ctx context.Context, limit int) ([]model.A
 		ORDER BY executed_at DESC
 		LIMIT $1
 	`
-	rows, err := r.db.QueryContext(ctx, query, limit)
+	rows, err := r.db.Query(ctx, query, limit)
 	if err != nil {
 		return nil, err
 	}

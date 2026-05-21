@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,9 +21,9 @@ func TestWorkOrderRepository_NewWorkOrderRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestWorkOrderRepository_Create_Success(t *testing.T) {
@@ -30,7 +31,7 @@ func TestWorkOrderRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -64,7 +65,7 @@ func TestWorkOrderRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	wo := &model.WorkOrder{
@@ -88,7 +89,7 @@ func TestWorkOrderRepository_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -117,7 +118,7 @@ func TestWorkOrderRepository_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM work_orders WHERE id = \$1`).
@@ -136,7 +137,7 @@ func TestWorkOrderRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -167,7 +168,7 @@ func TestWorkOrderRepository_List_WithFilters(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -197,7 +198,7 @@ func TestWorkOrderRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM work_orders`).
@@ -215,7 +216,7 @@ func TestWorkOrderRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM work_orders`).
@@ -236,7 +237,7 @@ func TestWorkOrderRepository_UpdateStatus_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE work_orders SET status = \$1, updated_at = \$2 WHERE id = \$3`).
@@ -253,7 +254,7 @@ func TestWorkOrderRepository_UpdateStatus_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewWorkOrderRepository(db)
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE work_orders SET status =`).
@@ -271,9 +272,9 @@ func TestNotificationRepository_NewNotificationRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestNotificationRepository_Create_Success(t *testing.T) {
@@ -281,7 +282,7 @@ func TestNotificationRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -312,7 +313,7 @@ func TestNotificationRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	n := &model.Notification{
@@ -336,7 +337,7 @@ func TestNotificationRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -367,7 +368,7 @@ func TestNotificationRepository_List_WithFilters(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -397,7 +398,7 @@ func TestNotificationRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM notifications`).
@@ -415,7 +416,7 @@ func TestNotificationRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM notifications`).
@@ -436,7 +437,7 @@ func TestNotificationRepository_MarkRead_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE notifications SET read = true WHERE id = \$1`).
@@ -453,7 +454,7 @@ func TestNotificationRepository_MarkRead_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewNotificationRepository(db)
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectExec(`UPDATE notifications SET read = true WHERE id = \$1`).
@@ -471,9 +472,9 @@ func TestBlackBoxRepository_NewBlackBoxRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestBlackBoxRepository_Create_Success(t *testing.T) {
@@ -481,7 +482,7 @@ func TestBlackBoxRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -512,7 +513,7 @@ func TestBlackBoxRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	record := &model.BlackBoxRecord{
@@ -535,7 +536,7 @@ func TestBlackBoxRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -566,7 +567,7 @@ func TestBlackBoxRepository_List_WithDeviceID(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -597,7 +598,7 @@ func TestBlackBoxRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM blackbox_records`).
@@ -615,7 +616,7 @@ func TestBlackBoxRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewBlackBoxRepository(db)
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM blackbox_records`).
@@ -638,9 +639,9 @@ func TestReportRepository_NewReportRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestReportRepository_Create_Success(t *testing.T) {
@@ -648,7 +649,7 @@ func TestReportRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -678,7 +679,7 @@ func TestReportRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	report := &model.Report{
@@ -701,7 +702,7 @@ func TestReportRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -732,7 +733,7 @@ func TestReportRepository_List_WithType(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -763,7 +764,7 @@ func TestReportRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM reports`).
@@ -781,7 +782,7 @@ func TestReportRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(db)
+	repo := NewReportRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM reports`).
@@ -804,9 +805,9 @@ func TestAgentTaskLogRepository_NewAgentTaskLogRepository(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	assert.NotNil(t, repo)
-	assert.Equal(t, db, repo.db)
+	assert.NotNil(t, repo.db)
 }
 
 func TestAgentTaskLogRepository_Create_Success(t *testing.T) {
@@ -814,7 +815,7 @@ func TestAgentTaskLogRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -843,7 +844,7 @@ func TestAgentTaskLogRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	log := &model.AgentTaskLog{
@@ -867,7 +868,7 @@ func TestAgentTaskLogRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -894,7 +895,7 @@ func TestAgentTaskLogRepository_List_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{
@@ -917,7 +918,7 @@ func TestAgentTaskLogRepository_List_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewAgentTaskLogRepository(db)
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM agent_task_logs ORDER BY executed_at DESC LIMIT \$1`).

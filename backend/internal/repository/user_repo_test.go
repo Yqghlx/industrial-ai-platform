@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func TestUserRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -59,7 +60,7 @@ func TestUserRepository_Create_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	user := &model.User{
@@ -89,7 +90,7 @@ func TestUserRepository_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -122,7 +123,7 @@ func TestUserRepository_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning no rows
@@ -145,7 +146,7 @@ func TestUserRepository_GetByUsername_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -173,7 +174,7 @@ func TestUserRepository_GetByUsername_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning no rows
@@ -195,7 +196,7 @@ func TestUserRepository_GetByEmail_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -223,7 +224,7 @@ func TestUserRepository_GetByEmail_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning no rows
@@ -245,7 +246,7 @@ func TestUserRepository_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -280,7 +281,7 @@ func TestUserRepository_List_EmptyResult(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -309,7 +310,7 @@ func TestUserRepository_List_CountError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query returning error
@@ -332,7 +333,7 @@ func TestUserRepository_List_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -360,7 +361,7 @@ func TestUserRepository_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	now := time.Now()
@@ -396,7 +397,7 @@ func TestUserRepository_Update_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	user := &model.User{
@@ -424,7 +425,7 @@ func TestUserRepository_UpdatePassword_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE password query
@@ -445,7 +446,7 @@ func TestUserRepository_UpdatePassword_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE password query returning error
@@ -466,7 +467,7 @@ func TestUserRepository_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect DELETE query
@@ -487,7 +488,7 @@ func TestUserRepository_Delete_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect DELETE query returning error
@@ -508,7 +509,7 @@ func TestUserRepository_Count_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query
@@ -529,7 +530,7 @@ func TestUserRepository_Count_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect COUNT query returning error
@@ -551,7 +552,7 @@ func TestUserRepository_GetTokenVersion_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT token_version query
@@ -575,7 +576,7 @@ func TestUserRepository_GetTokenVersion_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect SELECT query returning no rows
@@ -597,7 +598,7 @@ func TestUserRepository_UpdateTokenVersion_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE token_version query (increment)
@@ -618,7 +619,7 @@ func TestUserRepository_UpdateTokenVersion_Error(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewUserRepository(db)
+	repo := NewUserRepository(database.NewDBWrapper(db))
 	ctx := context.Background()
 
 	// Expect UPDATE token_version query returning error
@@ -642,7 +643,7 @@ func TestUserRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewUserRepository(db)
+		repo := NewUserRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		user := &model.User{
@@ -667,7 +668,7 @@ func TestUserRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewUserRepository(db)
+		repo := NewUserRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		now := time.Now()
@@ -689,7 +690,7 @@ func TestUserRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewUserRepository(db)
+		repo := NewUserRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		user := &model.User{
@@ -712,7 +713,7 @@ func TestUserRepository_SQLQueryPatterns(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		repo := NewUserRepository(db)
+		repo := NewUserRepository(database.NewDBWrapper(db))
 		ctx := context.Background()
 
 		mock.ExpectExec("DELETE FROM users WHERE id").

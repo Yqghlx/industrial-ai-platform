@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 var (
@@ -18,11 +19,11 @@ var (
 
 // RBACRepository handles RBAC data access
 type RBACRepository struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
 // NewRBACRepository creates a new RBAC repository
-func NewRBACRepository(db *sql.DB) *RBACRepository {
+func NewRBACRepository(db database.DatabaseInterface) *RBACRepository {
 	return &RBACRepository{db: db}
 }
 
@@ -33,7 +34,7 @@ func (r *RBACRepository) CreateRole(ctx context.Context, role *model.Role) error
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		role.Name, role.Description, role.TenantID, role.IsSystem,
 		role.CreatedAt, role.UpdatedAt,
 	).Scan(&role.ID)
@@ -46,7 +47,7 @@ func (r *RBACRepository) GetRoleByID(ctx context.Context, id int) (*model.Role, 
 		FROM roles WHERE id = $1
 	`
 	role := &model.Role{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&role.ID, &role.Name, &role.Description, &role.TenantID,
 		&role.IsSystem, &role.CreatedAt, &role.UpdatedAt,
 	)
@@ -66,7 +67,7 @@ func (r *RBACRepository) GetRoleByName(ctx context.Context, name string) (*model
 		FROM roles WHERE name = $1
 	`
 	role := &model.Role{}
-	err := r.db.QueryRowContext(ctx, query, name).Scan(
+	err := r.db.QueryRow(ctx, query, name).Scan(
 		&role.ID, &role.Name, &role.Description, &role.TenantID,
 		&role.IsSystem, &role.CreatedAt, &role.UpdatedAt,
 	)
@@ -87,7 +88,7 @@ func (r *RBACRepository) ListRoles(ctx context.Context, tenantID string) ([]mode
 		WHERE tenant_id = $1 OR tenant_id = '' OR tenant_id IS NULL
 		ORDER BY created_at DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query, tenantID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func (r *RBACRepository) UpdateRole(ctx context.Context, role *model.Role) error
 			name = $1, description = $2, updated_at = $3
 		WHERE id = $4 AND is_system = false
 	`
-	result, err := r.db.ExecContext(ctx, query,
+	result, err := r.db.Exec(ctx, query,
 		role.Name, role.Description, role.UpdatedAt, role.ID,
 	)
 	if err != nil {
@@ -134,7 +135,7 @@ func (r *RBACRepository) UpdateRole(ctx context.Context, role *model.Role) error
 // This operation is idempotent - deleting a non-existent role returns no error
 func (r *RBACRepository) DeleteRole(ctx context.Context, id int) error {
 	query := `DELETE FROM roles WHERE id = $1 AND is_system = false`
-	_, err := r.db.ExecContext(ctx, query, id)
+	_, err := r.db.Exec(ctx, query, id)
 	return err
 }
 
@@ -145,7 +146,7 @@ func (r *RBACRepository) AssignRoleToUser(ctx context.Context, userID, roleID in
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id, role_id) DO NOTHING
 	`
-	result, err := r.db.ExecContext(ctx, query, userID, roleID, tenantID, time.Now())
+	result, err := r.db.Exec(ctx, query, userID, roleID, tenantID, time.Now())
 	if err != nil {
 		return err
 	}
@@ -162,7 +163,7 @@ func (r *RBACRepository) AssignRoleToUser(ctx context.Context, userID, roleID in
 // RemoveRoleFromUser removes a role from a user
 func (r *RBACRepository) RemoveRoleFromUser(ctx context.Context, userID, roleID int) error {
 	query := `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`
-	_, err := r.db.ExecContext(ctx, query, userID, roleID)
+	_, err := r.db.Exec(ctx, query, userID, roleID)
 	return err
 }
 
@@ -175,7 +176,7 @@ func (r *RBACRepository) GetUserRoles(ctx context.Context, userID int) ([]model.
 		WHERE ur.user_id = $1
 		ORDER BY r.name
 	`
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +203,7 @@ func (r *RBACRepository) CreatePermission(ctx context.Context, perm *model.Permi
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
-	return r.db.QueryRowContext(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		perm.Name, perm.Resource, perm.Action, perm.Description, perm.CreatedAt,
 	).Scan(&perm.ID)
 }
@@ -214,7 +215,7 @@ func (r *RBACRepository) GetPermissionByID(ctx context.Context, id int) (*model.
 		FROM permissions WHERE id = $1
 	`
 	perm := &model.Permission{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&perm.ID, &perm.Name, &perm.Resource, &perm.Action, &perm.Description, &perm.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -232,7 +233,7 @@ func (r *RBACRepository) ListPermissions(ctx context.Context) ([]model.Permissio
 		SELECT id, name, resource, action, description, created_at
 		FROM permissions ORDER BY resource, action
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +259,7 @@ func (r *RBACRepository) AssignPermissionToRole(ctx context.Context, roleID, per
 		VALUES ($1, $2)
 		ON CONFLICT (role_id, permission_id) DO NOTHING
 	`
-	result, err := r.db.ExecContext(ctx, query, roleID, permissionID)
+	result, err := r.db.Exec(ctx, query, roleID, permissionID)
 	if err != nil {
 		return err
 	}
@@ -275,7 +276,7 @@ func (r *RBACRepository) AssignPermissionToRole(ctx context.Context, roleID, per
 // RemovePermissionFromRole removes a permission from a role
 func (r *RBACRepository) RemovePermissionFromRole(ctx context.Context, roleID, permissionID int) error {
 	query := `DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2`
-	_, err := r.db.ExecContext(ctx, query, roleID, permissionID)
+	_, err := r.db.Exec(ctx, query, roleID, permissionID)
 	return err
 }
 
@@ -288,7 +289,7 @@ func (r *RBACRepository) GetRolePermissions(ctx context.Context, roleID int) ([]
 		WHERE rp.role_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.QueryContext(ctx, query, roleID)
+	rows, err := r.db.Query(ctx, query, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +318,7 @@ func (r *RBACRepository) CheckPermission(ctx context.Context, userID int, resour
 		WHERE ur.user_id = $1 AND p.resource = $2 AND p.action = $3
 	`
 	var hasPermission bool
-	err := r.db.QueryRowContext(ctx, query, userID, resource, action).Scan(&hasPermission)
+	err := r.db.QueryRow(ctx, query, userID, resource, action).Scan(&hasPermission)
 	if err != nil {
 		return false, err
 	}
@@ -334,7 +335,7 @@ func (r *RBACRepository) GetUserPermissions(ctx context.Context, userID int) ([]
 		WHERE ur.user_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}

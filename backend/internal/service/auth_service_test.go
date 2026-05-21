@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"os"
@@ -35,7 +36,7 @@ func TestAuthService_Login_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -68,7 +69,7 @@ func TestAuthService_Login_InvalidUsername(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -94,7 +95,7 @@ func TestAuthService_Login_InvalidPassword(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -125,7 +126,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -169,7 +170,7 @@ func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -204,7 +205,7 @@ func TestAuthService_Register_EmailAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -244,7 +245,7 @@ func TestAuthService_GetUserByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 
@@ -273,7 +274,7 @@ func TestAuthService_GetUserByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	authService := NewAuthService(userRepo)
 	ctx := context.Background()
 

@@ -22,6 +22,7 @@ import (
 	"github.com/industrial-ai/platform/internal/service"
 	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/pkg/cache_service"
+	dbpkg "github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/wscompression"
 
 	_ "github.com/lib/pq" // PostgreSQL driver registration
@@ -147,11 +148,11 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	log.Printf("[Cache] Initialized with backend: %s", cacheSvc.GetCache().GetStats().BackendType)
 
 	// Initialize repositories
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	tenantRepo := repository.NewTenantRepo(db)
-	rbacRepo := repository.NewRBACRepository(db)
+	deviceRepo := repository.NewDeviceRepository(dbpkg.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(dbpkg.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(dbpkg.NewDBWrapper(db))
+	tenantRepo := repository.NewTenantRepo(dbpkg.NewDBWrapper(db))
+	rbacRepo := repository.NewRBACRepository(dbpkg.NewDBWrapper(db))
 
 	// Initialize services
 	authSvc := service.NewAuthService(userRepo)

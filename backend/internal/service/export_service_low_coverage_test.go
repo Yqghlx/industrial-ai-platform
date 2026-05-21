@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"errors"
 	"testing"
@@ -23,11 +24,11 @@ func TestExportService_GenerateAlertReportData_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -60,11 +61,11 @@ func TestExportService_GenerateAlertReportData_DBError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -94,11 +95,11 @@ func TestExportService_GenerateROIReportData_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -123,11 +124,11 @@ func TestExportService_GenerateROIReportData_DBError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -150,11 +151,11 @@ func TestExportService_ExportXLSX_DeviceReport2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -188,11 +189,11 @@ func TestExportService_ExportXLSX_AlertReport2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -224,11 +225,11 @@ func TestExportService_ExportXLSX_ROIReport2(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	telemetryRepo := repository.NewTelemetryRepository(db)
-	alertRepo := repository.NewAlertRepository(db)
-	workOrderRepo := repository.NewWorkOrderRepository(db)
-	reportRepo := repository.NewReportRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(database.NewDBWrapper(db))
 	reportSvc := NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, nil)
 
 	exportSvc := NewExportService(deviceRepo, telemetryRepo, alertRepo, workOrderRepo, reportSvc)
@@ -262,10 +263,10 @@ func TestExportService_GenerateDeviceExcelContent_Success(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -292,10 +293,10 @@ func TestExportService_GenerateDeviceExcelContent_EmptyDevices(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -319,10 +320,10 @@ func TestExportService_GenerateAlertExcelContent_Success(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -355,10 +356,10 @@ func TestExportService_GenerateROIExcelContent_Success(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -391,10 +392,10 @@ func TestExportService_GenerateAlertPDFContent_Success(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -420,10 +421,10 @@ func TestExportService_GenerateROIPDFContent_Success(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 
@@ -449,10 +450,10 @@ func TestExportService_Export_UnsupportedType2(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 	ctx := context.Background()
@@ -474,10 +475,10 @@ func TestExportService_Export_UnsupportedFormat2(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 	ctx := context.Background()
@@ -503,10 +504,10 @@ func TestExportService_Export_DefaultDates2(t *testing.T) {
 	defer db.Close()
 
 	exportSvc := NewExportService(
-		repository.NewDeviceRepository(db),
-		repository.NewTelemetryRepository(db),
-		repository.NewAlertRepository(db),
-		repository.NewWorkOrderRepository(db),
+		repository.NewDeviceRepository(database.NewDBWrapper(db)),
+		repository.NewTelemetryRepository(database.NewDBWrapper(db)),
+		repository.NewAlertRepository(database.NewDBWrapper(db)),
+		repository.NewWorkOrderRepository(database.NewDBWrapper(db)),
 		nil,
 	)
 	ctx := context.Background()

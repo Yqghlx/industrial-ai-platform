@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"testing"
@@ -19,8 +20,8 @@ func TestDeviceService_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -55,8 +56,8 @@ func TestDeviceService_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -86,8 +87,8 @@ func TestDeviceService_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -111,8 +112,8 @@ func TestDeviceService_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -145,8 +146,8 @@ func TestDeviceService_Update_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -186,8 +187,8 @@ func TestDeviceService_Update_DeviceNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -219,8 +220,8 @@ func TestDeviceService_Delete_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -243,8 +244,8 @@ func TestDeviceService_UpdateStatus_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -311,8 +312,8 @@ func TestDeviceService_AutoRegisterDevice_NewDevice(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -346,8 +347,8 @@ func TestDeviceService_AutoRegisterDevice_ExistingDevice(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 
@@ -376,8 +377,8 @@ func TestDeviceService_GetGraph_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	deviceRepo := repository.NewDeviceRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
 	deviceService := NewDeviceService(deviceRepo, userRepo)
 	ctx := context.Background()
 

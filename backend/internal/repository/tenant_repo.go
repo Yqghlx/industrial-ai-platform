@@ -1,19 +1,22 @@
 package repository
 
 import (
+	"context"
+
 	"database/sql"
 	"errors"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 var ErrTenantNotFound = errors.New("tenant not found")
 
 type TenantRepo struct {
-	db *sql.DB
+	db database.DatabaseInterface
 }
 
-func NewTenantRepo(db *sql.DB) *TenantRepo {
+func NewTenantRepo(db database.DatabaseInterface) *TenantRepo {
 	return &TenantRepo{db: db}
 }
 
@@ -22,7 +25,7 @@ func (r *TenantRepo) Create(tenant *model.Tenant) error {
 		INSERT INTO tenants (id, name, slug, plan, max_devices, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := r.db.Exec(query,
+	_, err := r.db.Exec(context.Background(), query,
 		tenant.ID,
 		tenant.Name,
 		tenant.Slug,
@@ -41,7 +44,7 @@ func (r *TenantRepo) GetByID(id string) (*model.Tenant, error) {
 		WHERE id = $1
 	`
 	tenant := &model.Tenant{}
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRow(context.Background(), query, id).Scan(
 		&tenant.ID,
 		&tenant.Name,
 		&tenant.Slug,
@@ -66,7 +69,7 @@ func (r *TenantRepo) GetBySlug(slug string) (*model.Tenant, error) {
 		WHERE slug = $1
 	`
 	tenant := &model.Tenant{}
-	err := r.db.QueryRow(query, slug).Scan(
+	err := r.db.QueryRow(context.Background(), query, slug).Scan(
 		&tenant.ID,
 		&tenant.Name,
 		&tenant.Slug,
@@ -91,7 +94,7 @@ func (r *TenantRepo) List(limit, offset int) ([]model.Tenant, error) {
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	rows, err := r.db.Query(query, limit, offset)
+	rows, err := r.db.Query(context.Background(), query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +126,7 @@ func (r *TenantRepo) Update(tenant *model.Tenant) error {
 		SET name = $2, slug = $3, plan = $4, max_devices = $5, updated_at = $6
 		WHERE id = $1
 	`
-	result, err := r.db.Exec(query,
+	result, err := r.db.Exec(context.Background(), query,
 		tenant.ID,
 		tenant.Name,
 		tenant.Slug,
@@ -146,7 +149,7 @@ func (r *TenantRepo) Update(tenant *model.Tenant) error {
 
 func (r *TenantRepo) Delete(id string) error {
 	query := `DELETE FROM tenants WHERE id = $1`
-	result, err := r.db.Exec(query, id)
+	result, err := r.db.Exec(context.Background(), query, id)
 	if err != nil {
 		return err
 	}
@@ -163,6 +166,6 @@ func (r *TenantRepo) Delete(id string) error {
 func (r *TenantRepo) Count() (int, error) {
 	query := `SELECT COUNT(*) FROM tenants`
 	var count int
-	err := r.db.QueryRow(query).Scan(&count)
+	err := r.db.QueryRow(context.Background(), query).Scan(&count)
 	return count, err
 }
