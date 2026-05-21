@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // AuthService handles authentication
@@ -23,18 +24,18 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	// Get user by username
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
-		return nil, "", errors.New("invalid credentials")
+		return nil, "", errors.NewAuthFailedError()
 	}
 
 	// Verify password
 	if !VerifyPassword(password, user.Password) {
-		return nil, "", errors.New("invalid credentials")
+		return nil, "", errors.NewAuthFailedError()
 	}
 
 	// Generate JWT token
 	token, err := GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.NewInternalError(err.Error())
 	}
 
 	return user, token, nil
@@ -44,12 +45,12 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) (*model.User, string, error) {
 	// Check if username exists
 	if _, err := s.userRepo.GetByUsername(ctx, req.Username); err == nil {
-		return nil, "", errors.New("username already exists")
+		return nil, "", errors.NewAppError(errors.ErrCodeConflict, "Username already exists", req.Username)
 	}
 
 	// Check if email exists
 	if _, err := s.userRepo.GetByEmail(ctx, req.Email); err == nil {
-		return nil, "", errors.New("email already exists")
+		return nil, "", errors.NewAppError(errors.ErrCodeConflict, "Email already exists", req.Email)
 	}
 
 	// Set default role
@@ -61,7 +62,7 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 	// Hash password
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.NewInternalError(err.Error())
 	}
 
 	// Create user
@@ -73,13 +74,13 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		return nil, "", err
+		return nil, "", errors.NewDatabaseError(err.Error())
 	}
 
 	// Generate JWT token
 	token, err := GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.NewInternalError(err.Error())
 	}
 
 	return user, token, nil
@@ -87,5 +88,9 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 
 // GetUserByID retrieves a user by ID
 func (s *AuthService) GetUserByID(ctx context.Context, id int) (*model.User, error) {
-	return s.userRepo.GetByID(ctx, id)
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.NewUserNotFoundError(fmt.Sprintf("%d", id))
+	}
+	return user, nil
 }

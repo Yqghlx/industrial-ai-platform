@@ -82,7 +82,7 @@ func TestAuthService_Login_InvalidUsername(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Equal(t, "invalid credentials", err.Error())
+	assert.Contains(t, err.Error(), "Authentication failed")
 	assert.Nil(t, user)
 	assert.Empty(t, token)
 
@@ -113,7 +113,7 @@ func TestAuthService_Login_InvalidPassword(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Equal(t, "invalid credentials", err.Error())
+	assert.Contains(t, err.Error(), "Authentication failed")
 	assert.Nil(t, user)
 	assert.Empty(t, token)
 
@@ -192,7 +192,7 @@ func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Equal(t, "username already exists", err.Error())
+	assert.Contains(t, err.Error(), "Username already exists")
 	assert.Nil(t, user)
 	assert.Empty(t, token)
 
@@ -232,7 +232,7 @@ func TestAuthService_Register_EmailAlreadyExists(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Equal(t, "email already exists", err.Error())
+	assert.Contains(t, err.Error(), "Email already exists")
 	assert.Nil(t, user)
 	assert.Empty(t, token)
 
