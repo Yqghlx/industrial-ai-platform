@@ -464,7 +464,7 @@ func TestExportService_Export_UnsupportedType2(t *testing.T) {
 
 	result, err := exportSvc.Export(ctx, req)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported report type")
+	assert.Contains(t, err.Error(), "Unsupported report type")
 	assert.Nil(t, result)
 }
 
@@ -493,7 +493,7 @@ func TestExportService_Export_UnsupportedFormat2(t *testing.T) {
 
 	result, err := exportSvc.Export(ctx, req)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported export format")
+	assert.Contains(t, err.Error(), "Unsupported export format")
 	assert.Nil(t, result)
 }
 

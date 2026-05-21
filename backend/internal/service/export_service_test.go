@@ -49,7 +49,7 @@ func TestExportService_Export_UnsupportedReportType(t *testing.T) {
 	result, err := svc.Export(ctx, req)
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Contains(t, err.Error(), "unsupported report type")
+	assert.Contains(t, err.Error(), "Unsupported report type")
 }
 
 func TestExportService_Export_UnsupportedFormat(t *testing.T) {
@@ -66,7 +66,7 @@ func TestExportService_Export_UnsupportedFormat(t *testing.T) {
 	result, err := svc.Export(ctx, req)
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Contains(t, err.Error(), "unsupported export format")
+	assert.Contains(t, err.Error(), "Unsupported export format")
 }
 
 func TestExportService_Export_DefaultDates(t *testing.T) {

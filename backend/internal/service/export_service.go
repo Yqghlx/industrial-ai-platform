@@ -9,6 +9,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -94,7 +95,7 @@ func (s *ExportService) Export(ctx context.Context, req *ExportRequest) (*Export
 		data = s.generateROIReportData(ctx)
 		filename = fmt.Sprintf("ROI分析报告_%s", time.Now().Format("20060102"))
 	default:
-		return nil, fmt.Errorf("unsupported report type: %s", req.ReportType)
+		return nil, errors.NewAppError(errors.ErrCodeInvalidInput, "Unsupported report type", req.ReportType)
 	}
 
 	// Export based on format
@@ -104,7 +105,7 @@ func (s *ExportService) Export(ctx context.Context, req *ExportRequest) (*Export
 	case FormatXLSX:
 		return s.exportXLSX(data, req.ReportType, filename)
 	default:
-		return nil, fmt.Errorf("unsupported export format: %s", req.Format)
+		return nil, errors.NewAppError(errors.ErrCodeInvalidInput, "Unsupported export format", string(req.Format))
 	}
 }
 
