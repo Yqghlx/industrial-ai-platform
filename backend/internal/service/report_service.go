@@ -249,14 +249,12 @@ func (s *ReportService) ListReports(ctx context.Context, reportType string, page
 
 // GetReportByID retrieves a report by ID
 func (s *ReportService) GetReportByID(ctx context.Context, id int) (*model.Report, error) {
-	// This would need to be implemented in the repository
-	return nil, errors.NewAppError(errors.ErrCodeService, "Feature not implemented", "")
+	return s.reportRepo.GetByID(ctx, id)
 }
 
 // DeleteReport deletes a report
 func (s *ReportService) DeleteReport(ctx context.Context, id int) error {
-	// This would need to be implemented in the repository
-	return errors.NewAppError(errors.ErrCodeService, "Feature not implemented", "")
+	return s.reportRepo.Delete(ctx, id)
 }
 
 // GetROIStats calculates ROI statistics

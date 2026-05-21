@@ -460,6 +460,8 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 type ReportRepositoryInterface interface {
 	Create(ctx context.Context, report *model.Report) error
 	List(ctx context.Context, reportType string, page, pageSize int) ([]model.Report, int, error)
+	GetByID(ctx context.Context, id int) (*model.Report, error)
+	Delete(ctx context.Context, id int) error
 }
 
 // ReportRepository handles report data access
@@ -541,6 +543,30 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 	}
 
 	return reports, total, nil
+}
+
+// GetByID retrieves a report by ID
+func (r *ReportRepository) GetByID(ctx context.Context, id int) (*model.Report, error) {
+	query := `SELECT id, title, type, device_id, content, generated_at FROM reports WHERE id = $1`
+	report := &model.Report{}
+	var deviceID sql.NullString
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&report.ID, &report.Title, &report.Type, &deviceID, &report.Content, &report.GeneratedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if deviceID.Valid {
+		report.DeviceID = &deviceID.String
+	}
+	return report, nil
+}
+
+// Delete deletes a report by ID
+func (r *ReportRepository) Delete(ctx context.Context, id int) error {
+	query := `DELETE FROM reports WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id)
+	return err
 }
 
 // AgentTaskLogRepository handles AI agent task log data access
