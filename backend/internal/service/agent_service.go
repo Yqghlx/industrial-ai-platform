@@ -104,7 +104,7 @@ type AgentService struct {
 	apiKey        string
 	baseURL       string
 	model         string
-	httpClient    *http.Client // FIX-019: 共享 HTTP Client，支持连接复用
+	httpClient    HTTPClientInterface // FIX-019: HTTP Client 接口化
 	config        *AgentServiceConfig
 }
 
