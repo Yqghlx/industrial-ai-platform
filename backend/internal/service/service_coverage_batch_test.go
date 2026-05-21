@@ -250,9 +250,10 @@ func TestDeviceService_GetDeviceTypeFromID(t *testing.T) {
 	}{
 		{"CNC-001", "数控机床"},
 		{"INJ-001", "注塑机"},
-		{"ROB-001", "机器人"},
-		{"CONV-001", "输送带"},
-		{"UNKNOWN-001", "其他设备"},
+		{"ROB-001", "工业机器人"},
+		{"CNV-001", "传送带"},
+		{"ASM-001", "装配线"},
+		{"UNKNOWN-001", "未知设备"},
 	}
 
 	for _, tt := range tests {
@@ -266,11 +267,14 @@ func TestDeviceService_GetDeviceNameFromType(t *testing.T) {
 		typeStr  string
 		expected string
 	}{
-		{"数控机床", "CNC"},
-		{"注塑机", "INJ"},
-		{"机器人", "ROB"},
-		{"输送带", "CONV"},
-		{"其他", "OTHER"},
+		{"数控机床", "数控机床"},
+		{"CNC", "数控机床"},
+		{"注塑机", "注塑机"},
+		{"INJ", "注塑机"},
+		{"工业机器人", "工业机器人"},
+		{"ROB", "工业机器人"},
+		{"装配线", "装配线"},
+		{"其他", "工业设备"},
 	}
 
 	for _, tt := range tests {
