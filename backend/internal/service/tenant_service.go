@@ -1,15 +1,13 @@
 package service
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
-
-var ErrTenantSlugExists = errors.New("tenant slug already exists")
 
 type TenantService struct {
 	repo *repository.TenantRepo
@@ -23,7 +21,7 @@ func (s *TenantService) CreateTenant(name, slug, plan string, maxDevices int) (*
 	// Check if slug exists
 	existing, err := s.repo.GetBySlug(slug)
 	if err == nil && existing != nil {
-		return nil, ErrTenantSlugExists
+		return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", slug)
 	}
 
 	// Validate plan
@@ -49,7 +47,7 @@ func (s *TenantService) CreateTenant(name, slug, plan string, maxDevices int) (*
 
 	err = s.repo.Create(tenant)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError(err.Error())
 	}
 
 	return tenant, nil
@@ -69,7 +67,11 @@ func (s *TenantService) GetTenant(id string) (*model.Tenant, error) {
 }
 
 func (s *TenantService) GetTenantBySlug(slug string) (*model.Tenant, error) {
-	return s.repo.GetBySlug(slug)
+	tenant, err := s.repo.GetBySlug(slug)
+	if err != nil {
+		return nil, errors.NewTenantNotFoundError(slug)
+	}
+	return tenant, nil
 }
 
 func (s *TenantService) ListTenants(limit, offset int) ([]model.Tenant, error) {
@@ -79,13 +81,17 @@ func (s *TenantService) ListTenants(limit, offset int) ([]model.Tenant, error) {
 	if offset < 0 {
 		offset = 0
 	}
-	return s.repo.List(limit, offset)
+	tenants, err := s.repo.List(limit, offset)
+	if err != nil {
+		return nil, errors.NewDatabaseError(err.Error())
+	}
+	return tenants, nil
 }
 
 func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) (*model.Tenant, error) {
 	tenant, err := s.repo.GetByID(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewTenantNotFoundError(id)
 	}
 
 	// Apply updates
@@ -96,7 +102,7 @@ func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) 
 		// Check if new slug exists for another tenant
 		existing, err := s.repo.GetBySlug(slug)
 		if err == nil && existing != nil && existing.ID != id {
-			return nil, ErrTenantSlugExists
+			return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", slug)
 		}
 		tenant.Slug = slug
 	}
@@ -114,16 +120,23 @@ func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) 
 
 	err = s.repo.Update(tenant)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError(err.Error())
 	}
 
 	return tenant, nil
 }
 
 func (s *TenantService) DeleteTenant(id string) error {
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 func (s *TenantService) CountTenants() (int, error) {
-	return s.repo.Count()
+	count, err := s.repo.Count()
+	if err != nil {
+		return 0, errors.NewDatabaseError(err.Error())
+	}
+	return count, nil
 }

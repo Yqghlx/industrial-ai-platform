@@ -62,7 +62,7 @@ func TestTenantService_CreateTenant_SlugExists(t *testing.T) {
 
 	tenant, err := svc.CreateTenant("Test Tenant", "test-tenant", "free", 0)
 	assert.Error(t, err)
-	assert.Equal(t, ErrTenantSlugExists, err)
+	assert.Contains(t, err.Error(), "Tenant slug already exists")
 	assert.Nil(t, tenant)
 }
 
@@ -281,7 +281,7 @@ func TestTenantService_UpdateTenant_SlugConflict(t *testing.T) {
 	}
 	tenant, err := svc.UpdateTenant("t-1", updates)
 	assert.Error(t, err)
-	assert.Equal(t, ErrTenantSlugExists, err)
+	assert.Contains(t, err.Error(), "Tenant slug already exists")
 	assert.Nil(t, tenant)
 }
 
