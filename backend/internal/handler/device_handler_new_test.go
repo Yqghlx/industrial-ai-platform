@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // ============================================
@@ -154,7 +155,7 @@ func TestDeviceHandlerNew_GetDevice_NotFound(t *testing.T) {
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, broadcastFunc)
 
-	mockDeviceSvc.On("GetByID", mock.Anything, "nonexistent").Return(nil, assert.AnError)
+	mockDeviceSvc.On("GetByID", mock.Anything, "nonexistent").Return(nil, errors.NewDeviceNotFoundError("nonexistent"))
 
 	router.GET("/devices/:id", handler.GetDevice)
 

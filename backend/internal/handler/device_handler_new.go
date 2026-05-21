@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/response"
 	"github.com/industrial-ai/platform/pkg/validation"
 )
 
@@ -48,7 +49,7 @@ func (h *DeviceHandlerNew) ListDevices(c *gin.Context) {
 
 	devices, total, err := h.deviceSvc.List(ctx, pagination.Page, pagination.PageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "DATABASE_ERROR"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -66,13 +67,13 @@ func (h *DeviceHandlerNew) GetDevice(c *gin.Context) {
 	deviceID := c.Param("id")
 
 	if err := validation.ValidateDeviceID(deviceID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "INVALID_DEVICE_ID"})
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	device, err := h.deviceSvc.GetByID(ctx, deviceID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found", "code": "NOT_FOUND"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *DeviceHandlerNew) CreateDevice(c *gin.Context) {
 	device.UpdatedAt = time.Now()
 
 	if err := h.deviceSvc.Create(ctx, &device); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "CREATE_FAILED"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -130,7 +131,7 @@ func (h *DeviceHandlerNew) UpdateDevice(c *gin.Context) {
 	device.UpdatedAt = time.Now()
 
 	if err := h.deviceSvc.Update(ctx, &device); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "UPDATE_FAILED"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -143,7 +144,7 @@ func (h *DeviceHandlerNew) DeleteDevice(c *gin.Context) {
 	deviceID := c.Param("id")
 
 	if err := h.deviceSvc.Delete(ctx, deviceID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "DELETE_FAILED"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -164,7 +165,7 @@ func (h *DeviceHandlerNew) GetDeviceGraph(c *gin.Context) {
 
 	graph, err := h.deviceSvc.GetGraph(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "GRAPH_ERROR"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -177,7 +178,7 @@ func (h *DeviceHandlerNew) ListRules(c *gin.Context) {
 
 	rules, err := h.alertSvc.GetRules(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "DATABASE_ERROR"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -198,7 +199,7 @@ func (h *DeviceHandlerNew) CreateRule(c *gin.Context) {
 	rule.UpdatedAt = time.Now()
 
 	if err := h.alertSvc.CreateRule(ctx, &rule); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "CREATE_FAILED"})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -229,7 +230,7 @@ func (h *DeviceHandlerNew) CreateUser(c *gin.Context) {
 
 	user, token, err := h.authSvc.Register(ctx, registerReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "CREATE_FAILED"})
+		response.HandleError(c, err)
 		return
 	}
 
