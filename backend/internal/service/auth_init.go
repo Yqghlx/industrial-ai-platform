@@ -8,7 +8,22 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// JWTServiceInterface defines the interface for JWT service
+type JWTServiceInterface interface {
+	GenerateAccessToken(userID int, username, role, tenantID string, tokenVersion int) (string, string, error)
+	GenerateRefreshToken(userID int, username, role, tenantID string, tokenVersion int) (string, string, error)
+	GenerateTokenPair(userID int, username, role, tenantID string, tokenVersion int) (*TokenPair, error)
+	ParseToken(tokenString string) (*Claims, error)
+	RefreshAccessToken(refreshTokenString string) (*TokenPair, error)
+	RevokeToken(tokenString string) error
+	RevokeAllUserTokens(userID int) error
+	ValidateToken(tokenString string) (*Claims, error)
+	GetSecret() []byte
+}
+
+// ============================================
 // JWT 配置常量
+// =============================================
 const (
 	AccessTokenDuration  = 15 * time.Minute
 	RefreshTokenDuration = 7 * 24 * time.Hour

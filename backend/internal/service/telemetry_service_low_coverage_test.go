@@ -54,7 +54,7 @@ func TestInitTelemetryService(t *testing.T) {
 	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
 	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 	blackBoxRepo := repository.NewBlackBoxRepository(database.NewDBWrapper(db))
-	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo)
+	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, AlertServiceConfig{})
 
 	svc := InitTelemetryService(alertSvc, telemetryRepo, deviceRepo)
 	assert.NotNil(t, svc)
@@ -308,7 +308,7 @@ func TestTelemetryService_Ingest_WithAlertService(t *testing.T) {
 	notificationRepo := repository.NewNotificationRepository(database.NewDBWrapper(db))
 	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 	blackBoxRepo := repository.NewBlackBoxRepository(database.NewDBWrapper(db))
-	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo)
+	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, AlertServiceConfig{})
 
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertSvc)
 	ctx := context.Background()

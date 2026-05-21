@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +15,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// AlertServiceConfig holds configuration for AlertService
+type AlertServiceConfig struct {
+	FeishuWebhook  string
+	NotifyEnabled  bool
+}
+
 // AlertService handles alert evaluation and actions
 type AlertService struct {
 	ruleRepo         repository.RuleRepositoryInterface
@@ -26,6 +31,7 @@ type AlertService struct {
 	telemetryRepo    repository.TelemetryRepositoryInterface
 	deviceRepo       repository.DeviceRepositoryInterface
 	notifyManager    *notify.NotifyManager
+	config           AlertServiceConfig
 }
 
 // NewAlertService creates a new alert service
@@ -37,11 +43,8 @@ func NewAlertService(
 	blackBoxRepo repository.BlackBoxRepositoryInterface,
 	telemetryRepo repository.TelemetryRepositoryInterface,
 	deviceRepo repository.DeviceRepositoryInterface,
+	config AlertServiceConfig,
 ) *AlertService {
-	// Initialize notification manager from env
-	feishuWebhook := os.Getenv("FEISHU_WEBHOOK_URL")
-	notifyEnabled := os.Getenv("FEISHU_NOTIFY_ENABLED") == "true"
-
 	return &AlertService{
 		ruleRepo:         ruleRepo,
 		alertRepo:        alertRepo,
@@ -50,7 +53,8 @@ func NewAlertService(
 		blackBoxRepo:     blackBoxRepo,
 		telemetryRepo:    telemetryRepo,
 		deviceRepo:       deviceRepo,
-		notifyManager:    notify.NewNotifyManager(feishuWebhook, notifyEnabled),
+		config:           config,
+		notifyManager:    notify.NewNotifyManager(config.FeishuWebhook, config.NotifyEnabled),
 	}
 }
 

@@ -32,6 +32,7 @@ func TestAlertService_NewAlertService(t *testing.T) {
 		mockBlackBoxRepo,
 		mockTelemetryRepo,
 		mockDeviceRepo,
+		AlertServiceConfig{},
 	)
 
 	assert.NotNil(t, svc)

@@ -157,7 +157,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	// Initialize services
 	authSvc := service.NewAuthService(userRepo)
 	userSvc := service.NewUserService(userRepo)
-	alertSvc := service.NewAlertService(nil, alertRepo, nil, nil, nil, nil, deviceRepo)
+	alertSvc := service.NewAlertService(nil, alertRepo, nil, nil, nil, nil, deviceRepo, service.AlertServiceConfig{})
 	deviceSvc := service.NewDeviceService(deviceRepo, userRepo)
 	tenantSvc := service.NewTenantService(tenantRepo)
 	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
