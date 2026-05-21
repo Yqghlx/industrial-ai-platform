@@ -13,13 +13,13 @@ import (
 
 // DeviceService handles device business logic
 type DeviceService struct {
-	deviceRepo *repository.DeviceRepository
-	userRepo   *repository.UserRepository
+	deviceRepo repository.DeviceRepositoryInterface
+	userRepo   repository.UserRepositoryInterface
 	db         database.DatabaseInterface // for transactions
 }
 
 // NewDeviceService creates a new device service
-func NewDeviceService(deviceRepo *repository.DeviceRepository, userRepo *repository.UserRepository) *DeviceService {
+func NewDeviceService(deviceRepo repository.DeviceRepositoryInterface, userRepo repository.UserRepositoryInterface) *DeviceService {
 	return &DeviceService{
 		deviceRepo: deviceRepo,
 		userRepo:   userRepo,
@@ -27,7 +27,7 @@ func NewDeviceService(deviceRepo *repository.DeviceRepository, userRepo *reposit
 }
 
 // NewDeviceServiceWithDB creates a device service with database for transactions
-func NewDeviceServiceWithDB(deviceRepo *repository.DeviceRepository, userRepo *repository.UserRepository, db database.DatabaseInterface) *DeviceService {
+func NewDeviceServiceWithDB(deviceRepo repository.DeviceRepositoryInterface, userRepo repository.UserRepositoryInterface, db database.DatabaseInterface) *DeviceService {
 	return &DeviceService{
 		deviceRepo: deviceRepo,
 		userRepo:   userRepo,

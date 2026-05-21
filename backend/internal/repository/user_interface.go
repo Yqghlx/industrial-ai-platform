@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 // UserRepositoryInterface defines the interface for user repository
@@ -16,4 +17,5 @@ type UserRepositoryInterface interface {
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id int) error
 	UpdatePassword(ctx context.Context, id int, passwordHash string) error
+	WithTx(tx database.TransactionInterface) UserRepositoryInterface
 }

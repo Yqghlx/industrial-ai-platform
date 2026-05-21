@@ -19,19 +19,19 @@ type ExportServiceInterface interface {
 
 // ExportService handles report export functionality
 type ExportService struct {
-	deviceRepo    *repository.DeviceRepository
-	telemetryRepo *repository.TelemetryRepository
-	alertRepo     *repository.AlertRepository
-	workOrderRepo *repository.WorkOrderRepository
+	deviceRepo    repository.DeviceRepositoryInterface
+	telemetryRepo repository.TelemetryRepositoryInterface
+	alertRepo     repository.AlertRepositoryInterface
+	workOrderRepo repository.WorkOrderRepositoryInterface
 	reportSvc     *ReportService
 }
 
 // NewExportService creates a new export service
 func NewExportService(
-	deviceRepo *repository.DeviceRepository,
-	telemetryRepo *repository.TelemetryRepository,
-	alertRepo *repository.AlertRepository,
-	workOrderRepo *repository.WorkOrderRepository,
+	deviceRepo repository.DeviceRepositoryInterface,
+	telemetryRepo repository.TelemetryRepositoryInterface,
+	alertRepo repository.AlertRepositoryInterface,
+	workOrderRepo repository.WorkOrderRepositoryInterface,
 	reportSvc *ReportService,
 ) *ExportService {
 	return &ExportService{

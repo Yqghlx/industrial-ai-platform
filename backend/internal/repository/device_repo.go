@@ -17,6 +17,7 @@ type DeviceRepositoryInterface interface {
 	Delete(ctx context.Context, id string) error
 	UpdateStatus(ctx context.Context, id, status string) error
 	Count(ctx context.Context) (int, error)
+	WithTx(tx database.TransactionInterface) DeviceRepositoryInterface
 }
 
 // DeviceRepository handles device data access
@@ -30,7 +31,7 @@ func NewDeviceRepository(db database.QueryExecutor) *DeviceRepository {
 }
 
 // WithTx returns a new repository that uses the given transaction
-func (r *DeviceRepository) WithTx(tx database.TransactionInterface) *DeviceRepository {
+func (r *DeviceRepository) WithTx(tx database.TransactionInterface) DeviceRepositoryInterface {
 	return &DeviceRepository{db: tx}
 }
 
@@ -156,7 +157,7 @@ func NewUserRepository(db database.QueryExecutor) *UserRepository {
 }
 
 // WithTx returns a new repository that uses the given transaction
-func (r *UserRepository) WithTx(tx database.TransactionInterface) *UserRepository {
+func (r *UserRepository) WithTx(tx database.TransactionInterface) UserRepositoryInterface {
 	return &UserRepository{db: tx}
 }
 
