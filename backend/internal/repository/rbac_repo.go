@@ -19,12 +19,17 @@ var (
 
 // RBACRepository handles RBAC data access
 type RBACRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewRBACRepository creates a new RBAC repository
-func NewRBACRepository(db database.DatabaseInterface) *RBACRepository {
+func NewRBACRepository(db database.QueryExecutor) *RBACRepository {
 	return &RBACRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *RBACRepository) WithTx(tx database.TransactionInterface) *RBACRepository {
+	return &RBACRepository{db: tx}
 }
 
 // CreateRole creates a new role

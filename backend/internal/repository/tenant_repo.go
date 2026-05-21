@@ -13,11 +13,16 @@ import (
 var ErrTenantNotFound = errors.New("tenant not found")
 
 type TenantRepo struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
-func NewTenantRepo(db database.DatabaseInterface) *TenantRepo {
+func NewTenantRepo(db database.QueryExecutor) *TenantRepo {
 	return &TenantRepo{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *TenantRepo) WithTx(tx database.TransactionInterface) *TenantRepo {
+	return &TenantRepo{db: tx}
 }
 
 func (r *TenantRepo) Create(tenant *model.Tenant) error {

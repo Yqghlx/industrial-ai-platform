@@ -21,12 +21,17 @@ type TelemetryRepositoryInterface interface {
 
 // TelemetryRepository handles telemetry data access
 type TelemetryRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewTelemetryRepository creates a new telemetry repository
-func NewTelemetryRepository(db database.DatabaseInterface) *TelemetryRepository {
+func NewTelemetryRepository(db database.QueryExecutor) *TelemetryRepository {
 	return &TelemetryRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *TelemetryRepository) WithTx(tx database.TransactionInterface) *TelemetryRepository {
+	return &TelemetryRepository{db: tx}
 }
 
 // Insert inserts telemetry data
@@ -154,12 +159,17 @@ type WorkOrderRepositoryInterface interface {
 
 // WorkOrderRepository handles work order data access
 type WorkOrderRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewWorkOrderRepository creates a new work order repository
-func NewWorkOrderRepository(db database.DatabaseInterface) *WorkOrderRepository {
+func NewWorkOrderRepository(db database.QueryExecutor) *WorkOrderRepository {
 	return &WorkOrderRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *WorkOrderRepository) WithTx(tx database.TransactionInterface) *WorkOrderRepository {
+	return &WorkOrderRepository{db: tx}
 }
 
 // Create creates a new work order
@@ -275,12 +285,17 @@ type NotificationRepositoryInterface interface {
 
 // NotificationRepository handles notification data access
 type NotificationRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewNotificationRepository creates a new notification repository
-func NewNotificationRepository(db database.DatabaseInterface) *NotificationRepository {
+func NewNotificationRepository(db database.QueryExecutor) *NotificationRepository {
 	return &NotificationRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *NotificationRepository) WithTx(tx database.TransactionInterface) *NotificationRepository {
+	return &NotificationRepository{db: tx}
 }
 
 // Create creates a new notification
@@ -366,12 +381,17 @@ type BlackBoxRepositoryInterface interface {
 
 // BlackBoxRepository handles black box record data access
 type BlackBoxRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewBlackBoxRepository creates a new black box repository
-func NewBlackBoxRepository(db database.DatabaseInterface) *BlackBoxRepository {
+func NewBlackBoxRepository(db database.QueryExecutor) *BlackBoxRepository {
 	return &BlackBoxRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *BlackBoxRepository) WithTx(tx database.TransactionInterface) *BlackBoxRepository {
+	return &BlackBoxRepository{db: tx}
 }
 
 // Create creates a new black box record
@@ -444,12 +464,17 @@ type ReportRepositoryInterface interface {
 
 // ReportRepository handles report data access
 type ReportRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewReportRepository creates a new report repository
-func NewReportRepository(db database.DatabaseInterface) *ReportRepository {
+func NewReportRepository(db database.QueryExecutor) *ReportRepository {
 	return &ReportRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *ReportRepository) WithTx(tx database.TransactionInterface) *ReportRepository {
+	return &ReportRepository{db: tx}
 }
 
 // Create creates a new report
@@ -520,12 +545,17 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 
 // AgentTaskLogRepository handles AI agent task log data access
 type AgentTaskLogRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewAgentTaskLogRepository creates a new agent task log repository
-func NewAgentTaskLogRepository(db database.DatabaseInterface) *AgentTaskLogRepository {
+func NewAgentTaskLogRepository(db database.QueryExecutor) *AgentTaskLogRepository {
 	return &AgentTaskLogRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *AgentTaskLogRepository) WithTx(tx database.TransactionInterface) *AgentTaskLogRepository {
+	return &AgentTaskLogRepository{db: tx}
 }
 
 // Create creates a new task log

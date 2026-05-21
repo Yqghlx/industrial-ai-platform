@@ -15,12 +15,17 @@ var ErrPermissionExists = errors.New("permission already exists")
 
 // PermissionRepo handles permission data access
 type PermissionRepo struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewPermissionRepo creates a new permission repository
-func NewPermissionRepo(db database.DatabaseInterface) *PermissionRepo {
+func NewPermissionRepo(db database.QueryExecutor) *PermissionRepo {
 	return &PermissionRepo{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *PermissionRepo) WithTx(tx database.TransactionInterface) *PermissionRepo {
+	return &PermissionRepo{db: tx}
 }
 
 // Create inserts a new permission

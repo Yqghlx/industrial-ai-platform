@@ -16,12 +16,17 @@ var ErrRoleAlreadyExists = errors.New("role already exists")
 
 // RoleRepo handles role data access
 type RoleRepo struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewRoleRepo creates a new role repository
-func NewRoleRepo(db database.DatabaseInterface) *RoleRepo {
+func NewRoleRepo(db database.QueryExecutor) *RoleRepo {
 	return &RoleRepo{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *RoleRepo) WithTx(tx database.TransactionInterface) *RoleRepo {
+	return &RoleRepo{db: tx}
 }
 
 // Create inserts a new role

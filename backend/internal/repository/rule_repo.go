@@ -13,12 +13,17 @@ import (
 
 // RuleRepository handles alert rule data access
 type RuleRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewRuleRepository creates a new rule repository
-func NewRuleRepository(db database.DatabaseInterface) *RuleRepository {
+func NewRuleRepository(db database.QueryExecutor) *RuleRepository {
 	return &RuleRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *RuleRepository) WithTx(tx database.TransactionInterface) *RuleRepository {
+	return &RuleRepository{db: tx}
 }
 
 // Create creates a new alert rule
@@ -151,12 +156,17 @@ func (r *RuleRepository) ToggleEnabled(ctx context.Context, id int, enabled bool
 
 // AlertRepository handles alert data access
 type AlertRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewAlertRepository creates a new alert repository
-func NewAlertRepository(db database.DatabaseInterface) *AlertRepository {
+func NewAlertRepository(db database.QueryExecutor) *AlertRepository {
 	return &AlertRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *AlertRepository) WithTx(tx database.TransactionInterface) *AlertRepository {
+	return &AlertRepository{db: tx}
 }
 
 // Create creates a new alert
