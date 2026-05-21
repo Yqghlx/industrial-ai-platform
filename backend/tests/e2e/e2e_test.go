@@ -16,6 +16,7 @@ import (
 	"github.com/industrial-ai/platform/internal/handler"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/errors"
 )
 
 // ============================================
@@ -405,7 +406,7 @@ func TestE2E_NotFound(t *testing.T) {
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
 
 	// Setup mock to return error
-	mockDeviceSvc.On("GetByID", mock.Anything, "nonexistent").Return(nil, assert.AnError)
+	mockDeviceSvc.On("GetByID", mock.Anything, "nonexistent").Return(nil, errors.NewDeviceNotFoundError("nonexistent"))
 
 	router.GET("/api/v1/devices/:id", deviceHandler.GetDevice)
 
