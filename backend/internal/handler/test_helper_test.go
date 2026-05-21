@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 )
 
 // ============================================
@@ -94,11 +94,11 @@ func (h *TestHelper) ParseResponse(w *httptest.ResponseRecorder) map[string]inte
 func CreateMockServiceFactory() *service.ServiceFactory {
 	sf := service.NewServiceFactory()
 
-	sf.SetDeviceService(new(service.MockDeviceService))
-	sf.SetAlertService(new(service.MockAlertService))
-	sf.SetAuthService(new(service.MockAuthService))
-	sf.SetUserService(new(service.MockUserService))
-	sf.SetHealthService(new(service.MockHealthService))
+	sf.SetDeviceService(new(mocks.MockDeviceService))
+	sf.SetAlertService(new(mocks.MockAlertService))
+	sf.SetAuthService(new(mocks.MockAuthService))
+	sf.SetUserService(new(mocks.MockUserService))
+	sf.SetHealthService(new(mocks.MockHealthService))
 
 	return sf
 }

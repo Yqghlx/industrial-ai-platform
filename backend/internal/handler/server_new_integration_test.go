@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 )
 
 // ============================================
@@ -175,10 +175,10 @@ func TestHTTPServerNew_setupHandlers_Basic(t *testing.T) {
 
 	// Create mock services
 	sf := service.NewServiceFactory()
-	sf.SetDeviceService(new(service.MockDeviceService))
-	sf.SetAlertService(new(service.MockAlertService))
-	sf.SetAuthService(new(service.MockAuthService))
-	sf.SetUserService(new(service.MockUserService))
+	sf.SetDeviceService(new(mocks.MockDeviceService))
+	sf.SetAlertService(new(mocks.MockAlertService))
+	sf.SetAuthService(new(mocks.MockAuthService))
+	sf.SetUserService(new(mocks.MockUserService))
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
@@ -202,7 +202,7 @@ func TestHTTPServerNew_setupHandlers_Basic(t *testing.T) {
 	assert.GreaterOrEqual(t, len(routes), 4)
 
 	// Test device route
-	mockDeviceSvc := sf.GetDeviceService().(*service.MockDeviceService)
+	mockDeviceSvc := sf.GetDeviceService().(*mocks.MockDeviceService)
 	mockDeviceSvc.On("List", mock.Anything, 1, 20).Return([]model.Device{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/devices", nil)
@@ -406,7 +406,7 @@ func TestHTTPServerNew_RoutesRegistration(t *testing.T) {
 func TestHTTPServerNew_NewAuthHandler_Compat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockUserSvc := new(service.MockUserService)
+	mockUserSvc := new(mocks.MockUserService)
 	jwtSecret := "test-secret"
 
 	handler := NewAuthHandler(mockUserSvc, jwtSecret)
@@ -415,7 +415,7 @@ func TestHTTPServerNew_NewAuthHandler_Compat(t *testing.T) {
 }
 
 func TestHTTPServerNew_compatAuthSvc_Login_Compat(t *testing.T) {
-	mockUserSvc := new(service.MockUserService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	user := &model.User{ID: 1, Username: "testuser"}
 	mockUserSvc.On("Authenticate", "testuser", "password").Return(user, nil)
@@ -432,7 +432,7 @@ func TestHTTPServerNew_compatAuthSvc_Login_Compat(t *testing.T) {
 }
 
 func TestHTTPServerNew_compatAuthSvc_GetUserByID_Compat(t *testing.T) {
-	mockUserSvc := new(service.MockUserService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	user := &model.User{ID: 1, Username: "testuser"}
 	mockUserSvc.On("GetByID", 1).Return(user, nil)
@@ -448,7 +448,7 @@ func TestHTTPServerNew_compatAuthSvc_GetUserByID_Compat(t *testing.T) {
 }
 
 func TestHTTPServerNew_compatAuthSvc_Register_Compat(t *testing.T) {
-	mockUserSvc := new(service.MockUserService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	compatSvc := &compatAuthSvc{userSvc: mockUserSvc}
 

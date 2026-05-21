@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -25,7 +25,7 @@ func TestAlertHandlerNew_GetAlertByID_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -46,7 +46,7 @@ func TestAlertHandlerNew_GetTrend_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -65,7 +65,7 @@ func TestAlertHandlerNew_GetRanking_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -84,7 +84,7 @@ func TestAlertHandlerNew_GetEfficiency_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -103,9 +103,9 @@ func TestAlertHandlerNew_CreateRule_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -124,9 +124,9 @@ func TestAlertHandlerNew_UpdateRule_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -145,9 +145,9 @@ func TestAlertHandlerNew_UpdateRule_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -172,7 +172,7 @@ func TestAlertHandlerNew_AcknowledgeAlert_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -197,8 +197,8 @@ func TestAuthHandlerNew_Login_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -217,8 +217,8 @@ func TestAuthHandlerNew_Register_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -237,8 +237,8 @@ func TestAuthHandlerNew_ChangePassword_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -261,8 +261,8 @@ func TestAuthHandlerNew_RefreshToken_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -281,8 +281,8 @@ func TestAuthHandlerNew_ValidateToken_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -301,8 +301,8 @@ func TestAuthHandlerNew_Login_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -327,8 +327,8 @@ func TestAuthHandlerNew_Register_ServiceError_New(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 

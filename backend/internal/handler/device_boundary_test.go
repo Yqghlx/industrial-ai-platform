@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -25,9 +25,9 @@ func TestDeviceHandlerNew_CreateDevice_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -46,9 +46,9 @@ func TestDeviceHandlerNew_UpdateDevice_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -67,9 +67,9 @@ func TestDeviceHandlerNew_CreateRule_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -88,9 +88,9 @@ func TestDeviceHandlerNew_CreateUser_BadJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -109,9 +109,9 @@ func TestDeviceHandlerNew_GetDeviceGraph_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -132,9 +132,9 @@ func TestDeviceHandlerNew_ListRules_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -155,9 +155,9 @@ func TestDeviceHandlerNew_GetLatestTelemetry_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, func(msg model.WSMessage) {})
@@ -179,9 +179,9 @@ func TestDeviceHandlerNew_GetDeviceTelemetry_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, func(msg model.WSMessage) {})
@@ -203,9 +203,9 @@ func TestDeviceHandlerNew_DeleteDevice_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -226,9 +226,9 @@ func TestDeviceHandlerNew_GetDevice_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -249,9 +249,9 @@ func TestDeviceHandlerNew_CreateDevice_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -276,9 +276,9 @@ func TestDeviceHandlerNew_UpdateDevice_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -303,9 +303,9 @@ func TestDeviceHandlerNew_CreateRule_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -330,9 +330,9 @@ func TestDeviceHandlerNew_DeleteRule_ServiceError_New(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 
@@ -353,9 +353,9 @@ func TestDeviceHandlerNew_ListDevices_ServiceError_New(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, func(msg model.WSMessage) {})
 

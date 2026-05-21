@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -23,7 +23,7 @@ import (
 
 func TestNewAlertHandler_ListAlerts_Success(t *testing.T) {
 	router := gin.New()
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 
 	broadcastFunc := func(msg model.WSMessage) {
@@ -62,7 +62,7 @@ func TestNewAlertHandler_ListAlerts_Success(t *testing.T) {
 
 func TestNewAlertHandler_GetAlert_Success(t *testing.T) {
 	router := gin.New()
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 
 	broadcastFunc := func(msg model.WSMessage) {
@@ -102,7 +102,7 @@ func TestNewAlertHandler_GetAlert_Success(t *testing.T) {
 
 func TestNewAlertHandler_ResolveAlert_Success(t *testing.T) {
 	router := gin.New()
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 
 	broadcastFunc := func(msg model.WSMessage) {
@@ -137,7 +137,7 @@ func TestNewAlertHandler_ResolveAlert_Success(t *testing.T) {
 
 func TestNewAlertHandler_AcknowledgeAlert_Success(t *testing.T) {
 	router := gin.New()
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 
 	broadcastFunc := func(msg model.WSMessage) {
@@ -171,7 +171,7 @@ func TestAlertHandler_GetTrend(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -198,7 +198,7 @@ func TestAlertHandler_GetRanking(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -225,7 +225,7 @@ func TestAlertHandler_GetEfficiency(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -252,7 +252,7 @@ func TestAlertHandler_ListAlerts_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -278,7 +278,7 @@ func TestAlertHandler_GetAlert_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -304,7 +304,7 @@ func TestAlertHandler_ResolveAlert_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -330,7 +330,7 @@ func TestAlertHandler_AcknowledgeAlert_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg

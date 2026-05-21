@@ -89,7 +89,7 @@ func TestHealthService_CheckHealth_LLMDisabled(t *testing.T) {
 
 	assert.NotNil(t, result)
 	assert.Contains(t, []string{"healthy", "degraded"}, result.Status)
-	assert.Equal(t, "disabled", result.Components.LLMAPI.Status)
+	assert.Equal(t, "unavailable", result.Components.LLMAPI.Status)
 }
 
 func TestHealthService_CheckHealth_MemoryOK(t *testing.T) {

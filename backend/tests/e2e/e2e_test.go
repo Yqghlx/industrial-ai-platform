@@ -15,7 +15,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/handler"
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/internal/mocks"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ func setupE2ETest(t *testing.T) *gin.Engine {
 func TestE2E_ListDevices(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -60,7 +60,7 @@ func TestE2E_ListDevices(t *testing.T) {
 func TestE2E_GetDevice(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -85,7 +85,7 @@ func TestE2E_GetDevice(t *testing.T) {
 func TestE2E_CreateDevice(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -116,7 +116,7 @@ func TestE2E_CreateDevice(t *testing.T) {
 func TestE2E_DeleteDevice(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -144,7 +144,7 @@ func TestE2E_DeleteDevice(t *testing.T) {
 func TestE2E_ListAlerts(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcast := func(msg model.WSMessage) {}
 
 	alertHandler := handler.NewAlertHandler(mockAlertSvc, broadcast)
@@ -170,7 +170,7 @@ func TestE2E_ListAlerts(t *testing.T) {
 func TestE2E_GetAlertByID(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcast := func(msg model.WSMessage) {}
 
 	alertHandler := handler.NewAlertHandler(mockAlertSvc, broadcast)
@@ -195,7 +195,7 @@ func TestE2E_GetAlertByID(t *testing.T) {
 func TestE2E_AcknowledgeAlert(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockAlertSvc := new(service.MockAlertService)
+	mockAlertSvc := new(mocks.MockAlertService)
 	broadcast := func(msg model.WSMessage) {}
 
 	alertHandler := handler.NewAlertHandler(mockAlertSvc, broadcast)
@@ -219,9 +219,9 @@ func TestE2E_AcknowledgeAlert(t *testing.T) {
 func TestE2E_ListRules(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 	broadcast := func(msg model.WSMessage) {}
 
 	// Rules are handled by DeviceHandler
@@ -247,9 +247,9 @@ func TestE2E_ListRules(t *testing.T) {
 func TestE2E_DeleteRule(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 	broadcast := func(msg model.WSMessage) {}
 
 	// Rules are handled by DeviceHandler
@@ -278,8 +278,8 @@ func TestE2E_DeleteRule(t *testing.T) {
 func TestE2E_Login(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	authHandler := handler.NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -310,8 +310,8 @@ func TestE2E_Login(t *testing.T) {
 func TestE2E_Register(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockAuthSvc := new(service.MockAuthService)
-	mockUserSvc := new(service.MockUserService)
+	mockAuthSvc := new(mocks.MockAuthService)
+	mockUserSvc := new(mocks.MockUserService)
 
 	authHandler := handler.NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
@@ -379,7 +379,7 @@ func TestE2E_HealthCheck(t *testing.T) {
 func TestE2E_InvalidJSON(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -400,7 +400,7 @@ func TestE2E_InvalidJSON(t *testing.T) {
 func TestE2E_NotFound(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, nil, nil, nil, broadcast)
@@ -428,9 +428,9 @@ func TestE2E_NotFound(t *testing.T) {
 func TestE2E_DeviceToAlertWorkflow(t *testing.T) {
 	router := setupE2ETest(t)
 
-	mockDeviceSvc := new(service.MockDeviceService)
-	mockAlertSvc := new(service.MockAlertService)
-	mockAuthSvc := new(service.MockAuthService)
+	mockDeviceSvc := new(mocks.MockDeviceService)
+	mockAlertSvc := new(mocks.MockAlertService)
+	mockAuthSvc := new(mocks.MockAuthService)
 	broadcast := func(msg model.WSMessage) {}
 
 	deviceHandler := handler.NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, nil, broadcast)

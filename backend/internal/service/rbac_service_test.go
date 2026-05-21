@@ -677,7 +677,7 @@ func TestRBACService_GetPermission_NotFound(t *testing.T) {
 
 	perm, err := svc.GetPermission(ctx, 999)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Permission not found")
+	assert.Contains(t, err.Error(), "permission not found")
 	assert.Nil(t, perm)
 }
 
@@ -907,13 +907,13 @@ func TestRBACService_HasSystemPermission_True(t *testing.T) {
 	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
 	ctx := context.Background()
 
-	// HasSystemPermission -> CheckPermission -> rbacRepo.CheckPermission
-	// SQL: SELECT COUNT(*) > 0 FROM user_roles ur JOIN role_permissions rp ... JOIN permissions p ...
-	rows := sqlmock.NewRows([]string{"count"}).
-		AddRow(true)
+	// HasSystemPermission -> GetUserPermissions -> rbacRepo.GetUserPermissions
+	// SQL: SELECT DISTINCT p.id, p.name, p.resource, p.action, p.description, p.created_at FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN user_roles ur ON rp.role_id = ur.role_id WHERE ur.user_id = $1 ORDER BY p.resource, p.action
+	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
+		AddRow(1, "system.manage", "system", "manage", "Manage system", testTime)
 
-	mock.ExpectQuery(`SELECT COUNT.*FROM user_roles ur`).
-		WithArgs(10, "system", "manage").
+	mock.ExpectQuery(`SELECT DISTINCT p\.id.*FROM permissions p`).
+		WithArgs(10).
 		WillReturnRows(rows)
 
 	hasSys, err := svc.HasSystemPermission(ctx, 10)

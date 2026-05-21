@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/industrial-ai/platform/internal/service"
 )
 
 // ============================================

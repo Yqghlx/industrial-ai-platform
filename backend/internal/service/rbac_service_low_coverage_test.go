@@ -37,12 +37,13 @@ func TestRBACService_ListPermissionsByResource_Basic(t *testing.T) {
 // ============================================
 
 func TestRBACService_DeletePermission_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	// 使用 newTestRBACService 创建带有 permRepo 的服务
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
-	// DeletePermission calls rbacRepo.DeletePermission which does:
-	// DELETE FROM role_permissions WHERE permission_id = $1
-	// DELETE FROM permissions WHERE id = $1
+	// DeletePermission calls permRepo.Delete which does:
+	// 1. DELETE FROM role_permissions WHERE permission_id = $1
+	// 2. DELETE FROM permissions WHERE id = $1
 	mock.ExpectExec("DELETE FROM role_permissions").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
