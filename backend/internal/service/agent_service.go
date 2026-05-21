@@ -18,6 +18,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -303,14 +304,14 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return "", errors.NewInternalError(fmt.Sprintf("Failed to marshal request: %v", err))
 	}
 
 	// Create HTTP request
 	url := s.baseURL + "/chat/completions"
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonBody))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", errors.NewInternalError(fmt.Sprintf("Failed to create request: %v", err))
 	}
 
 	// Set headers
@@ -320,14 +321,14 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 	// FIX-019: 使用共享 HTTP Client 发送请求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send request: %w", err)
+		return "", errors.NewInternalError(fmt.Sprintf("Failed to send request: %v", err))
 	}
 	defer resp.Body.Close()
 
 	// Read response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
+		return "", errors.NewInternalError(fmt.Sprintf("Failed to read response: %v", err))
 	}
 
 	// Check status code
@@ -336,18 +337,18 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("body", string(body)),
 		)
-		return "", fmt.Errorf("LLM API returned status %d: %s", resp.StatusCode, string(body))
+		return "", errors.NewAppError(errors.ErrCodeService, fmt.Sprintf("LLM API returned status %d: %s", resp.StatusCode, string(body)), "")
 	}
 
 	// Parse response
 	var llmResp LLMResponse
 	if err := json.Unmarshal(body, &llmResp); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
+		return "", errors.NewInternalError(fmt.Sprintf("Failed to parse response: %v", err))
 	}
 
 	// Extract content
 	if len(llmResp.Choices) == 0 {
-		return "", fmt.Errorf("no choices in response")
+		return "", errors.NewAppError(errors.ErrCodeService, "No choices in LLM response", "")
 	}
 
 	content := llmResp.Choices[0].Message.Content

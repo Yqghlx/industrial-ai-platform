@@ -281,7 +281,7 @@ func TestAgentService_callLLM_EmptyChoices(t *testing.T) {
 
 	_, err = svc.callLLM(ctx, "问题", nil, "通用智能体")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no choices")
+	assert.Contains(t, err.Error(), "No choices")
 }
 
 func TestAgentService_callLLM_ContextTimeout(t *testing.T) {
