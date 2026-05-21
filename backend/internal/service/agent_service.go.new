@@ -1,15 +1,24 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math/big" // FIX-006: 用于 crypto/rand 的随机整数
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/errors"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -239,7 +248,3 @@ func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*mode
 		Response:  response,
 		Agent:     agent,
 		Timestamp: time.Now(),
-	}, nil
-}
-
-// determineAgent determines which agent to use based on query
