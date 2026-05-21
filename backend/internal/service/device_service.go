@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -14,6 +15,7 @@ import (
 type DeviceService struct {
 	deviceRepo *repository.DeviceRepository
 	userRepo   *repository.UserRepository
+	db         database.DatabaseInterface // for transactions
 }
 
 // NewDeviceService creates a new device service
@@ -21,6 +23,15 @@ func NewDeviceService(deviceRepo *repository.DeviceRepository, userRepo *reposit
 	return &DeviceService{
 		deviceRepo: deviceRepo,
 		userRepo:   userRepo,
+	}
+}
+
+// NewDeviceServiceWithDB creates a device service with database for transactions
+func NewDeviceServiceWithDB(deviceRepo *repository.DeviceRepository, userRepo *repository.UserRepository, db database.DatabaseInterface) *DeviceService {
+	return &DeviceService{
+		deviceRepo: deviceRepo,
+		userRepo:   userRepo,
+		db:         db,
 	}
 }
 
@@ -151,6 +162,33 @@ func (s *DeviceService) AutoRegisterDevice(ctx context.Context, deviceID string)
 	}
 
 	return device, nil
+}
+
+// CreateDeviceWithUser creates a device and associated user in a single transaction
+// This demonstrates transaction support across multiple repositories
+func (s *DeviceService) CreateDeviceWithUser(ctx context.Context, device *model.Device, user *model.User) error {
+	if s.db == nil {
+		return errors.NewInternalError("Database not configured for transactions")
+	}
+
+	// Use transaction helper
+	txHelper := database.NewTransactionHelper(s.db)
+
+	return txHelper.WithTransaction(ctx, func(tx database.TransactionInterface) error {
+		// Create device with transaction
+		txDeviceRepo := s.deviceRepo.WithTx(tx)
+		if err := txDeviceRepo.Create(ctx, device); err != nil {
+			return err
+		}
+
+		// Create user with transaction
+		txUserRepo := s.userRepo.WithTx(tx)
+		if err := txUserRepo.Create(ctx, user); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 // GetGraph returns device relationship graph

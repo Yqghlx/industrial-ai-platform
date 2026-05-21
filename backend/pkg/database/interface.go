@@ -5,17 +5,20 @@ import (
 	"database/sql"
 )
 
-// DatabaseInterface defines the interface for database operations
-// This allows repositories to depend on an interface rather than concrete sql.DB
-type DatabaseInterface interface {
-	// Core query methods
+// QueryExecutor defines the interface for query execution
+// Both DatabaseInterface and TransactionInterface implement this
+type QueryExecutor interface {
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
 	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) *sql.Row
+}
 
+// DatabaseInterface defines the interface for database operations
+// This allows repositories to depend on an interface rather than concrete sql.DB
+type DatabaseInterface interface {
+	QueryExecutor
 	// Transaction support
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (TransactionInterface, error)
-
 	// Connection management
 	Ping(ctx context.Context) error
 	Stats() sql.DBStats
@@ -23,9 +26,7 @@ type DatabaseInterface interface {
 
 // TransactionInterface defines the interface for transaction operations
 type TransactionInterface interface {
-	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
-	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRow(ctx context.Context, query string, args ...any) *sql.Row
+	QueryExecutor
 	Commit() error
 	Rollback() error
 }

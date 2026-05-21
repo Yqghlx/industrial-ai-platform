@@ -21,12 +21,17 @@ type DeviceRepositoryInterface interface {
 
 // DeviceRepository handles device data access
 type DeviceRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewDeviceRepository creates a new device repository
-func NewDeviceRepository(db database.DatabaseInterface) *DeviceRepository {
+func NewDeviceRepository(db database.QueryExecutor) *DeviceRepository {
 	return &DeviceRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *DeviceRepository) WithTx(tx database.TransactionInterface) *DeviceRepository {
+	return &DeviceRepository{db: tx}
 }
 
 // Create inserts a new device
@@ -142,12 +147,17 @@ func (r *DeviceRepository) Count(ctx context.Context) (int, error) {
 
 // UserRepository handles user data access
 type UserRepository struct {
-	db database.DatabaseInterface
+	db database.QueryExecutor
 }
 
 // NewUserRepository creates a new user repository
-func NewUserRepository(db database.DatabaseInterface) *UserRepository {
+func NewUserRepository(db database.QueryExecutor) *UserRepository {
 	return &UserRepository{db: db}
+}
+
+// WithTx returns a new repository that uses the given transaction
+func (r *UserRepository) WithTx(tx database.TransactionInterface) *UserRepository {
+	return &UserRepository{db: tx}
 }
 
 // Create inserts a new user
