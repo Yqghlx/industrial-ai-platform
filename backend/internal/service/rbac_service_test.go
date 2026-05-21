@@ -107,7 +107,7 @@ func TestRBACService_CreateRole_AlreadyExists(t *testing.T) {
 
 	role, err := svc.CreateRole(ctx, "", "admin", "", "Admin role")
 	assert.Error(t, err)
-	assert.Equal(t, ErrRoleAlreadyExists, err)
+	assert.Contains(t, err.Error(), "Role already exists")
 	assert.Nil(t, role)
 }
 
@@ -158,7 +158,7 @@ func TestRBACService_GetRole_NotFound(t *testing.T) {
 
 	role, err := svc.GetRole(ctx, 999)
 	assert.Error(t, err)
-	assert.Equal(t, ErrRoleNotFound, err)
+	assert.Contains(t, err.Error(), "Role not found")
 	assert.Nil(t, role)
 }
 
@@ -231,7 +231,7 @@ func TestRBACService_UpdateRole_NotFound(t *testing.T) {
 		WillReturnError(repository.ErrRoleNotFound)
 
 	err := svc.UpdateRole(ctx, 999, map[string]interface{}{"name": "x"})
-	assert.Equal(t, ErrRoleNotFound, err)
+	assert.Contains(t, err.Error(), "Role not found")
 }
 
 // ============================================
@@ -269,7 +269,7 @@ func TestRBACService_DeleteRole_SystemRole(t *testing.T) {
 		WillReturnRows(rows)
 
 	err := svc.DeleteRole(ctx, 1)
-	assert.Equal(t, ErrCannotDeleteSystemRole, err)
+	assert.Contains(t, err.Error(), "Cannot delete system role")
 }
 
 func TestRBACService_DeleteRole_NotFound(t *testing.T) {
@@ -281,7 +281,7 @@ func TestRBACService_DeleteRole_NotFound(t *testing.T) {
 		WillReturnError(repository.ErrRoleNotFound)
 
 	err := svc.DeleteRole(ctx, 999)
-	assert.Equal(t, ErrRoleNotFound, err)
+	assert.Contains(t, err.Error(), "Role not found")
 }
 
 // ============================================
@@ -317,7 +317,7 @@ func TestRBACService_AssignRole_RoleNotFound(t *testing.T) {
 		WillReturnError(repository.ErrRoleNotFound)
 
 	err := svc.AssignRole(ctx, 10, 999, "t1")
-	assert.Equal(t, ErrRoleNotFound, err)
+	assert.Contains(t, err.Error(), "Role not found")
 }
 
 // ============================================
@@ -676,7 +676,7 @@ func TestRBACService_GetPermission_NotFound(t *testing.T) {
 
 	perm, err := svc.GetPermission(ctx, 999)
 	assert.Error(t, err)
-	assert.Equal(t, ErrPermissionNotFound, err)
+	assert.Contains(t, err.Error(), "Permission not found")
 	assert.Nil(t, perm)
 }
 

@@ -8,13 +8,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
-)
-
-var (
-	ErrRoleNotFound           = errors.New("role not found")
-	ErrPermissionNotFound     = errors.New("permission not found")
-	ErrRoleAlreadyExists      = errors.New("role already exists")
-	ErrCannotDeleteSystemRole = errors.New("cannot delete system role")
+	pkgerrors "github.com/industrial-ai/platform/pkg/errors"
 )
 
 // RBACService handles role-based access control business logic
@@ -60,12 +54,12 @@ func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayNam
 	if s.roleRepo != nil {
 		existing, err := s.roleRepo.GetByName(tenantID, name)
 		if err == nil && existing != nil {
-			return nil, ErrRoleAlreadyExists
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeConflict, "Role already exists", "")
 		}
 	} else if s.rbacRepo != nil {
 		existing, err := s.rbacRepo.GetRoleByName(ctx, name)
 		if err == nil && existing != nil {
-			return nil, ErrRoleAlreadyExists
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeConflict, "Role already exists", "")
 		}
 	}
 
@@ -105,7 +99,7 @@ func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) 
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return nil, ErrRoleNotFound
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
@@ -136,7 +130,7 @@ func (s *RBACService) GetRoleWithPermissions(ctx context.Context, id int) (*mode
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return nil, ErrRoleNotFound
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return nil, fmt.Errorf("failed to get role with permissions: %w", err)
 	}
@@ -173,7 +167,7 @@ func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return ErrRoleNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return fmt.Errorf("failed to get role: %w", err)
 	}
@@ -213,13 +207,13 @@ func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return ErrRoleNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return fmt.Errorf("failed to get role: %w", err)
 	}
 
 	if role.IsSystem {
-		return ErrCannotDeleteSystemRole
+		return pkgerrors.NewAppError(pkgerrors.ErrCodeForbidden, "Cannot delete system role", "")
 	}
 
 	if s.roleRepo != nil {
@@ -247,7 +241,7 @@ func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenant
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return ErrRoleNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return fmt.Errorf("failed to verify role: %w", err)
 	}
@@ -399,7 +393,7 @@ func (s *RBACService) AssignPermissionToRole(ctx context.Context, roleID, permis
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return ErrRoleNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return fmt.Errorf("failed to verify role: %w", err)
 	}
@@ -413,7 +407,7 @@ func (s *RBACService) AssignPermissionToRole(ctx context.Context, roleID, permis
 
 	if err != nil {
 		if errors.Is(err, repository.ErrPermissionNotFound) {
-			return ErrPermissionNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
 		}
 		return fmt.Errorf("failed to verify permission: %w", err)
 	}
@@ -508,7 +502,7 @@ func (s *RBACService) GetPermission(ctx context.Context, id int) (*model.Permiss
 
 	if err != nil {
 		if errors.Is(err, repository.ErrPermissionNotFound) {
-			return nil, ErrPermissionNotFound
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
 		}
 		return nil, fmt.Errorf("failed to get permission: %w", err)
 	}
@@ -567,7 +561,7 @@ func (s *RBACService) DeletePermission(ctx context.Context, id int) error {
 
 	if err != nil {
 		if errors.Is(err, repository.ErrPermissionNotFound) {
-			return ErrPermissionNotFound
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
 		}
 		return fmt.Errorf("failed to delete permission: %w", err)
 	}
