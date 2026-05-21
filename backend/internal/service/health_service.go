@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sync"
 	"time"
 )
 
@@ -38,44 +37,38 @@ type HealthCheckResponse struct {
 // HealthService provides health checking capabilities
 type HealthService struct {
 	db           *sql.DB
+	httpClient   HTTPClientInterface
 	startTime    time.Time
 	version      string
-	llmAPIKey    string
-	llmBaseURL   string
-	llmModel     string
-	checkTimeout time.Duration
+	config       HealthServiceConfig
 }
 
-var (
-	healthServiceInstance *HealthService
-	healthServiceOnce     sync.Once
-)
-
-// InitHealthService initializes the global health service instance
-func InitHealthService(db *sql.DB, version string) *HealthService {
-	healthServiceOnce.Do(func() {
-		healthServiceInstance = &HealthService{
-			db:           db,
-			startTime:    time.Now(),
-			version:      version,
-			llmAPIKey:    os.Getenv("LLM_API_KEY"),
-			llmBaseURL:   os.Getenv("LLM_BASE_URL"),
-			llmModel:     os.Getenv("LLM_MODEL"),
-			checkTimeout: 5 * time.Second,
-		}
-	})
-	return healthServiceInstance
+// InitHealthService initializes the health service instance
+func InitHealthService(db *sql.DB, version string, config HealthServiceConfig) *HealthService {
+	return &HealthService{
+		db:         db,
+		startTime:  time.Now(),
+		version:    version,
+		httpClient: &http.Client{Timeout: config.CheckTimeout},
+		config:     config,
+	}
 }
 
-// GetHealthService returns the global health service instance
-func GetHealthService() *HealthService {
-	return healthServiceInstance
+// InitHealthServiceWithClient initializes health service with custom HTTP client
+func InitHealthServiceWithClient(db *sql.DB, version string, config HealthServiceConfig, client HTTPClientInterface) *HealthService {
+	return &HealthService{
+		db:         db,
+		startTime:  time.Now(),
+		version:    version,
+		httpClient: client,
+		config:     config,
+	}
 }
 
 // CheckHealth performs comprehensive health checks on all components
 func (s *HealthService) CheckHealth(ctx context.Context) *HealthCheckResponse {
 	// Use a shorter timeout for the overall health check
-	checkCtx, cancel := context.WithTimeout(ctx, s.checkTimeout)
+	checkCtx, cancel := context.WithTimeout(ctx, s.config.CheckTimeout)
 	defer cancel()
 
 	// Perform checks concurrently using channels
@@ -160,7 +153,7 @@ func (s *HealthService) checkDatabase(ctx context.Context) HealthStatus {
 
 // checkLLMAPI checks LLM API availability
 func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
-	if s.llmAPIKey == "" {
+	if s.config.LLMAPIKey == "" {
 		return HealthStatus{
 			Status:  "unavailable",
 			Message: "LLM_API_KEY not configured",
@@ -169,13 +162,8 @@ func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
 
 	start := time.Now()
 
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
-
 	// Determine the base URL
-	baseURL := s.llmBaseURL
+	baseURL := s.config.LLMBseURL
 	if baseURL == "" {
 		baseURL = "https://coding.dashscope.aliyuncs.com/v1"
 	}
@@ -190,9 +178,9 @@ func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
 		}
 	}
 
-	req.Header.Set("Authorization", "Bearer "+s.llmAPIKey)
+	req.Header.Set("Authorization", "Bearer "+s.config.LLMAPIKey)
 
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	latency := time.Since(start).Milliseconds()
 
 	if err != nil {
@@ -206,7 +194,7 @@ func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
 
 	// Consider available if we get any response (even 401/403 means the API is up)
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		model := s.llmModel
+		model := s.config.LLMModel
 		if model == "" {
 			model = "glm-5"
 		}
