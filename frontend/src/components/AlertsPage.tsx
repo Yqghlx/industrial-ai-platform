@@ -131,8 +131,9 @@ function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, u
       setStats(data);
     } catch {
       console.error('Failed to fetch alert stats');
+      showToast({ type: 'error', message: t('errors.loadFailedAlertStats') });
     }
-  }, []);
+  }, [showToast, t]);
 
   // Initial load
   useEffect(() => {
@@ -226,6 +227,7 @@ function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, u
           className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition-colors"
           onClick={handleRefresh}
           disabled={refreshing}
+          aria-label={t('common.refresh')}
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           刷新
@@ -233,6 +235,7 @@ function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, u
         <button
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
           onClick={() => navigate('/alerts/report')}
+          aria-label={t('report.generate')}
         >
           <BarChart3 className="h-4 w-4" />
           报表分析
@@ -370,26 +373,29 @@ function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, u
                   <div className="flex gap-2">
                     {alert.status === 'active' && (
                       <>
-                        <button
-                          className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
-                          onClick={() => handleAcknowledge(alert.id)}
-                        >
-                          <Clock className="h-4 w-4" />
-                          确认
-                        </button>
-                        <button
-                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
-                          onClick={() => handleResolve(alert.id)}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          解决
-                        </button>
+<button
+                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
+                        onClick={() => handleAcknowledge(alert.id)}
+                        aria-label={t('alert.acknowledgedLabel')}
+                      >
+                        <Clock className="h-4 w-4" />
+                        确认
+                      </button>
+                      <button
+                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+                        onClick={() => handleResolve(alert.id)}
+                        aria-label={t('alert.resolvedLabel')}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        解决
+                      </button>
                       </>
                     )}
                     {alert.status === 'acknowledged' && (
                       <button
                         className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
                         onClick={() => handleResolve(alert.id)}
+                        aria-label={t('alert.resolvedLabel')}
                       >
                         <CheckCircle className="h-4 w-4" />
                         解决

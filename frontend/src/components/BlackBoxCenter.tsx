@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
+import { useToast } from './Toast';
 import { Box, Play, Clock } from 'lucide-react';
 import { BlackBoxRecord } from '../types/api';
 
@@ -27,6 +28,7 @@ function isBlackBoxRecordArray(data: unknown): data is BlackBoxRecord[] {
 
 export default function BlackBoxCenter() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [records, setRecords] = useState<BlackBoxRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<BlackBoxRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,9 +47,11 @@ export default function BlackBoxCenter() {
       } else {
         console.error('Invalid BlackBoxRecord[] response:', res.data);
         setRecords([]);
+        showToast({ type: 'error', message: t('errors.loadFailedBlackbox') });
       }
     } catch (error) {
       console.error('Failed to load black box records:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedBlackbox') });
     } finally {
       setLoading(false);
     }
@@ -61,9 +65,11 @@ export default function BlackBoxCenter() {
         setSelectedRecord(res);
       } else {
         console.error('Invalid BlackBoxRecord response:', res);
+        showToast({ type: 'error', message: t('errors.loadFailedRecordData') });
       }
     } catch (error) {
       console.error('Failed to load record data:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedRecordData') });
     }
   };
 
@@ -124,6 +130,7 @@ export default function BlackBoxCenter() {
                         <button
                           onClick={() => loadRecordData(r.id)}
                           className="btn btn-secondary flex items-center gap-2"
+                          aria-label={t('blackbox.playback')}
                         >
                           <Play className="w-4 h-4" />
                           <span>{t('blackbox.playback')}</span>
@@ -147,6 +154,7 @@ export default function BlackBoxCenter() {
               <button
                 onClick={() => setSelectedRecord(null)}
                 className="text-slate-400 hover:text-slate-200"
+                aria-label={t('common.close')}
               >
                 ×
               </button>

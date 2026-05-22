@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
+import { useToast } from './Toast';
 import { Database, Activity, Server, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { SystemStatus as SystemStatusType } from '../types/api';
 
 export default function SystemStatus() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [status, setStatus] = useState<SystemStatusType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,6 +26,7 @@ export default function SystemStatus() {
       setStatus(res as SystemStatusType);
     } catch (error) {
       console.error('Failed to load system status:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedSystem') });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -42,6 +45,7 @@ export default function SystemStatus() {
           onClick={loadStatus}
           disabled={refreshing}
           className="btn btn-secondary flex items-center gap-2"
+          aria-label={t('common.refresh')}
         >
           <Activity className={`w-5 h-5 ${refreshing ? 'animate-pulse' : ''}`} />
           <span>{t('common.refresh')}</span>

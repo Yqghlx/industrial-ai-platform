@@ -25,6 +25,7 @@ export default function NotificationCenter() {
       setNotifications(res.data as Notification[]);
     } catch (error) {
       console.error('Failed to load notifications:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedNotifications') });
     } finally {
       setLoading(false);
     }
@@ -69,6 +70,7 @@ export default function NotificationCenter() {
           <button 
             onClick={handleMarkAllRead}
             className="btn btn-secondary flex items-center gap-2"
+            aria-label={t('notification.markAllRead')}
           >
             <Check className="w-5 h-5" />
             <span>{t('notification.markAllRead')}</span>
@@ -170,6 +172,7 @@ export default function NotificationCenter() {
                     <button
                       onClick={() => handleMarkRead(n.id)}
                       className="btn btn-secondary flex items-center gap-2"
+                      aria-label={t('notification.markRead')}
                     >
                       <Check className="w-4 h-4" />
                       <span>{t('notification.markRead')}</span>

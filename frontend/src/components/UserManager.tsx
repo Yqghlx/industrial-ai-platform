@@ -29,6 +29,7 @@ export default function UserManager() {
       setUsers(asUserArraySafe(res.data));
     } catch (error) {
       console.error('Failed to load users:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedUsers') });
     } finally {
       setLoading(false);
     }
@@ -66,6 +67,7 @@ export default function UserManager() {
         <button 
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary flex items-center gap-2"
+          aria-label={t('user.createUser')}
         >
           <Plus className="w-5 h-5" />
           <span>{t('user.createUser')}</span>
@@ -116,6 +118,7 @@ export default function UserManager() {
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="p-1 text-slate-400 hover:text-red-400"
+                          aria-label={t('common.delete')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -184,6 +187,7 @@ export default function UserManager() {
                       type="button"
                       onClick={() => setShowCreateModal(false)}
                       className="btn btn-secondary flex-1"
+                      aria-label={t('common.cancel')}
                     >
                       {t('common.cancel')}
                     </button>

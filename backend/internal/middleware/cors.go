@@ -241,10 +241,14 @@ func isOriginAllowed(origin string, allowedOrigins []string) bool {
 }
 
 // ParseOrigins 解析 CORS origins 配置字符串
-// Returns ["*"] by default for empty input
+// SEC-HIGH-01: 安全修复 - 空输入返回空数组而非 ["*"] 通配符
+// 在生产环境中，必须显式配置 CORS origins
+// 使用 config.GetCORSOrigins() 可获得更安全的默认行为
 func ParseOrigins(originsStr string) []string {
 	if originsStr == "" {
-		return []string{"*"}
+		// 返回空数组，不允许通配符默认值
+		// 这符合 CWE-942 的安全最佳实践
+		return []string{}
 	}
 
 	origins := strings.Split(originsStr, ",")

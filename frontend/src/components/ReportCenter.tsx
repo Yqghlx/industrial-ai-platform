@@ -26,6 +26,7 @@ export default function ReportCenter() {
       setReports((res.data as Report[]) || []);
     } catch (error) {
       console.error('Failed to load reports:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedReports') });
     } finally {
       setLoading(false);
     }
@@ -55,6 +56,7 @@ export default function ReportCenter() {
           <button 
             onClick={() => setShowGenerateModal(true)}
             className="btn btn-primary flex items-center gap-2"
+            aria-label={t('report.generate')}
           >
             <Plus className="w-5 h-5" />
             <span>{t('report.generate')}</span>
@@ -82,6 +84,7 @@ export default function ReportCenter() {
               <button
                 onClick={() => setShowGenerateModal(true)}
                 className="btn btn-primary mt-4"
+                aria-label={t('report.generate')}
               >
                 {t('report.generate')}
               </button>
@@ -118,7 +121,9 @@ export default function ReportCenter() {
                         </div>
                       </div>
                     </div>
-                    <button className="p-2 text-slate-400 hover:text-slate-200">
+                    <button className="p-2 text-slate-400 hover:text-slate-200"
+                      aria-label={t('common.download')}
+                    >
                       <Download className="w-5 h-5" />
                     </button>
                   </div>
@@ -159,6 +164,7 @@ export default function ReportCenter() {
                 <button
                   onClick={() => setShowGenerateModal(false)}
                   className="btn btn-secondary w-full"
+                  aria-label={t('common.cancel')}
                 >
                   {t('common.cancel')}
                 </button>
@@ -177,6 +183,7 @@ export default function ReportCenter() {
               <button
                 onClick={() => setSelectedReport(null)}
                 className="text-slate-400 hover:text-slate-200"
+                aria-label={t('common.close')}
               >
                 ×
               </button>

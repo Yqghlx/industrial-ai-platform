@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import { SkeletonGrid } from './Skeleton';
+import { useToast } from './Toast';
 import { Activity, AlertTriangle, Wrench, TrendingUp, Settings, Bell } from 'lucide-react';
 import { getDeviceStatusColor, getDeviceStatusBadgeClass } from '../lib/colorUtils';
 
@@ -24,6 +25,7 @@ interface Telemetry {
 
 export default function FleetDashboard() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const location = useLocation();
   const [devices, setDevices] = useState<Device[]>([]);
   const [telemetry, setTelemetry] = useState<Telemetry[]>([]);
@@ -57,10 +59,11 @@ export default function FleetDashboard() {
       setStats({ total, online, warning, fault });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedDashboard') });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast, t]);
 
   useEffect(() => {
     loadData();

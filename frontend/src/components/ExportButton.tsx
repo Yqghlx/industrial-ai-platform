@@ -72,6 +72,7 @@ export default function ExportButton({
         onClick={() => setShowModal(true)}
         className={`btn btn-secondary flex items-center gap-2 ${className}`}
         title={getReportLabel()}
+        aria-label={t('common.export')}
       >
         <Download className="w-5 h-5" />
         <span>{label || t('common.export') || '导出'}</span>
@@ -144,6 +145,7 @@ export default function ExportButton({
                 onClick={() => setShowModal(false)}
                 disabled={exporting}
                 className="btn btn-secondary w-full mt-4"
+                aria-label={t('common.cancel')}
               >
                 {t('common.cancel') || '取消'}
               </button>

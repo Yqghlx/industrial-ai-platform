@@ -25,7 +25,7 @@ This module handles loading and validating environment variables for the Industr
 | `LLM_API_KEY` | LLM API key for AI features | - |
 | `LLM_BASE_URL` | LLM API base URL | - |
 | `LLM_MODEL` | LLM model name | - |
-| `CORS_ORIGINS` | Comma-separated allowed origins | `*` |
+|| `CORS_ORIGINS` | Comma-separated allowed origins | Empty (must be set in production) |
 | `ADMIN_PASSWORD` | Admin user password | Randomly generated |
 | `ENV` | Environment (development/production) | `development` |
 

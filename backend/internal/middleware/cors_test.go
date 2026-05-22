@@ -306,7 +306,8 @@ func TestParseOrigins(t *testing.T) {
 		input    string
 		expected []string
 	}{
-		{"empty", "", []string{"*"}},
+		// SEC-HIGH-01: 空输入现在返回空数组而非 ["*"] 通配符
+		{"empty", "", []string{}},
 		{"single", "https://example.com", []string{"https://example.com"}},
 		{"multiple", "https://a.com, https://b.com", []string{"https://a.com", "https://b.com"}},
 		{"with spaces", " https://a.com , https://b.com ", []string{"https://a.com", "https://b.com"}},

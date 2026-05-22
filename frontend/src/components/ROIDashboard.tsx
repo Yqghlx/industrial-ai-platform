@@ -3,12 +3,14 @@ import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import ExportButton from './ExportButton';
+import { useToast } from './Toast';
 import { BarChart3, TrendingUp, Clock, DollarSign, Activity, RefreshCw } from 'lucide-react';
 import { ROIStats } from '../types/api';
 import { asROIStatsSafe } from '../types/typeGuards';
 
 export default function ROIDashboard() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [stats, setStats] = useState<ROIStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +28,7 @@ export default function ROIDashboard() {
       setStats(asROIStatsSafe(res));
     } catch (error) {
       console.error('Failed to load ROI stats:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedROI') });
     } finally {
       setLoading(false);
     }
@@ -44,6 +47,7 @@ export default function ROIDashboard() {
           <button 
             onClick={loadStats}
             className="btn btn-secondary flex items-center gap-2"
+            aria-label={t('common.refresh')}
           >
             <RefreshCw className="w-5 h-5" />
             <span>{t('common.refresh')}</span>

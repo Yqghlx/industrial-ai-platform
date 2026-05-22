@@ -24,10 +24,11 @@ export default function WorkOrderBoard() {
       setOrders(asWorkOrderArraySafe(res.data));
     } catch (error) {
       console.error('Failed to load work orders:', error);
+      showToast({ type: 'error', message: t('errors.loadFailedWorkOrders') });
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, showToast, t]);
 
   useEffect(() => {
     loadOrders();
@@ -56,6 +57,7 @@ export default function WorkOrderBoard() {
         <button 
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary flex items-center gap-2"
+          aria-label={t('workOrder.createOrder')}
         >
           <Plus className="w-5 h-5" />
           <span>{t('workOrder.createOrder')}</span>
@@ -196,6 +198,7 @@ export default function WorkOrderBoard() {
                       type="button"
                       onClick={() => setShowCreateModal(false)}
                       className="btn btn-secondary flex-1"
+                      aria-label={t('common.cancel')}
                     >
                       {t('common.cancel')}
                     </button>
