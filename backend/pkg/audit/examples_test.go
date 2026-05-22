@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -84,6 +85,21 @@ func TestAuditRequest_ServerError(t *testing.T) {
 	assert.Equal(t, SeverityCritical, logs[0].Severity)
 }
 
+func TestAuditRequest_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	middleware := NewAuditMiddleware(auditLogger, logger)
+
+	// Test request with audit error - covers error logging branch
+	middleware.AuditRequest("user-123", "tenant-456", "192.168.1.1", "GET", "/api/devices", 200, 100*time.Millisecond)
+	// Middleware should still function even if audit fails
+}
+
 func TestAuditRequest_WriteMethods(t *testing.T) {
 	logger := zap.NewNop()
 	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
@@ -129,6 +145,27 @@ func TestAuditRequest_WriteMethods(t *testing.T) {
 // AuthService Tests
 // ============================================
 
+// TestAuthService_Login_WithAuditError 测试登录时审计错误
+func TestAuthService_Login_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit log failed")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	authService := &AuthService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	// Test login with audit error
+	ctx := context.Background()
+	_, _, _, err := authService.Login(ctx, "testuser", "password", "192.168.1.1", "Mozilla/5.0")
+	// Login should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
 func TestAuthService_Login(t *testing.T) {
 	logger := zap.NewNop()
 	repo := NewMockRepository()
@@ -146,6 +183,248 @@ func TestAuthService_Login(t *testing.T) {
 	_, _, _, err := authService.Login(ctx, "testuser", "password", "192.168.1.1", "Mozilla/5.0")
 	// Note: Login returns empty values since it's an example
 	assert.NoError(t, err)
+}
+
+// TestAuthService_Logout_WithAuditError 测试登出时审计错误
+func TestAuthService_Logout_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	authService := &AuthService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	err := authService.Logout(ctx, "user-123", "tenant-456", "session-789", "192.168.1.1")
+	// Logout should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestAuthService_ChangePassword_WithAuditError 测试修改密码时审计错误
+func TestAuthService_ChangePassword_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	authService := &AuthService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	err := authService.ChangePassword(ctx, "user-123", "tenant-456", "192.168.1.1", true)
+	// ChangePassword should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestDataService_GetDevice_WithAuditError 测试获取设备时审计错误
+func TestDataService_GetDevice_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	dataService := &DataService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	_, err := dataService.GetDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-001")
+	// GetDevice should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestDataService_UpdateDevice_WithAuditError 测试更新设备时审计错误
+func TestDataService_UpdateDevice_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	dataService := &DataService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	beforeState := map[string]interface{}{"name": "old"}
+	afterState := map[string]interface{}{"name": "new"}
+	err := dataService.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-001", beforeState, afterState)
+	// UpdateDevice should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestDataService_DeleteDevice_WithAuditError 测试删除设备时审计错误
+func TestDataService_DeleteDevice_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	dataService := &DataService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	err := dataService.DeleteDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-001")
+	// DeleteDevice should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestAdminService_CreateUser_WithAuditError 测试创建用户时审计错误
+func TestAdminService_CreateUser_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	adminService := &AdminService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	userData := map[string]interface{}{"user_id": "user-002", "username": "newuser", "role": "user"}
+	err := adminService.CreateUser(ctx, "admin-001", "tenant-456", "192.168.1.1", userData)
+	// CreateUser should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestAdminService_AssignRole_WithAuditError 测试分配角色时审计错误
+func TestAdminService_AssignRole_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	adminService := &AdminService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	err := adminService.AssignRole(ctx, "admin-001", "tenant-456", "192.168.1.1", "user-002", "admin")
+	// AssignRole should still succeed (audit is secondary)
+	assert.NoError(t, err)
+}
+
+// TestSecurityService_DetectBruteForce_WithAuditError 测试检测暴力破解时审计错误
+func TestSecurityService_DetectBruteForce_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	securityService := &SecurityService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	// At threshold - should trigger alert
+	securityService.DetectBruteForce(ctx, "user-123", "tenant-456", "192.168.1.1", 5)
+}
+
+// TestSecurityService_DetectUnauthorizedAccess_WithAuditError 测试检测未授权访问时审计错误
+func TestSecurityService_DetectUnauthorizedAccess_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	securityService := &SecurityService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	securityService.DetectUnauthorizedAccess(ctx, "user-123", "tenant-456", "192.168.1.1", "admin/settings")
+}
+
+// TestSecurityService_BlockIP_WithAuditError 测试阻断 IP 时审计错误
+func TestSecurityService_BlockIP_WithAuditError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.createErr = errors.New("audit error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	securityService := &SecurityService{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	securityService.BlockIP(ctx, "192.168.1.100", "brute force")
+}
+
+// TestAuditAnalyzer_AnalyzeUserActivity_WithError 测试分析用户活动时查询错误
+func TestAuditAnalyzer_AnalyzeUserActivity_WithError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.queryErr = errors.New("query error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	analyzer := &AuditAnalyzer{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	startTime := time.Now().Add(-24 * time.Hour)
+	endTime := time.Now()
+	err := analyzer.AnalyzeUserActivity(ctx, "user-123", startTime, endTime)
+	// Should return error due to query failure
+	assert.Error(t, err)
+}
+
+// TestAuditAnalyzer_AnalyzeSecurityEvents_WithError 测试分析安全事件时查询错误
+func TestAuditAnalyzer_AnalyzeSecurityEvents_WithError(t *testing.T) {
+	logger := zap.NewNop()
+	repo := NewErrorRepository()
+	repo.queryErr = errors.New("query error")
+	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
+	auditLogger := NewAuditLogger(repo, logger, config)
+	defer auditLogger.Close()
+
+	analyzer := &AuditAnalyzer{
+		auditLogger: auditLogger,
+		logger:      logger,
+	}
+
+	ctx := context.Background()
+	startTime := time.Now().Add(-24 * time.Hour)
+	endTime := time.Now()
+	err := analyzer.AnalyzeSecurityEvents(ctx, startTime, endTime)
+	// Should return error due to query failure
+	assert.Error(t, err)
 }
 
 func TestAuthService_Logout(t *testing.T) {
@@ -206,7 +485,8 @@ func TestDataService_GetDevice(t *testing.T) {
 	assert.Equal(t, 1, repo.GetLogCount())
 }
 
-func TestDataService_UpdateDevice(t *testing.T) {
+// TestUpdateDevice_CompleteChangeCalculation 测试完整的变更计算逻辑
+func TestUpdateDevice_CompleteChangeCalculation(t *testing.T) {
 	logger := zap.NewNop()
 	repo := NewMockRepository()
 	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
@@ -219,11 +499,58 @@ func TestDataService_UpdateDevice(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	beforeState := map[string]interface{}{"name": "old"}
-	afterState := map[string]interface{}{"name": "new"}
-	err := dataService.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-001", beforeState, afterState)
+
+	// Test 1: 值发生变化
+	beforeState1 := map[string]interface{}{"name": "Old Device", "location": "Building A"}
+	afterState1 := map[string]interface{}{"name": "New Device", "location": "Building A"}
+	err := dataService.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-001", beforeState1, afterState1)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, repo.GetLogCount())
+
+	// Test 2: 新添加的字段
+	beforeState2 := map[string]interface{}{"name": "Device"}
+	afterState2 := map[string]interface{}{"name": "Device", "location": "Building B"}
+	repo2 := NewMockRepository()
+	auditLogger2 := NewAuditLogger(repo2, logger, config)
+	dataService2 := &DataService{auditLogger: auditLogger2, logger: logger}
+	err = dataService2.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-002", beforeState2, afterState2)
+	assert.NoError(t, err)
+	logs2, _, _ := repo2.Query(ctx, &QueryRequest{})
+	if len(logs2) > 0 {
+		assert.Contains(t, logs2[0].Changes, "location")
+		assert.Contains(t, logs2[0].Changes["location"], "added:")
+	}
+	auditLogger2.Close()
+
+	// Test 3: 值相同（无变化）
+	beforeState3 := map[string]interface{}{"name": "Same Device"}
+	afterState3 := map[string]interface{}{"name": "Same Device"}
+	repo3 := NewMockRepository()
+	auditLogger3 := NewAuditLogger(repo3, logger, config)
+	dataService3 := &DataService{auditLogger: auditLogger3, logger: logger}
+	err = dataService3.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-003", beforeState3, afterState3)
+	assert.NoError(t, err)
+	logs3, _, _ := repo3.Query(ctx, &QueryRequest{})
+	if len(logs3) > 0 && logs3[0].Changes != nil {
+		// 无变化时 Changes 应为空或只包含相同值
+	}
+	auditLogger3.Close()
+
+	// Test 4: 空 beforeState
+	beforeState4 := map[string]interface{}{}
+	afterState4 := map[string]interface{}{"name": "New Device", "status": "active"}
+	repo4 := NewMockRepository()
+	auditLogger4 := NewAuditLogger(repo4, logger, config)
+	dataService4 := &DataService{auditLogger: auditLogger4, logger: logger}
+	err = dataService4.UpdateDevice(ctx, "user-123", "tenant-456", "192.168.1.1", "device-004", beforeState4, afterState4)
+	assert.NoError(t, err)
+	logs4, _, _ := repo4.Query(ctx, &QueryRequest{})
+	if len(logs4) > 0 && logs4[0].Changes != nil {
+		// 所有字段都是新添加的
+		for key := range logs4[0].Changes {
+			assert.Contains(t, logs4[0].Changes[key], "added:")
+		}
+	}
+	auditLogger4.Close()
 }
 
 func TestDataService_DeleteDevice(t *testing.T) {

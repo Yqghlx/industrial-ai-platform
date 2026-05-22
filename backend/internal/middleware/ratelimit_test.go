@@ -15,8 +15,14 @@ import (
 func TestRateLimit_BasicLimiting(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Use unique limiter name to avoid interference from other tests
 	router := gin.New()
-	router.Use(RateLimit(2, 1.0)) // 2 requests burst, 1 token per second
+	router.Use(RateLimitWithConfig(RateLimitConfig{
+		Capacity:   2,
+		RefillRate: 100.0, // Very fast refill to ensure we have tokens
+		KeyFunc:    DefaultKeyFunc,
+		Name:       "basic-limit-test-unique",
+	}))
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "ok"})
 	})
@@ -32,6 +38,12 @@ func TestRateLimit_BasicLimiting(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)
 	assert.Equal(t, 200, w2.Code)
+
+	// Third request should be rate limited
+	req3 := httptest.NewRequest("GET", "/test", nil)
+	w3 := httptest.NewRecorder()
+	router.ServeHTTP(w3, req3)
+	assert.Equal(t, 429, w3.Code)
 }
 
 func TestLoginRateLimit(t *testing.T) {
