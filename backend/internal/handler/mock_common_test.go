@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -41,6 +43,24 @@ func (m *MockDeviceRepository) Update(ctx context.Context, device *model.Device)
 func (m *MockDeviceRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+func (m *MockDeviceRepository) UpdateStatus(ctx context.Context, id, status string) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
+func (m *MockDeviceRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int), args.Error(1)
+}
+
+func (m *MockDeviceRepository) WithTx(tx database.TransactionInterface) repository.DeviceRepositoryInterface {
+	args := m.Called(tx)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(repository.DeviceRepositoryInterface)
 }
 
 // MockDeviceService 模拟设备服务 (共享 Mock)
@@ -476,6 +496,21 @@ func (m *MockAlertRepository) GetRecentByDevice(ctx context.Context, deviceID st
 	return args.Get(0).(*model.Alert), args.Error(1)
 }
 
+func (m *MockAlertRepository) CountActive(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int), args.Error(1)
+}
+
+func (m *MockAlertRepository) Resolve(ctx context.Context, id int) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockAlertRepository) UpdateStatus(ctx context.Context, id int, status string) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
 // MockWorkOrderRepository 模拟工单仓库
 type MockWorkOrderRepository struct {
 	mock.Mock
@@ -703,6 +738,14 @@ func (m *MockUserRepository) GetByUsername(ctx context.Context, username string)
 	return args.Get(0).(*model.User), args.Error(1)
 }
 
+func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.User), args.Error(1)
+}
+
 func (m *MockUserRepository) List(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
 	args := m.Called(ctx, page, pageSize)
 	users, _ := args.Get(0).([]model.User)
@@ -732,6 +775,14 @@ func (m *MockUserRepository) GetTokenVersion(ctx context.Context, userID int) (i
 func (m *MockUserRepository) UpdateTokenVersion(ctx context.Context, userID int) error {
 	args := m.Called(ctx, userID)
 	return args.Error(0)
+}
+
+func (m *MockUserRepository) WithTx(tx database.TransactionInterface) repository.UserRepositoryInterface {
+	args := m.Called(tx)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(repository.UserRepositoryInterface)
 }
 
 // MockAuthService 模拟认证服务

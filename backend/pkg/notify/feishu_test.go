@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,4 +162,213 @@ func TestNotifyManager_NotifyAlert_Enabled(t *testing.T) {
 
 	err := manager.NotifyAlert(ctx, alert, device, rule)
 	require.NoError(t, err)
+}
+
+// ============================================
+// Error Handling Tests
+// ============================================
+
+func TestFeishuNotifier_Send_HTTPError(t *testing.T) {
+	// Create a server that immediately closes the connection
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Force connection close to simulate network error
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err == nil {
+			conn.Close()
+		}
+	}))
+	defer server.Close()
+
+	notifier := NewFeishuNotifier(server.URL)
+	ctx := context.Background()
+
+	msg := FeishuMessage{
+		MsgType: "text",
+		Content: map[string]interface{}{"text": "test"},
+	}
+
+	err := notifier.send(ctx, msg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "send request")
+}
+
+func TestFeishuNotifier_Send_NonOKStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"code":500,"msg":"internal error"}`))
+	}))
+	defer server.Close()
+
+	notifier := NewFeishuNotifier(server.URL)
+	ctx := context.Background()
+
+	msg := FeishuMessage{
+		MsgType: "text",
+		Content: map[string]interface{}{"text": "test"},
+	}
+
+	err := notifier.send(ctx, msg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+}
+
+func TestFeishuNotifier_Send_ContextCancelled(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Delay to ensure context cancellation triggers
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	notifier := NewFeishuNotifier(server.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	msg := FeishuMessage{
+		MsgType: "text",
+		Content: map[string]interface{}{"text": "test"},
+	}
+
+	err := notifier.send(ctx, msg)
+	assert.Error(t, err)
+}
+
+func TestNotifyManager_NotifyAlert_Failed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"code":500}`))
+	}))
+	defer server.Close()
+
+	manager := NewNotifyManager(server.URL, true)
+	ctx := context.Background()
+
+	alert := &model.Alert{ID: 1, Severity: "critical", Message: "Critical alert"}
+	device := &model.Device{ID: "dev-1", Name: "Device"}
+	rule := &model.AlertRule{ID: 1, Name: "Critical Rule"}
+
+	err := manager.NotifyAlert(ctx, alert, device, rule)
+	assert.Error(t, err)
+}
+
+func TestNotifyManager_NotifyAlertResolved_Failed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"code":500}`))
+	}))
+	defer server.Close()
+
+	manager := NewNotifyManager(server.URL, true)
+	ctx := context.Background()
+
+	err := manager.NotifyAlertResolved(ctx, 1, "Test Device")
+	assert.Error(t, err)
+}
+
+// ============================================
+// Different Severity Levels Tests
+// ============================================
+
+func TestFeishuNotifier_SendAlert_AllSeverities(t *testing.T) {
+	severities := []string{"critical", "high", "medium", "low", "unknown"}
+
+	for _, severity := range severities {
+		t.Run(severity, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"code":0}`))
+			}))
+			defer server.Close()
+
+			notifier := NewFeishuNotifier(server.URL)
+			ctx := context.Background()
+
+			alert := &model.Alert{
+				ID:         1,
+				Severity:   severity,
+				Message:   "Test alert",
+				TriggeredAt: time.Now(),
+			}
+			device := &model.Device{ID: "dev-1", Name: "Test Device"}
+			rule := &model.AlertRule{ID: 1, Name: "Test Rule"}
+
+			err := notifier.SendAlert(ctx, alert, device, rule)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestFeishuNotifier_GetSeverityColor_AllLevels(t *testing.T) {
+	notifier := NewFeishuNotifier("")
+
+	tests := []struct {
+		severity string
+		expected string
+	}{
+		{"critical", "<font color='red'>"},
+		{"high", "<font color='orange'>"},
+		{"medium", "<font color='yellow'>"},
+		{"low", "<font color='green'>"},
+		{"unknown", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.severity, func(t *testing.T) {
+			result := notifier.getSeverityColor(tt.severity)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFeishuNotifier_GetSeverityText_AllLevels(t *testing.T) {
+	notifier := NewFeishuNotifier("")
+
+	tests := []struct {
+		severity string
+		expected string
+	}{
+		{"critical", "紧急"},
+		{"high", "高"},
+		{"medium", "中"},
+		{"low", "低"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.severity, func(t *testing.T) {
+			result := notifier.getSeverityText(tt.severity)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// ============================================
+// Mock Send Tests
+// ============================================
+
+func TestFeishuNotifier_Send_InvalidURL(t *testing.T) {
+	notifier := NewFeishuNotifier("http://invalid.local:99999/webhook")
+	ctx := context.Background()
+
+	msg := FeishuMessage{
+		MsgType: "text",
+		Content: map[string]interface{}{"text": "test"},
+	}
+
+	err := notifier.send(ctx, msg)
+	assert.Error(t, err)
+}
+
+func TestFeishuNotifier_Send_MessageMarshalError(t *testing.T) {
+	notifier := NewFeishuNotifier("http://example.com")
+	ctx := context.Background()
+
+	// Create a message that cannot be marshaled to JSON
+	msg := map[string]interface{}{
+		"invalid": make(chan int), // channels cannot be marshaled to JSON
+	}
+
+	err := notifier.send(ctx, msg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "marshal message")
 }
