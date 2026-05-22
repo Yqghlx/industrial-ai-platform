@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -53,9 +52,8 @@ func IsJWTInitialized() bool {
 // SetJWTSecret 设置 JWT 密钥 (向后兼容)
 func SetJWTSecret(secret string) {
 	if secret != "" {
-		if len(secret) < MinSecretLength {
-			fmt.Printf("WARNING: JWT_SECRET length (%d) is below recommended minimum (32)\n", len(secret))
-		}
+		// SEC-LOW-02: 不打印密钥长度信息
+		// 密钥长度验证应在配置层面处理
 		globalJWTService = &JWTService{secret: []byte(secret)}
 	}
 }

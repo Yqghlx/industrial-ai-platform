@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/industrial-ai/platform/pkg/database"
+	"context"
 	"database/sql"
 	"errors"
 	"testing"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/database"
 )
 
 func newTestTenantService(t *testing.T) (*TenantService, sqlmock.Sqlmock) {
@@ -30,6 +31,7 @@ func TestNewTenantService(t *testing.T) {
 
 func TestTenantService_CreateTenant_Success(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	// Slug check - not found
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE slug = .*`).
@@ -41,7 +43,7 @@ func TestTenantService_CreateTenant_Success(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), "Test Tenant", "test-tenant", "free", 10, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	tenant, err := svc.CreateTenant("Test Tenant", "test-tenant", "free", 0)
+	tenant, err := svc.CreateTenant(ctx, "Test Tenant", "test-tenant", "free", 0)
 	assert.NoError(t, err)
 	assert.NotNil(t, tenant)
 	assert.Equal(t, "Test Tenant", tenant.Name)
@@ -52,6 +54,7 @@ func TestTenantService_CreateTenant_Success(t *testing.T) {
 
 func TestTenantService_CreateTenant_SlugExists(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	// Slug check - found
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -61,7 +64,7 @@ func TestTenantService_CreateTenant_SlugExists(t *testing.T) {
 		WithArgs("test-tenant").
 		WillReturnRows(rows)
 
-	tenant, err := svc.CreateTenant("Test Tenant", "test-tenant", "free", 0)
+	tenant, err := svc.CreateTenant(ctx, "Test Tenant", "test-tenant", "free", 0)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Tenant slug already exists")
 	assert.Nil(t, tenant)
@@ -69,6 +72,7 @@ func TestTenantService_CreateTenant_SlugExists(t *testing.T) {
 
 func TestTenantService_CreateTenant_InvalidPlan(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	// Slug check - not found
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE slug = .*`).
@@ -80,13 +84,14 @@ func TestTenantService_CreateTenant_InvalidPlan(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), "Test", "test-tenant", "free", 10, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	tenant, err := svc.CreateTenant("Test", "test-tenant", "invalid-plan", 0)
+	tenant, err := svc.CreateTenant(ctx, "Test", "test-tenant", "invalid-plan", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "free", tenant.Plan)
 }
 
 func TestTenantService_CreateTenant_ProPlan(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE slug = .*`).
 		WithArgs("pro-tenant").
@@ -96,7 +101,7 @@ func TestTenantService_CreateTenant_ProPlan(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), "Pro Tenant", "pro-tenant", "pro", 100, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	tenant, err := svc.CreateTenant("Pro Tenant", "pro-tenant", "pro", 0)
+	tenant, err := svc.CreateTenant(ctx, "Pro Tenant", "pro-tenant", "pro", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "pro", tenant.Plan)
 	assert.Equal(t, 100, tenant.MaxDevices)
@@ -104,6 +109,7 @@ func TestTenantService_CreateTenant_ProPlan(t *testing.T) {
 
 func TestTenantService_CreateTenant_CustomMaxDevices(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE slug = .*`).
 		WithArgs("custom-tenant").
@@ -113,13 +119,14 @@ func TestTenantService_CreateTenant_CustomMaxDevices(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), "Custom", "custom-tenant", "free", 50, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	tenant, err := svc.CreateTenant("Custom", "custom-tenant", "free", 50)
+	tenant, err := svc.CreateTenant(ctx, "Custom", "custom-tenant", "free", 50)
 	assert.NoError(t, err)
 	assert.Equal(t, 50, tenant.MaxDevices)
 }
 
 func TestTenantService_CreateTenant_DBError(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE slug = .*`).
 		WithArgs("test").
@@ -128,13 +135,14 @@ func TestTenantService_CreateTenant_DBError(t *testing.T) {
 	mock.ExpectExec(`INSERT INTO tenants`).
 		WillReturnError(errors.New("db error"))
 
-	tenant, err := svc.CreateTenant("Test", "test", "free", 0)
+	tenant, err := svc.CreateTenant(ctx, "Test", "test", "free", 0)
 	assert.Error(t, err)
 	assert.Nil(t, tenant)
 }
 
 func TestTenantService_GetTenant(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
 		AddRow("t-1", "Test", "test", "free", 10, time.Now(), time.Now())
@@ -143,7 +151,7 @@ func TestTenantService_GetTenant(t *testing.T) {
 		WithArgs("t-1").
 		WillReturnRows(rows)
 
-	tenant, err := svc.GetTenant("t-1")
+	tenant, err := svc.GetTenant(ctx, "t-1")
 	assert.NoError(t, err)
 	assert.NotNil(t, tenant)
 	assert.Equal(t, "t-1", tenant.ID)
@@ -151,18 +159,20 @@ func TestTenantService_GetTenant(t *testing.T) {
 
 func TestTenantService_GetTenant_NotFound(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM tenants WHERE id = .*`).
 		WithArgs("nonexistent").
 		WillReturnError(repository.ErrTenantNotFound)
 
-	tenant, err := svc.GetTenant("nonexistent")
+	tenant, err := svc.GetTenant(ctx, "nonexistent")
 	assert.Error(t, err)
 	assert.Nil(t, tenant)
 }
 
 func TestTenantService_GetTenantBySlug(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
 		AddRow("t-1", "Test", "test-slug", "pro", 100, time.Now(), time.Now())
@@ -171,7 +181,7 @@ func TestTenantService_GetTenantBySlug(t *testing.T) {
 		WithArgs("test-slug").
 		WillReturnRows(rows)
 
-	tenant, err := svc.GetTenantBySlug("test-slug")
+	tenant, err := svc.GetTenantBySlug(ctx, "test-slug")
 	assert.NoError(t, err)
 	assert.NotNil(t, tenant)
 	assert.Equal(t, "test-slug", tenant.Slug)
@@ -179,6 +189,7 @@ func TestTenantService_GetTenantBySlug(t *testing.T) {
 
 func TestTenantService_ListTenants(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
 		AddRow("t-1", "Tenant 1", "slug-1", "free", 10, time.Now(), time.Now()).
@@ -188,13 +199,14 @@ func TestTenantService_ListTenants(t *testing.T) {
 		WithArgs(50, 0).
 		WillReturnRows(rows)
 
-	tenants, err := svc.ListTenants(0, 0)
+	tenants, err := svc.ListTenants(ctx, 0, 0)
 	assert.NoError(t, err)
 	assert.Len(t, tenants, 2)
 }
 
 func TestTenantService_ListTenants_DefaultLimit(t *testing.T) {
 	svc, mock := newTestTenantService(t)
+	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"})
 
@@ -202,7 +214,7 @@ func TestTenantService_ListTenants_DefaultLimit(t *testing.T) {
 		WithArgs(50, 0).
 		WillReturnRows(rows)
 
-	tenants, err := svc.ListTenants(0, 0)
+	tenants, err := svc.ListTenants(ctx, 0, 0)
 	assert.NoError(t, err)
 	assert.Empty(t, tenants)
 }

@@ -207,6 +207,12 @@
     "ruleCreated": "规则创建成功",
     "ruleUpdated": "规则更新成功",
     "ruleDeleted": "规则删除成功",
+    "ruleSaved": "规则已保存",
+    "saveFailed": "保存失败",
+    "deleteFailed": "删除失败",
+    "ruleEnabled": "规则已启用",
+    "ruleDisabled": "规则已禁用",
+    "cooldownUnit": "秒",
     "confirmDelete": "确认删除此规则吗？此操作不可撤销",
     "validationRequired": "此字段必填",
     "validationThreshold": "请输入有效的阈值",
@@ -301,6 +307,8 @@
     "generatedAt": "生成时间",
     "list": "报告列表",
     "noReports": "暂无报告",
+    "reportGenerated": "报告已生成",
+    "generateFailed": "生成失败",
     "details": "详细信息",
     "schedule": "定时报告",
     "scheduleReport": "设置定时报告",
@@ -460,7 +468,10 @@
     "exportSuccess": "导出成功",
     "exportFailed": "导出失败",
     "scheduledExport": "定时导出",
-    "lastExport": "上次导出"
+    "lastExport": "上次导出",
+    "exportReport": "导出报告",
+    "selectExportFormat": "选择导出格式",
+    "alertReportExport": "导出告警报告"
   },
   "digitalTwin": {
     "realTimeMonitoring": "实时设备监控面板",

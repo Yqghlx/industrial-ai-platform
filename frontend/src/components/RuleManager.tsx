@@ -62,7 +62,7 @@ export default function RuleManager() {
     if (success) {
       showToast({ type: 'success', message: t('alert.ruleDeleted') });
     } else {
-      showToast({ type: 'error', message: '删除失败' });
+      showToast({ type: 'error', message: t('alert.deleteFailed') });
     }
   }, [showConfirm, deleteItem, showToast, t]);
 
@@ -156,6 +156,7 @@ export default function RuleManager() {
                             <button
                               onClick={() => handleDelete(rule.id)}
                               className="p-1 text-slate-400 hover:text-red-400"
+                              aria-label={t('common.delete')}
                             >
                               ×
                             </button>
@@ -204,9 +205,9 @@ export default function RuleManager() {
                   success = await create(data) !== null;
                 }
                 if (success) {
-                  showToast({ type: 'success', message: '规则已保存' });
+                  showToast({ type: 'success', message: t('alert.ruleSaved') });
                 } else {
-                  showToast({ type: 'error', message: '保存失败' });
+                  showToast({ type: 'error', message: t('alert.saveFailed') });
                 }
                 setShowCreateModal(false);
                 setEditingRule(null);
@@ -262,7 +263,7 @@ export default function RuleManager() {
                     </select>
                   </div>
                   <div>
-                    <label className="label">{t('alert.cooldown')} (秒)</label>
+                    <label className="label">{t('alert.cooldown')} ({t('alert.cooldownUnit')})</label>
                     <input name="cooldown_sec" type="number" className="input" defaultValue={editingRule?.cooldown_sec || 300} />
                   </div>
                   <div className="flex gap-2">

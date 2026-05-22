@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"testing"
@@ -22,6 +23,7 @@ func TestTenantRepo_Create(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
 		tenant := &model.Tenant{
@@ -38,7 +40,7 @@ func TestTenantRepo_Create(t *testing.T) {
 			WithArgs(tenant.ID, tenant.Name, tenant.Slug, tenant.Plan, tenant.MaxDevices, tenant.CreatedAt, tenant.UpdatedAt).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := repo.Create(tenant)
+		err := repo.Create(ctx, tenant)
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -57,7 +59,7 @@ func TestTenantRepo_Create(t *testing.T) {
 		mock.ExpectExec(`INSERT INTO tenants`).
 			WillReturnError(errors.New("duplicate key value violates unique constraint"))
 
-		err := repo.Create(tenant)
+		err := repo.Create(ctx, tenant)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicate")
 	})
@@ -69,6 +71,7 @@ func TestTenantRepo_GetByID(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("found", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -78,7 +81,7 @@ func TestTenantRepo_GetByID(t *testing.T) {
 			WithArgs("tenant-001").
 			WillReturnRows(rows)
 
-		tenant, err := repo.GetByID("tenant-001")
+		tenant, err := repo.GetByID(ctx, "tenant-001")
 		assert.NoError(t, err)
 		assert.Equal(t, "tenant-001", tenant.ID)
 		assert.Equal(t, "Test Tenant", tenant.Name)
@@ -89,7 +92,7 @@ func TestTenantRepo_GetByID(t *testing.T) {
 			WithArgs("non-existent").
 			WillReturnError(sql.ErrNoRows)
 
-		tenant, err := repo.GetByID("non-existent")
+		tenant, err := repo.GetByID(ctx, "non-existent")
 		assert.Error(t, err)
 		assert.Equal(t, ErrTenantNotFound, err)
 		assert.Nil(t, tenant)
@@ -102,6 +105,7 @@ func TestTenantRepo_GetBySlug(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("found", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -111,7 +115,7 @@ func TestTenantRepo_GetBySlug(t *testing.T) {
 			WithArgs("test-tenant").
 			WillReturnRows(rows)
 
-		tenant, err := repo.GetBySlug("test-tenant")
+		tenant, err := repo.GetBySlug(ctx, "test-tenant")
 		assert.NoError(t, err)
 		assert.Equal(t, "test-tenant", tenant.Slug)
 	})
@@ -121,7 +125,7 @@ func TestTenantRepo_GetBySlug(t *testing.T) {
 			WithArgs("non-existent").
 			WillReturnError(sql.ErrNoRows)
 
-		tenant, err := repo.GetBySlug("non-existent")
+		tenant, err := repo.GetBySlug(ctx, "non-existent")
 		assert.Error(t, err)
 		assert.Nil(t, tenant)
 	})
@@ -133,6 +137,7 @@ func TestTenantRepo_Update(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
 		tenant := &model.Tenant{
@@ -148,7 +153,7 @@ func TestTenantRepo_Update(t *testing.T) {
 			WithArgs(tenant.ID, tenant.Name, tenant.Slug, tenant.Plan, tenant.MaxDevices, tenant.UpdatedAt).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := repo.Update(tenant)
+		err := repo.Update(ctx, tenant)
 		assert.NoError(t, err)
 	})
 
@@ -166,7 +171,7 @@ func TestTenantRepo_Update(t *testing.T) {
 			WithArgs(tenant.ID, tenant.Name, tenant.Slug, tenant.Plan, tenant.MaxDevices, tenant.UpdatedAt).
 			WillReturnResult(sqlmock.NewResult(0, 0))
 
-		err := repo.Update(tenant)
+		err := repo.Update(ctx, tenant)
 		assert.Error(t, err)
 		assert.Equal(t, ErrTenantNotFound, err)
 	})
@@ -178,13 +183,14 @@ func TestTenantRepo_Delete(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
 		mock.ExpectExec(`DELETE FROM tenants WHERE id`).
 			WithArgs("tenant-001").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := repo.Delete("tenant-001")
+		err := repo.Delete(ctx, "tenant-001")
 		assert.NoError(t, err)
 	})
 
@@ -193,7 +199,7 @@ func TestTenantRepo_Delete(t *testing.T) {
 			WithArgs("non-existent").
 			WillReturnResult(sqlmock.NewResult(0, 0))
 
-		err := repo.Delete("non-existent")
+		err := repo.Delete(ctx, "non-existent")
 		assert.Error(t, err)
 		assert.Equal(t, ErrTenantNotFound, err)
 	})
@@ -205,6 +211,7 @@ func TestTenantRepo_List(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	t.Run("with_pagination", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"}).
@@ -215,7 +222,7 @@ func TestTenantRepo_List(t *testing.T) {
 			WithArgs(10, 0).
 			WillReturnRows(rows)
 
-		tenants, err := repo.List(10, 0)
+		tenants, err := repo.List(ctx, 10, 0)
 		assert.NoError(t, err)
 		assert.Len(t, tenants, 2)
 	})
@@ -227,7 +234,7 @@ func TestTenantRepo_List(t *testing.T) {
 			WithArgs(10, 20).
 			WillReturnRows(rows)
 
-		tenants, err := repo.List(10, 20)
+		tenants, err := repo.List(ctx, 10, 20)
 		assert.NoError(t, err)
 		assert.Len(t, tenants, 0)
 	})
@@ -239,13 +246,14 @@ func TestTenantRepo_Count(t *testing.T) {
 	defer db.Close()
 
 	repo := NewTenantRepo(database.NewDBWrapper(db))
+	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"count"}).AddRow(5)
 
 	mock.ExpectQuery(`SELECT COUNT`).
 		WillReturnRows(rows)
 
-	count, err := repo.Count()
+	count, err := repo.Count(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, count)
 }

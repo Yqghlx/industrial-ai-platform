@@ -35,11 +35,11 @@ export default function ReportCenter() {
   const handleGenerate = async (type: string, deviceId?: string) => {
     try {
       await api.generateReport(type, deviceId);
-      showToast({ type: 'success', message: '报告已生成' });
+      showToast({ type: 'success', message: t('report.reportGenerated') });
       setShowGenerateModal(false);
       loadReports();
     } catch (error) {
-      showToast({ type: 'error', message: '生成失败' });
+      showToast({ type: 'error', message: t('report.generateFailed') });
     }
   };
 
@@ -73,7 +73,7 @@ export default function ReportCenter() {
           <p className="text-slate-400">{t('report.title')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton reportType="alerts" label="导出告警报告" />
+          <ExportButton reportType="alerts" label={t('export.alertReportExport')} />
           <button 
             onClick={() => setShowGenerateModal(true)}
             className="btn btn-primary flex items-center gap-2"

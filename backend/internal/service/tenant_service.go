@@ -19,6 +19,21 @@ func NewTenantService(repo repository.TenantRepositoryInterface) *TenantService 
 	return &TenantService{repo: repo}
 }
 
+// getDefaultMaxDevices 根据计划返回默认设备数量上限
+// BE-P2-02: 使用常量替换魔法数字
+func (s *TenantService) getDefaultMaxDevices(plan string) int {
+	switch plan {
+	case "free":
+		return constants.FreePlanMaxDevices
+	case "pro":
+		return constants.ProPlanMaxDevices
+	case "enterprise":
+		return constants.MaxLimit // 无限制
+	default:
+		return constants.FreePlanMaxDevices
+	}
+}
+
 // FIX-003: 添加 context 参数
 // BE-P2-02: 使用常量替换魔法数字
 func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error) {

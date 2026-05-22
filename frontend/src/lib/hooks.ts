@@ -86,6 +86,7 @@ export function useDeferredValue<T>(value: T, timeout: number = 200): T {
 /**
  * 虚拟列表 Hook
  * 用于渲染大型列表时优化性能
+ * FE-P3-12: 优化大数据集性能，使用 items.length 作为依赖而非 items 引用
  */
 export function useVirtualList<T>(
   items: T[],
@@ -102,6 +103,10 @@ export function useVirtualList<T>(
   const { itemHeight, containerHeight, overscan = 3 } = options;
   const [scrollTop, setScrollTop] = useState(0);
 
+  // FE-P3-12: 使用 ref 存储最新 items，避免 useMemo 依赖数组引用
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   const totalHeight = items.length * itemHeight;
   const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
   const endIndex = Math.min(
@@ -109,12 +114,14 @@ export function useVirtualList<T>(
     Math.floor((scrollTop + containerHeight) / itemHeight) + overscan
   );
 
+  // FE-P3-12: 使用 itemCount 而非 items 作为依赖，优化大数据集性能
+  const itemCount = items.length;
   const virtualItems = useMemo(() => {
     const result: { item: T; index: number; style: React.CSSProperties }[] = [];
     
     for (let i = startIndex; i <= endIndex; i++) {
       result.push({
-        item: items[i],
+        item: itemsRef.current[i],
         index: i,
         style: {
           position: 'absolute' as const,
@@ -126,7 +133,8 @@ export function useVirtualList<T>(
     }
     
     return result;
-  }, [items, startIndex, endIndex, itemHeight]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemCount, startIndex, endIndex, itemHeight]);
 
   const scrollToIndex = useCallback((index: number) => {
     setScrollTop(index * itemHeight);

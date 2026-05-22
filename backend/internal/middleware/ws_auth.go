@@ -1,11 +1,47 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
+
+// validateJWTToken validates a JWT token and returns the user ID
+// Used by WebSocket authentication middleware
+func validateJWTToken(tokenString, secret string) (string, error) {
+	if secret == "" {
+		return "", errors.New("JWT secret not configured")
+	}
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		if userID, ok := claims["user_id"]; ok {
+			switch v := userID.(type) {
+			case float64:
+				return string(int(v)), nil
+			case string:
+				return v, nil
+			default:
+				return "", errors.New("invalid user_id type")
+			}
+		}
+	}
+
+	return "", errors.New("invalid token claims")
+}
 
 // SEC-MED-01: WebSocket Authentication Middleware
 // WebSocket endpoints can be protected using JWT token authentication

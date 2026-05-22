@@ -222,8 +222,8 @@ export default function DeviceDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {telemetry.slice(0, 10).map((t, i) => (
-                    <tr key={i}>
+                  {telemetry.slice(0, 10).map((t) => (
+                    <tr key={t.timestamp || t.time || `${t.temperature}-${t.vibration}`}>
                       <td>{new Date(t.timestamp || t.time || Date.now()).toLocaleString()}</td>
                       <td>{t.temperature?.toFixed(1) || '--'}°C</td>
                       <td>{t.vibration?.toFixed(2) || '--'} mm/s</td>

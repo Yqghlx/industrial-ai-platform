@@ -43,11 +43,11 @@ export default function ExportButton({
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      showToast({ type: 'success', message: '导出成功' });
+      showToast({ type: 'success', message: t('export.exportSuccess') });
       setShowModal(false);
     } catch (error) {
       console.error('Export failed:', error);
-      showToast({ type: 'error', message: '导出失败，请重试' });
+      showToast({ type: 'error', message: t('export.exportFailed') });
     } finally {
       setExporting(false);
     }
@@ -56,13 +56,13 @@ export default function ExportButton({
   const getReportLabel = () => {
     switch (reportType) {
       case 'devices':
-        return t('export.deviceReport') || '设备状态报告';
+        return t('export.deviceReport');
       case 'alerts':
-        return t('export.alertReport') || '告警统计报告';
+        return t('export.alertReport');
       case 'roi':
-        return t('export.roiReport') || 'ROI分析报告';
+        return t('export.roiReport');
       default:
-        return '导出报告';
+        return t('export.exportReport');
     }
   };
 
@@ -75,7 +75,7 @@ export default function ExportButton({
         aria-label={t('common.export')}
       >
         <Download className="w-5 h-5" />
-        <span>{label || t('common.export') || '导出'}</span>
+        <span>{label || t('common.export')}</span>
       </button>
 
       {/* Export Format Modal */}
@@ -84,7 +84,7 @@ export default function ExportButton({
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold text-slate-100">
-                {t('export.selectFormat') || '选择导出格式'}
+                {t('export.selectExportFormat')}
               </h2>
             </div>
             <div className="card-body">
@@ -147,7 +147,7 @@ export default function ExportButton({
                 className="btn btn-secondary w-full mt-4"
                 aria-label={t('common.cancel')}
               >
-                {t('common.cancel') || '取消'}
+                {t('common.cancel')}
               </button>
             </div>
           </div>

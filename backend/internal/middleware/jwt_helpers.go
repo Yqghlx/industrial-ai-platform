@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -17,8 +16,20 @@ const (
 	RefreshTokenDuration = 7 * 24 * time.Hour // RefreshToken: 7 天
 )
 
-// FIX-P1-02: 封装 JWT 配置为结构体，支持依赖注入
 // JWTConfig 封装 JWT 配置和状态
+// BE-P3-04: JWT 配置结构体文档
+// 
+// JWTConfig 提供安全的 JWT 密钥管理，支持:
+//   - 密钥存储与读取
+//   - 并发安全的密钥访问 (使用 RWMutex)
+//   - 密钥轮换功能
+//
+// 使用示例:
+//   config, err := NewJWTConfig("your-secret-key")
+//   if err != nil {
+//       return err
+//   }
+//   token, err := GenerateJWTWithConfig(1, "user", "admin", "tenant-1", config)
 type JWTConfig struct {
 	secret     []byte
 	mu         sync.RWMutex
@@ -29,9 +40,8 @@ func NewJWTConfig(secret string) (*JWTConfig, error) {
 	if secret == "" {
 		return nil, errors.New("JWT secret is required")
 	}
-	if len(secret) < 32 {
-		fmt.Printf("WARNING: JWT_SECRET length (%d) is below recommended minimum (32)\n", len(secret))
-	}
+	// SEC-LOW-02: 不打印密钥长度信息，避免泄露安全配置
+	// 密钥长度验证应在配置层面处理，而非通过日志输出
 	return &JWTConfig{
 		secret: []byte(secret),
 	}, nil
@@ -57,6 +67,15 @@ func (c *JWTConfig) SetSecret(secret string) {
 // Deprecated: Use NewJWTConfig instead
 var globalJWTConfig *JWTConfig
 
+// Claims JWT Token 中包含的用户身份信息
+// BE-P3-04: Claims 结构体文档
+//
+// Claims 包含以下字段:
+//   - UserID: 用户唯一标识符
+//   - Username: 用户名
+//   - Role: 用户角色 (admin/operator/viewer)
+//   - TenantID: 租户标识符
+//   - RegisteredClaims: 标准 JWT claims (过期时间、签发时间等)
 type Claims struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
@@ -79,7 +98,7 @@ func GenerateJWTWithConfig(userID int, username, role, tenantID string, config *
 func GenerateJWT(userID int, username, role, tenantID string, secret []byte) (string, error) {
 	if len(secret) == 0 {
 		if globalJWTConfig == nil {
-			return "", fmt.Errorf("JWT not initialized - call InitJWTConfig first")
+			return "", errors.New("JWT not initialized - call InitJWTConfig first")
 		}
 		secret = globalJWTConfig.GetSecret()
 	}
@@ -118,7 +137,7 @@ func ParseJWTWithConfig(tokenString string, config *JWTConfig) (*Claims, error) 
 func ParseJWT(tokenString string, secret []byte) (*Claims, error) {
 	if len(secret) == 0 {
 		if globalJWTConfig == nil {
-			return nil, fmt.Errorf("JWT not initialized")
+			return nil, errors.New("JWT not initialized")
 		}
 		secret = globalJWTConfig.GetSecret()
 	}

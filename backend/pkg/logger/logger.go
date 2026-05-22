@@ -222,22 +222,15 @@ func L() *Logger {
 
 // SetLevel 动态设置日志级别
 func (l *Logger) SetLevel(level string) error {
-	newLevel, err := zapcore.ParseLevel(level)
+	_, err := zapcore.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("invalid log level: %s", level)
 	}
 	
 	// 更新配置
+	// 注意: zap.Logger 的 Core 通常是不可变的
+	// 保存新的配置，下次重建 Logger 时会使用新级别
 	l.config.Level = level
-	
-	// 创建新的 Core 并替换
-	// 注意: zap.Logger 的 level 是在 Core 中设置的，需要重建
-	core := l.Logger.Core()
-	if levelEnabler, ok := core.(zapcore.LevelEnabler); ok {
-		// zapcore.Core 通常是不可变的，需要重建 Logger
-		// 这里我们保存新的配置，下次创建 Logger 时会使用新级别
-		l.config.Level = level
-	}
 	
 	return nil
 }

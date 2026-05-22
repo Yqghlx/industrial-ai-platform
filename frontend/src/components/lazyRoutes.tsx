@@ -36,16 +36,16 @@ export const UserManager = lazy(() => import('./UserManager'));
 
 /**
  * 创建带加载状态的懒加载组件
+ * FE-P3-11: 移除泛型约束，使用简单类型定义，移除 any
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createLazyPage<T extends ComponentType<any>>(
-  importFn: () => Promise<{ default: T }>
+export function createLazyPage(
+  importFn: () => Promise<{ default: ComponentType }>
 ) {
   const LazyComponent = lazy(importFn);
   
   return (
     <Suspense fallback={<RouteLoader />}>
-      <LazyComponent {...({} as React.ComponentProps<T>)} />
+      <LazyComponent />
     </Suspense>
   );
 }

@@ -145,3 +145,113 @@ const (
 	// 黑匣子快照数据点限制
 	BlackBoxSnapshotLimit = 100
 )
+
+// ============================================
+// Token 和认证常量
+// ============================================
+
+const (
+	// AccessToken 有效期（小时）
+	AccessTokenDurationHours = 1
+
+	// RefreshToken 有效期（小时）
+	RefreshTokenDurationHours = 168 // 7 天
+
+	// Token 密钥最小长度
+	TokenMinSecretLength = 32
+
+	// 分页最小大小
+	MinPageSize = 1
+)
+
+// ============================================
+// 密码常量
+// ============================================
+
+const (
+	// 密码最小长度
+	PasswordMinLength = 8
+
+	// 密码最大长度
+	PasswordMaxLength = 128
+)
+
+// ============================================
+// 有效值验证常量
+// ============================================
+
+// ValidTenantPlans 有效租户计划列表
+var ValidTenantPlans = []string{"free", "basic", "pro", "enterprise"}
+
+// ValidTenantStatuses 有效租户状态列表
+var ValidTenantStatuses = []string{"active", "suspended", "deleted"}
+
+// ValidDeviceStatuses 有效设备状态列表
+var ValidDeviceStatuses = []string{"online", "offline", "maintenance", "error"}
+
+// ValidUserRoles 有效用户角色列表
+var ValidUserRoles = []string{"admin", "operator", "viewer"}
+
+// ============================================
+// 验证函数
+// ============================================
+
+// IsValidTenantPlan 验证租户计划是否有效
+func IsValidTenantPlan(plan string) bool {
+	for _, p := range ValidTenantPlans {
+		if p == plan {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidTenantStatus 验证租户状态是否有效
+func IsValidTenantStatus(status string) bool {
+	for _, s := range ValidTenantStatuses {
+		if s == status {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidDeviceStatus 验证设备状态是否有效
+func IsValidDeviceStatus(status string) bool {
+	for _, s := range ValidDeviceStatuses {
+		if s == status {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidUserRole 验证用户角色是否有效
+func IsValidUserRole(role string) bool {
+	for _, r := range ValidUserRoles {
+		if r == role {
+			return true
+		}
+	}
+	return false
+}
+
+// GetRoleLevel 获取角色权限级别
+// admin=3, operator=2, viewer=1, unknown=0
+func GetRoleLevel(role string) int {
+	switch role {
+	case "admin":
+		return 3
+	case "operator":
+		return 2
+	case "viewer":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// HasPermission 检查角色是否有足够权限
+func HasPermission(role, required string) bool {
+	return GetRoleLevel(role) >= GetRoleLevel(required)
+}

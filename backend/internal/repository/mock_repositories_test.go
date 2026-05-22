@@ -147,6 +147,7 @@ func TestMockTenantRepository_InterfaceCompliance(t *testing.T) {
 	var _ TenantRepositoryInterface = (*MockTenantRepository)(nil)
 
 	mock := new(MockTenantRepository)
+	ctx := context.Background()
 
 	tenant := &model.Tenant{
 		ID:   "tenant-001",
@@ -154,8 +155,8 @@ func TestMockTenantRepository_InterfaceCompliance(t *testing.T) {
 		Slug: "test-tenant",
 	}
 
-	mock.On("Create", tenant).Return(nil)
-	err := mock.Create(tenant)
+	mock.On("Create", ctx, tenant).Return(nil)
+	err := mock.Create(ctx, tenant)
 	assert.NoError(t, err)
 	mock.AssertExpectations(t)
 }

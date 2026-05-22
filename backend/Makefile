@@ -1,9 +1,10 @@
-.PHONY: all test build lint fmt clean help
+.PHONY: all test build lint fmt clean help security-scan vulncheck
 
 # 变量
 GO := go
 GOFMT := gofmt
 GOLINT := golangci-lint
+GOVULNCHECK := govulncheck
 COVERAGE_FILE := coverage.out
 
 # 默认目标
@@ -79,6 +80,34 @@ deps:
 	$(GO) mod tidy
 	@echo "✅ Dependencies installed"
 
+# SEC-LOW-03: 漏洞扫描自动化
+# 运行 Go 漏洞扫描 (govulncheck)
+vulncheck:
+	@echo "🔒 Running Go vulnerability scan..."
+	@if command -v $(GOVULNCHECK) >/dev/null 2>&1; then \
+		$(GOVULNCHECK) ./...; \
+	else \
+		@echo "⚠️  govulncheck not installed. Install with:"; \
+		@echo "    go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+	fi
+
+# 完整安全扫描
+security-scan:
+	@echo "🔒 Running complete security scan..."
+	@echo ""
+	@echo "1. Running govulncheck..."
+	@if command -v $(GOVULNCHECK) >/dev/null 2>&1; then \
+		$(GOVULNCHECK) ./...; \
+	else \
+		@echo "⚠️  govulncheck not installed. Install with:"; \
+		@echo "    go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+	fi
+	@echo ""
+	@echo "2. Running golangci-lint security checks..."
+	$(GOLINT) run --timeout=5m ./... --enable=gosec
+	@echo ""
+	@echo "✅ Security scan complete"
+
 # 查看帮助
 help:
 	@echo "Industrial AI Platform - Available targets:"
@@ -94,4 +123,6 @@ help:
 	@echo "  fmt             - Format code"
 	@echo "  clean           - Clean build artifacts"
 	@echo "  deps            - Install dependencies"
+	@echo "  vulncheck       - Run Go vulnerability scan (SEC-LOW-03)"
+	@echo "  security-scan   - Run complete security scan"
 	@echo "  help            - Show this help message"
