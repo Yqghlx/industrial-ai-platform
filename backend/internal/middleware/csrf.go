@@ -11,9 +11,22 @@ import (
 
 // CSRFMiddleware provides CSRF protection using the double submit cookie pattern.
 // This is a defense against CSRF attacks for session-based authentication.
+//
+// SEC-MED-07: CSRF Protection Explanation
 // Note: When using JWT tokens stored in localStorage/sessionStorage and sent via
 // Authorization header, CSRF protection is typically not needed as browsers
 // don't automatically include these tokens in requests.
+//
+// See docs/SECURITY_CSRF.md for detailed explanation of CSRF protection strategy.
+//
+// CSRF Protection is REQUIRED when:
+// - Using cookie-based session authentication
+// - Using cookies to store JWT tokens (not recommended)
+//
+// CSRF Protection is NOT REQUIRED when:
+// - Using JWT tokens via Authorization header (our default)
+// - Using localStorage/sessionStorage for token storage
+// - Implementing stateless REST APIs
 
 // CSRFConfig holds the configuration for CSRF middleware
 type CSRFConfig struct {

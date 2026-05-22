@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/constants"
 	"github.com/industrial-ai/platform/pkg/response"
 	"github.com/industrial-ai/platform/pkg/validation"
 )
@@ -254,11 +255,12 @@ func (h *DeviceHandlerNew) GetLatestTelemetry(c *gin.Context) {
 }
 
 // GetDeviceTelemetry 获取设备遥测数据
+// BE-P2-02: 使用常量替换魔法数字
 func (h *DeviceHandlerNew) GetDeviceTelemetry(c *gin.Context) {
 	ctx := c.Request.Context()
 	deviceID := c.Param("id")
 
-	data, err := h.telemetrySvc.GetLatestByDevice(ctx, deviceID, 100)
+	data, err := h.telemetrySvc.GetLatestByDevice(ctx, deviceID, constants.DefaultTelemetryLimit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

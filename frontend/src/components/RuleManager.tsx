@@ -7,11 +7,13 @@ import { useToast } from './Toast';
 import { Bell, Plus, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
 import { AlertRule, AlertSeverity, DeviceType, AlertOperator } from '../types/api';
 import { asAlertRuleArraySafe, isAlertOperator, isAlertSeverity } from '../types/typeGuards';
+import { useConfirmDialog } from './UI/ConfirmDialog';
 
 export default function RuleManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
+  const { showConfirm } = useConfirmDialog();
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
@@ -45,7 +47,15 @@ export default function RuleManager() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('alert.confirmDelete'))) return;
+    // FE-P2-11: 使用自定义确认框替代原生 confirm()
+    const confirmed = await showConfirm({
+      title: t('alert.confirmDeleteTitle'),
+      message: t('alert.confirmDelete'),
+      variant: 'danger',
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+    });
+    if (!confirmed) return;
     try {
       await api.deleteRule(id);
       showToast({ type: 'success', message: t('alert.ruleDeleted') });

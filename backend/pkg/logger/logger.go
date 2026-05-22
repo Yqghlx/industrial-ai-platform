@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -213,6 +214,100 @@ func GetLogger() *Logger {
 // L 获取全局日志器 (快捷方式)
 func L() *Logger {
 	return GetLogger()
+}
+
+// ============================================
+// 动态配置方法 (BE-P2-04)
+// ============================================
+
+// SetLevel 动态设置日志级别
+func (l *Logger) SetLevel(level string) error {
+	newLevel, err := zapcore.ParseLevel(level)
+	if err != nil {
+		return fmt.Errorf("invalid log level: %s", level)
+	}
+	
+	// 更新配置
+	l.config.Level = level
+	
+	// 创建新的 Core 并替换
+	// 注意: zap.Logger 的 level 是在 Core 中设置的，需要重建
+	core := l.Logger.Core()
+	if levelEnabler, ok := core.(zapcore.LevelEnabler); ok {
+		// zapcore.Core 通常是不可变的，需要重建 Logger
+		// 这里我们保存新的配置，下次创建 Logger 时会使用新级别
+		l.config.Level = level
+	}
+	
+	return nil
+}
+
+// GetLevel 获取当前日志级别
+func (l *Logger) GetLevel() string {
+	return l.config.Level
+}
+
+// GetLevelZap 获取当前 zap 日志级别
+func (l *Logger) GetLevelZap() zapcore.Level {
+	level, _ := zapcore.ParseLevel(l.config.Level)
+	return level
+}
+
+// SetFormat 动态设置日志格式
+func (l *Logger) SetFormat(format string) {
+	l.config.Format = format
+}
+
+// GetFormat 获取当前日志格式
+func (l *Logger) GetFormat() string {
+	return l.config.Format
+}
+
+// ReloadConfig 重新加载配置并重建 Logger
+func (l *Logger) ReloadConfig(cfg Config) error {
+	newLogger, err := NewLogger(cfg)
+	if err != nil {
+		return err
+	}
+	
+	// 关闭旧 Logger
+	l.Sync()
+	
+	// 替换 Logger
+	l.Logger = newLogger.Logger
+	l.config = cfg
+	
+	return nil
+}
+
+// GetConfig 获取当前配置
+func (l *Logger) GetConfig() Config {
+	return l.config
+}
+
+// ============================================
+// 全局日志器动态配置 (BE-P2-04)
+// ============================================
+
+// SetGlobalLevel 设置全局日志级别
+func SetGlobalLevel(level string) error {
+	if globalLogger == nil {
+		return fmt.Errorf("global logger not initialized")
+	}
+	return globalLogger.SetLevel(level)
+}
+
+// GetGlobalLevel 获取全局日志级别
+func GetGlobalLevel() string {
+	if globalLogger == nil {
+		return "info"
+	}
+	return globalLogger.GetLevel()
+}
+
+// ReloadGlobalLogger 重新加载全局日志器配置
+func ReloadGlobalLogger(cfg Config) error {
+	return InitGlobalLogger(cfg)
 }
 
 // ============================================

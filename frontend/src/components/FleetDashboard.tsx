@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
@@ -6,29 +6,14 @@ import { SkeletonGrid } from './Skeleton';
 import { useToast } from './Toast';
 import { Activity, AlertTriangle, Wrench, TrendingUp, Settings, Bell } from 'lucide-react';
 import { getDeviceStatusColor, getDeviceStatusBadgeClass } from '../lib/colorUtils';
-
-interface Device {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  location: string;
-}
-
-interface Telemetry {
-  device_id: string;
-  timestamp: string;
-  temperature?: number;
-  vibration?: number;
-  status: string;
-}
+import { Device, LatestTelemetry } from '../types/api';
 
 export default function FleetDashboard() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const location = useLocation();
   const [devices, setDevices] = useState<Device[]>([]);
-  const [telemetry, setTelemetry] = useState<Telemetry[]>([]);
+  const [telemetry, setTelemetry] = useState<LatestTelemetry[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -76,10 +61,12 @@ export default function FleetDashboard() {
     loadData();
   }, [location.pathname, loadData]);
 
-  const devicesWithTelemetry = devices.map(device => {
-    const tel = telemetry.find(t => t.device_id === device.id);
-    return { ...device, telemetry: tel };
-  });
+  // FE-P2-05: 使用 useMemo 优化 devicesWithTelemetry 计算，避免每次渲染重新计算
+  const devicesWithTelemetry = useMemo(() => 
+    devices.map(device => {
+      const tel = telemetry.find(t => t.device_id === device.id);
+      return { ...device, telemetry: tel };
+    }), [devices, telemetry]);
 
   return (
     <div className="space-y-4 lg:space-y-6 mobile-page">

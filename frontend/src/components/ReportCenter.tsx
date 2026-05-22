@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -42,6 +42,27 @@ export default function ReportCenter() {
       showToast({ type: 'error', message: '生成失败' });
     }
   };
+
+  // FE-P2-08: 使用完整类名映射替代动态类名，避免 Tailwind purge 问题
+  const getReportTypeButtonClass = (color: string): string => {
+    const classMap: Record<string, string> = {
+      blue: 'w-full p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg text-left hover:bg-blue-500/30 transition-colors',
+      green: 'w-full p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-left hover:bg-green-500/30 transition-colors',
+      orange: 'w-full p-4 bg-orange-500/20 border border-orange-500/30 rounded-lg text-left hover:bg-orange-500/30 transition-colors',
+      red: 'w-full p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-left hover:bg-red-500/30 transition-colors',
+      purple: 'w-full p-4 bg-purple-500/20 border border-purple-500/30 rounded-lg text-left hover:bg-purple-500/30 transition-colors',
+    };
+    return classMap[color] || 'w-full p-4 bg-slate-500/20 border border-slate-500/30 rounded-lg text-left hover:bg-slate-500/30 transition-colors';
+  };
+
+  // FE-P2-06: 使用 useMemo 缓存报告类型配置
+  const reportTypes = useMemo(() => [
+    { type: 'daily', label: t('report.daily'), icon: '📊', color: 'blue' },
+    { type: 'device', label: t('report.device'), icon: '⚙️', color: 'green' },
+    { type: 'maintenance', label: t('report.maintenance'), icon: '🔧', color: 'orange' },
+    { type: 'anomaly', label: t('report.anomaly'), icon: '⚠️', color: 'red' },
+    { type: 'comprehensive', label: t('report.comprehensive'), icon: '📈', color: 'purple' },
+  ], [t]);
 
   return (
     <div className="space-y-6">
@@ -143,17 +164,11 @@ export default function ReportCenter() {
             </div>
             <div className="card-body">
               <div className="space-y-4">
-                {[
-                  { type: 'daily', label: t('report.daily'), icon: '📊', color: 'blue' },
-                  { type: 'device', label: t('report.device'), icon: '⚙️', color: 'green' },
-                  { type: 'maintenance', label: t('report.maintenance'), icon: '🔧', color: 'orange' },
-                  { type: 'anomaly', label: t('report.anomaly'), icon: '⚠️', color: 'red' },
-                  { type: 'comprehensive', label: t('report.comprehensive'), icon: '📈', color: 'purple' },
-                ].map((item) => (
+                {reportTypes.map((item) => (
                   <button
                     key={item.type}
                     onClick={() => handleGenerate(item.type)}
-                    className={`w-full p-4 bg-${item.color}-500/20 border border-${item.color}-500/30 rounded-lg text-left hover:bg-${item.color}-500/30 transition-colors`}
+                    className={getReportTypeButtonClass(item.color)}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{item.icon}</span>

@@ -8,6 +8,7 @@ import ExportButton from './ExportButton';
 import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Device, DeviceStatus } from '../types/api';
 import { getDeviceStatusBadgeClass } from '../lib/colorUtils';
+import { useConfirmDialog } from './UI/ConfirmDialog';
 
 const PAGE_SIZE = 20;
 
@@ -15,6 +16,7 @@ export default function DeviceManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
+  const { showConfirm } = useConfirmDialog();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,7 +80,15 @@ export default function DeviceManager() {
   }, [loadDevices]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('device.deleteConfirm'))) return;
+    // FE-P2-11: 使用自定义确认框替代原生 confirm()
+    const confirmed = await showConfirm({
+      title: t('device.deleteConfirmTitle'),
+      message: t('device.deleteConfirm'),
+      variant: 'danger',
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+    });
+    if (!confirmed) return;
     try {
       await api.deleteDevice(id);
       showToast({ type: 'success', message: t('device.deleteSuccess') });
@@ -88,12 +98,13 @@ export default function DeviceManager() {
     }
   };
 
-  const filteredDevices = devices.filter(d => {
+  // FE-P2-02: 使用 useMemo 优化 filteredDevices 过滤计算
+  const filteredDevices = useMemo(() => devices.filter(d => {
     const matchSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       d.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchType = !typeFilter || d.type === typeFilter;
     return matchSearch && matchType;
-  });
+  }), [devices, searchTerm, typeFilter]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 

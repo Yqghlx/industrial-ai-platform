@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
@@ -50,20 +50,22 @@ export default function DeviceDetail() {
     }
   };
 
-  const timeRangeOptions = [
+  // FE-P2-03: 使用 useMemo 缓存 timeRangeOptions，避免每次渲染重新创建
+  const timeRangeOptions = useMemo(() => [
     { value: '1h', label: t('telemetry.range1h') },
     { value: '6h', label: t('telemetry.range6h') },
     { value: '24h', label: t('telemetry.range24h') },
     { value: '7d', label: t('telemetry.range7d') },
-  ];
+  ], [t]);
 
-  const chartData = telemetry.map(t => ({
+  // FE-P2-04: 使用 useMemo 优化 chartData 计算，避免每次渲染重新映射
+  const chartData = useMemo(() => telemetry.map(t => ({
     time: new Date(t.timestamp || t.time || Date.now()).toLocaleTimeString(),
     temperature: t.temperature,
     vibration: t.vibration,
     pressure: t.pressure,
     power: t.power,
-  }));
+  })), [telemetry]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {

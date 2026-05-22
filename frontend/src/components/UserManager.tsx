@@ -7,11 +7,13 @@ import { useToast } from './Toast';
 import { Plus, Trash2, Shield, User as UserIcon } from 'lucide-react';
 import { User, UserRole } from '../types/api';
 import { asUserArraySafe } from '../types/typeGuards';
+import { useConfirmDialog } from './UI/ConfirmDialog';
 
 export default function UserManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
+  const { showConfirm } = useConfirmDialog();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -36,7 +38,15 @@ export default function UserManager() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('user.confirmDelete'))) return;
+    // FE-P2-11: 使用自定义确认框替代原生 confirm()
+    const confirmed = await showConfirm({
+      title: t('user.confirmDeleteTitle'),
+      message: t('user.confirmDelete'),
+      variant: 'danger',
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+    });
+    if (!confirmed) return;
     try {
       await api.deleteUser(id);
       showToast({ type: 'success', message: t('user.deleteSuccess') });

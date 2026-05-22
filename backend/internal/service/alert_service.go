@@ -1,3 +1,6 @@
+// Package service provides business logic services
+// BE-P2-02: 使用常量替换魔法数字
+// BE-P2-05: 统一错误处理
 package service
 
 import (
@@ -10,6 +13,8 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/constants"
+	"github.com/industrial-ai/platform/pkg/errors"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/industrial-ai/platform/pkg/notify"
 	"go.uber.org/zap"
@@ -280,11 +285,12 @@ func (s *AlertService) createWorkOrder(ctx context.Context, data *model.Telemetr
 }
 
 // captureBlackBox captures telemetry data around the alert
+// BE-P2-02: 使用常量替换魔法数字
 func (s *AlertService) captureBlackBox(ctx context.Context, data *model.TelemetryData, device *model.Device, rule model.AlertRule) error {
 	// Get recent telemetry
-	start := time.Now().Add(-5 * time.Minute)
+	start := time.Now().Add(-time.Duration(constants.BlackBoxSnapshotMinutes) * time.Minute)
 	end := time.Now()
-	snapshot, err := s.telemetryRepo.GetByDeviceID(ctx, data.DeviceID, start, end, 100)
+	snapshot, err := s.telemetryRepo.GetByDeviceID(ctx, data.DeviceID, start, end, constants.BlackBoxSnapshotLimit)
 	if err != nil {
 		logger.L().Warn("Failed to get telemetry for blackbox",
 			zap.String("device_id", data.DeviceID),
@@ -303,7 +309,10 @@ func (s *AlertService) captureBlackBox(ctx context.Context, data *model.Telemetr
 		Summary:     summary,
 		CreatedAt:   time.Now(),
 	}
-	return s.blackBoxRepo.Create(ctx, record)
+	if err := s.blackBoxRepo.Create(ctx, record); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // severityToPriority converts severity to work order priority
@@ -323,6 +332,7 @@ func (s *AlertService) severityToPriority(severity string) string {
 }
 
 // CreateRule creates a new alert rule
+// BE-P2-02: 使用常量替换魔法数字
 func (s *AlertService) CreateRule(ctx context.Context, rule *model.AlertRule) error {
 	rule.CreatedAt = time.Now()
 	rule.UpdatedAt = time.Now()
@@ -330,19 +340,30 @@ func (s *AlertService) CreateRule(ctx context.Context, rule *model.AlertRule) er
 		rule.Actions = `[{"type": "notification"}]`
 	}
 	if rule.CooldownSec == 0 {
-		rule.CooldownSec = 300 // 5 minutes default
+		rule.CooldownSec = constants.DefaultAlertCooldownSec
 	}
-	return s.ruleRepo.Create(ctx, rule)
+	if err := s.ruleRepo.Create(ctx, rule); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // UpdateRule updates an alert rule
+// BE-P2-05: 统一错误处理
 func (s *AlertService) UpdateRule(ctx context.Context, rule *model.AlertRule) error {
-	return s.ruleRepo.Update(ctx, rule)
+	if err := s.ruleRepo.Update(ctx, rule); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // DeleteRule deletes an alert rule
+// BE-P2-05: 统一错误处理
 func (s *AlertService) DeleteRule(ctx context.Context, id int) error {
-	return s.ruleRepo.Delete(ctx, id)
+	if err := s.ruleRepo.Delete(ctx, id); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
 }
 
 // GetRules retrieves all alert rules
@@ -356,6 +377,7 @@ func (s *AlertService) GetAlerts(ctx context.Context, status string, page, pageS
 }
 
 // InitializeDefaultRules creates default alert rules
+// BE-P2-02: 使用常量替换魔法数字
 func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 	defaultRules := []model.AlertRule{
 		{
@@ -363,55 +385,55 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			DeviceType:  "*",
 			Metric:      "temperature",
 			Operator:    ">",
-			Threshold:   100,
+			Threshold:   constants.HighTemperatureThreshold,
 			Severity:    "high",
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
 			Enabled:     true,
-			CooldownSec: 300,
+			CooldownSec: constants.DefaultAlertCooldownSec,
 		},
 		{
 			Name:        "严重高温告警",
 			DeviceType:  "*",
 			Metric:      "temperature",
 			Operator:    ">",
-			Threshold:   120,
+			Threshold:   constants.CriticalTemperatureThreshold,
 			Severity:    "critical",
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}, {"type": "blackbox"}]`,
 			Enabled:     true,
-			CooldownSec: 180,
+			CooldownSec: constants.ShortAlertCooldownSec,
 		},
 		{
 			Name:        "振动异常告警",
 			DeviceType:  "*",
 			Metric:      "vibration",
 			Operator:    ">",
-			Threshold:   3.0,
+			Threshold:   constants.AbnormalVibrationThreshold,
 			Severity:    "medium",
 			Actions:     `[{"type": "notification"}]`,
 			Enabled:     true,
-			CooldownSec: 600,
+			CooldownSec: constants.LongAlertCooldownSec,
 		},
 		{
 			Name:        "严重振动告警",
 			DeviceType:  "*",
 			Metric:      "vibration",
 			Operator:    ">",
-			Threshold:   5.0,
+			Threshold:   constants.CriticalVibrationThreshold,
 			Severity:    "critical",
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}, {"type": "blackbox"}]`,
 			Enabled:     true,
-			CooldownSec: 180,
+			CooldownSec: constants.ShortAlertCooldownSec,
 		},
 		{
 			Name:        "压力异常告警",
 			DeviceType:  "*",
 			Metric:      "pressure",
 			Operator:    ">",
-			Threshold:   150,
+			Threshold:   constants.AbnormalPressureThreshold,
 			Severity:    "high",
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
 			Enabled:     true,
-			CooldownSec: 300,
+			CooldownSec: constants.DefaultAlertCooldownSec,
 		},
 	}
 
@@ -421,7 +443,7 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 		if err := s.ruleRepo.Create(ctx, &defaultRules[i]); err != nil {
 			// Ignore duplicate key errors
 			if !strings.Contains(err.Error(), "duplicate") {
-				return err
+				return errors.NewDatabaseError(err.Error())
 			}
 		}
 	}

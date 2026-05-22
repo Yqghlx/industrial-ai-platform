@@ -288,11 +288,21 @@ func (s *HTTPServerNew) setupHandlers() {
 	s.router.GET("/health", s.healthCheck)
 	middleware.SetupPrometheusEndpoint(s.router)
 
+	// SEC-MED-02: Public telemetry endpoint - intentionally public for edge device ingestion
+	// See docs/SECURITY_TELEMETRY.md for security justification and measures
 	authPublic := s.router.Group("/api/v1")
 	authPublic.POST("/auth/login", middleware.LoginRateLimit(), s.authHandler.Login)
 	authPublic.POST("/auth/register", middleware.RegisterRateLimit(), s.authHandler.Register)
 	authPublic.POST("/auth/refresh", s.authHandler.RefreshToken)
+	
+	// SEC-MED-02: Telemetry endpoint with rate limiting and input validation
+	// Device authentication is optional - see DeviceAuthRequired middleware
 	s.router.POST("/api/v1/devices/telemetry", middleware.TelemetryRateLimit(), s.telemetryHandler.IngestTelemetry)
+	
+	// SEC-MED-01: WebSocket endpoint - public with rate limiting
+	// WebSocket authentication is available via ws_auth.go middleware
+	// For authenticated WebSocket, use WSAuthRequired middleware before this route
+	// See docs/SECURITY_CSRF.md and internal/middleware/ws_auth.go for details
 	s.router.GET("/ws", middleware.WebSocketRateLimit(), s.handleWebSocket)
 
 	// Setup authenticated routes

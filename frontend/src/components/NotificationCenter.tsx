@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -45,18 +45,18 @@ export default function NotificationCenter() {
 
   const handleMarkAllRead = async () => {
     const unread = notifications.filter(n => !n.read);
-    for (const n of unread) {
-      try {
-        await api.markNotificationRead(n.id);
-      } catch (error) {
-        // ignore
-      }
+    // FE-P2-07: 使用 Promise.all 替代串行 API 调用，提升性能
+    try {
+      await Promise.all(unread.map(n => api.markNotificationRead(n.id)));
+      showToast({ type: 'success', message: '已全部标记已读' });
+    } catch (error) {
+      showToast({ type: 'error', message: '部分标记失败' });
     }
     loadNotifications();
-    showToast({ type: 'success', message: '已全部标记已读' });
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // FE-P2-01: 使用 useMemo 优化 unreadCount 计算
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   return (
     <div className="space-y-6">

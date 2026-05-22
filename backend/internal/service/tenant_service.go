@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/constants"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
@@ -19,6 +20,7 @@ func NewTenantService(repo repository.TenantRepositoryInterface) *TenantService 
 }
 
 // FIX-003: 添加 context 参数
+// BE-P2-02: 使用常量替换魔法数字
 func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error) {
 	// Check if slug exists
 	existing, err := s.repo.GetBySlug(ctx, slug)
@@ -55,15 +57,6 @@ func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan strin
 	return tenant, nil
 }
 
-func (s *TenantService) getDefaultMaxDevices(plan string) int {
-	limits := map[string]int{
-		"free":       10,
-		"pro":        100,
-		"enterprise": 1000,
-	}
-	return limits[plan]
-}
-
 // FIX-003: 添加 context 参数
 func (s *TenantService) GetTenant(ctx context.Context, id string) (*model.Tenant, error) {
 	return s.repo.GetByID(ctx, id)
@@ -79,9 +72,10 @@ func (s *TenantService) GetTenantBySlug(ctx context.Context, slug string) (*mode
 }
 
 // FIX-003: 添加 context 参数
+// BE-P2-02: 使用常量替换魔法数字
 func (s *TenantService) ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
 	if limit <= 0 {
-		limit = 50
+		limit = constants.MaxPageSize
 	}
 	if offset < 0 {
 		offset = 0

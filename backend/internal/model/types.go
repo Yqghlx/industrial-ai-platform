@@ -20,85 +20,134 @@ type User struct {
 }
 
 // Device represents an industrial device
+// BE-P2-03: 添加 Gin binding 验证标签
 type Device struct {
-	ID          string    `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Type        string    `json:"type" db:"type"`
-	Location    string    `json:"location" db:"location"`
-	Status      string    `json:"status" db:"status"`
-	Description string    `json:"description" db:"description"`
-	TenantID    string    `json:"tenant_id" db:"tenant_id"`
+	ID          string    `json:"id" db:"id" binding:"required,max=100"`
+	Name        string    `json:"name" db:"name" binding:"required,min=1,max=200"`
+	Type        string    `json:"type" db:"type" binding:"required,oneof=CNC InjectionMolder AssemblyRobot Conveyor Sensor PLC robot motor pump valve heater cooler"`
+	Location    string    `json:"location" db:"location" binding:"max=200"`
+	Status      string    `json:"status" db:"status" binding:"omitempty,oneof=online offline maintenance error warning fault"`
+	Description string    `json:"description" db:"description" binding:"max=1000"`
+	TenantID    string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// DeviceCreateRequest 设备创建请求
+type DeviceCreateRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=200"`
+	Type        string `json:"type" binding:"required,oneof=CNC InjectionMolder AssemblyRobot Conveyor Sensor PLC robot motor pump valve heater cooler"`
+	Location    string `json:"location" binding:"omitempty,max=200"`
+	Description string `json:"description" binding:"omitempty,max=1000"`
+}
+
+// DeviceUpdateRequest 设备更新请求
+type DeviceUpdateRequest struct {
+	Name        string `json:"name" binding:"omitempty,min=1,max=200"`
+	Type        string `json:"type" binding:"omitempty,oneof=CNC InjectionMolder AssemblyRobot Conveyor Sensor PLC robot motor pump valve heater cooler"`
+	Location    string `json:"location" binding:"omitempty,max=200"`
+	Status      string `json:"status" binding:"omitempty,oneof=online offline maintenance error warning fault"`
+	Description string `json:"description" binding:"omitempty,max=1000"`
 }
 
 // TelemetryData represents sensor data from a device
+// BE-P2-03: 添加 Gin binding 验证标签
 type TelemetryData struct {
 	ID          int64     `json:"id,omitempty" db:"id"`
-	DeviceID    string    `json:"device_id" db:"device_id"`
-	TenantID    string    `json:"tenant_id" db:"tenant_id"`
+	DeviceID    string    `json:"device_id" db:"device_id" binding:"required,max=100"`
+	TenantID    string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
 	Timestamp   time.Time `json:"timestamp" db:"time"`
-	Temperature float64   `json:"temperature,omitempty" db:"temperature"`
-	Pressure    float64   `json:"pressure,omitempty" db:"pressure"`
-	Vibration   float64   `json:"vibration,omitempty" db:"vibration"`
-	Humidity    float64   `json:"humidity,omitempty" db:"humidity"`
-	Power       float64   `json:"power,omitempty" db:"power"`
-	Status      string    `json:"status" db:"status"`
-	Message     string    `json:"message,omitempty" db:"message"`
+	Temperature float64   `json:"temperature,omitempty" db:"temperature" binding:"omitempty"`
+	Pressure    float64   `json:"pressure,omitempty" db:"pressure" binding:"omitempty"`
+	Vibration   float64   `json:"vibration,omitempty" db:"vibration" binding:"omitempty"`
+	Humidity    float64   `json:"humidity,omitempty" db:"humidity" binding:"omitempty"`
+	Power       float64   `json:"power,omitempty" db:"power" binding:"omitempty"`
+	Status      string    `json:"status" db:"status" binding:"omitempty,oneof=normal warning fault"`
+	Message     string    `json:"message,omitempty" db:"message" binding:"max=500"`
 }
 
 // AlertRule defines conditions for triggering alerts
+// BE-P2-03: 添加 Gin binding 验证标签
 type AlertRule struct {
 	ID          int       `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	DeviceType  string    `json:"device_type" db:"device_type"`
-	Metric      string    `json:"metric" db:"metric"`
-	Operator    string    `json:"operator" db:"operator"`
-	Threshold   float64   `json:"threshold" db:"threshold"`
-	Severity    string    `json:"severity" db:"severity"`
+	Name        string    `json:"name" db:"name" binding:"required,min=1,max=200"`
+	DeviceType  string    `json:"device_type" db:"device_type" binding:"omitempty"`
+	Metric      string    `json:"metric" db:"metric" binding:"required,oneof=temperature pressure vibration humidity power"`
+	Operator    string    `json:"operator" db:"operator" binding:"required,oneof=> >= < <= == !="`
+	Threshold   float64   `json:"threshold" db:"threshold" binding:"required"`
+	Severity    string    `json:"severity" db:"severity" binding:"required,oneof=low medium high critical"`
 	Actions     string    `json:"actions" db:"actions"`
 	Enabled     bool      `json:"enabled" db:"enabled"`
-	CooldownSec int       `json:"cooldown_sec" db:"cooldown_sec"`
-	TenantID    string    `json:"tenant_id" db:"tenant_id"`
+	CooldownSec int       `json:"cooldown_sec" db:"cooldown_sec" binding:"omitempty,min=60,max=3600"`
+	TenantID    string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
+// AlertRuleCreateRequest 告警规则创建请求
+type AlertRuleCreateRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=200"`
+	DeviceType  string `json:"device_type" binding:"omitempty"`
+	Metric      string `json:"metric" binding:"required,oneof=temperature pressure vibration humidity power"`
+	Operator    string `json:"operator" binding:"required,oneof=> >= < <= == !="`
+	Threshold   float64 `json:"threshold" binding:"required"`
+	Severity    string `json:"severity" binding:"required,oneof=low medium high critical"`
+	Actions     string `json:"actions" binding:"omitempty"`
+	Enabled     bool    `json:"enabled"`
+	CooldownSec int    `json:"cooldown_sec" binding:"omitempty,min=60,max=3600"`
+}
+
+// AlertRuleUpdateRequest 告警规则更新请求
+type AlertRuleUpdateRequest struct {
+	Name        string  `json:"name" binding:"omitempty,min=1,max=200"`
+	DeviceType  string  `json:"device_type" binding:"omitempty"`
+	Metric      string  `json:"metric" binding:"omitempty,oneof=temperature pressure vibration humidity power"`
+	Operator    string  `json:"operator" binding:"omitempty,oneof=> >= < <= == !="`
+	Threshold   float64 `json:"threshold" binding:"omitempty"`
+	Severity    string  `json:"severity" binding:"omitempty,oneof=low medium high critical"`
+	Actions     string  `json:"actions" binding:"omitempty"`
+	Enabled     bool    `json:"enabled"`
+	CooldownSec int     `json:"cooldown_sec" binding:"omitempty,min=60,max=3600"`
+}
+
 // Alert represents a triggered alert
+// BE-P2-03: 添加 Gin binding 验证标签
 type Alert struct {
 	ID          int        `json:"id" db:"id"`
-	RuleID      int        `json:"rule_id" db:"rule_id"`
-	DeviceID    string     `json:"device_id" db:"device_id"`
-	TenantID    string     `json:"tenant_id" db:"tenant_id"`
-	Message     string     `json:"message" db:"message"`
-	Severity    string     `json:"severity" db:"severity"`
-	Status      string     `json:"status" db:"status"`
+	RuleID      int        `json:"rule_id" db:"rule_id" binding:"required"`
+	DeviceID    string     `json:"device_id" db:"device_id" binding:"required,max=100"`
+	TenantID    string     `json:"tenant_id" db:"tenant_id" binding:"max=100"`
+	Message     string     `json:"message" db:"message" binding:"max=500"`
+	Severity    string     `json:"severity" db:"severity" binding:"oneof=low medium high critical"`
+	Status      string     `json:"status" db:"status" binding:"oneof=active acknowledged resolved"`
 	TriggeredAt time.Time  `json:"triggered_at" db:"triggered_at"`
 	ResolvedAt  *time.Time `json:"resolved_at,omitempty" db:"resolved_at"`
 }
 
 // WorkOrder represents a maintenance work order
+// BE-P2-03: 添加 Gin binding 验证标签
 type WorkOrder struct {
 	ID          int       `json:"id" db:"id"`
-	Title       string    `json:"title" db:"title"`
-	Description string    `json:"description" db:"description"`
-	DeviceID    string    `json:"device_id" db:"device_id"`
-	TenantID    string    `json:"tenant_id" db:"tenant_id"`
-	Priority    string    `json:"priority" db:"priority"`
-	Status      string    `json:"status" db:"status"`
+	Title       string    `json:"title" db:"title" binding:"required,min=1,max=200"`
+	Description string    `json:"description" db:"description" binding:"max=1000"`
+	DeviceID    string    `json:"device_id" db:"device_id" binding:"required,max=100"`
+	TenantID    string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
+	Priority    string    `json:"priority" db:"priority" binding:"oneof=low medium high urgent"`
+	Status      string    `json:"status" db:"status" binding:"oneof=pending in_progress completed cancelled"`
 	AssignedTo  *int      `json:"assigned_to,omitempty" db:"assigned_to"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Notification represents a system notification
+// BE-P2-03: 添加 Gin binding 验证标签
 type Notification struct {
 	ID        int       `json:"id" db:"id"`
-	Type      string    `json:"type" db:"type"`
-	Title     string    `json:"title" db:"title"`
-	Message   string    `json:"message" db:"message"`
+	Type      string    `json:"type" db:"type" binding:"required,oneof=alert system info"`
+	Title     string    `json:"title" db:"title" binding:"required,max=200"`
+	Message   string    `json:"message" db:"message" binding:"required,max=500"`
 	DeviceID  *string   `json:"device_id,omitempty" db:"device_id"`
-	TenantID  string    `json:"tenant_id" db:"tenant_id"`
+	TenantID  string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
 	Read      bool      `json:"read" db:"read"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

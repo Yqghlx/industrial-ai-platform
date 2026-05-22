@@ -10,6 +10,7 @@ import { usePerformance } from '../lib/performance';
 import { useSwipe, useIsMobile, useViewportHeight } from '../lib/useSwipe';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useI18n } from '../i18n';
+import { ConfirmDialogProvider } from './UI/ConfirmDialog';
 
 export default function App() {
   usePerformance('App');
@@ -81,10 +82,11 @@ export default function App() {
   }
 
   return (
-    <div 
-      className="flex h-screen bg-slate-900 overflow-hidden"
-      {...swipeHandlers}
-    >
+    <ConfirmDialogProvider>
+      <div 
+        className="flex h-screen bg-slate-900 overflow-hidden"
+        {...swipeHandlers}
+      >
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
@@ -146,5 +148,6 @@ export default function App() {
       {/* Performance Monitor Button (Dev only) */}
       <PerformanceButton />
     </div>
+    </ConfirmDialogProvider>
   );
 }

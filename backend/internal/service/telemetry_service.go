@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/constants"
+	"github.com/industrial-ai/platform/pkg/errors"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -34,6 +36,7 @@ func NewTelemetryService(
 }
 
 // Ingest stores telemetry data and triggers alert evaluation
+// BE-P2-02: 使用常量替换魔法数字
 func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData) error {
 	// Set timestamp if not provided
 	if data.Timestamp.IsZero() {
@@ -43,17 +46,17 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 	// Set status based on data
 	if data.Status == "" {
 		data.Status = "normal"
-		if data.Temperature > 100 || data.Vibration > 3.0 {
+		if data.Temperature > constants.HighTemperatureThreshold || data.Vibration > constants.AbnormalVibrationThreshold {
 			data.Status = "warning"
 		}
-		if data.Temperature > 120 || data.Vibration > 5.0 {
+		if data.Temperature > constants.CriticalTemperatureThreshold || data.Vibration > constants.CriticalVibrationThreshold {
 			data.Status = "fault"
 		}
 	}
 
 	// Store telemetry
 	if err := s.telemetryRepo.Insert(ctx, data); err != nil {
-		return err
+		return errors.NewDatabaseError(err.Error())
 	}
 
 	// Update device status
@@ -90,24 +93,38 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 }
 
 // GetByDeviceID retrieves telemetry history for a device
+// BE-P2-02: 使用常量替换魔法数字
 func (s *TelemetryService) GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error) {
 	if limit <= 0 {
-		limit = 1000
+		limit = constants.MaxTelemetryLimit
 	}
-	return s.telemetryRepo.GetByDeviceID(ctx, deviceID, start, end, limit)
+	data, err := s.telemetryRepo.GetByDeviceID(ctx, deviceID, start, end, limit)
+	if err != nil {
+		return nil, errors.NewDatabaseError(err.Error())
+	}
+	return data, nil
 }
 
 // GetLatest retrieves latest telemetry for all devices
 func (s *TelemetryService) GetLatest(ctx context.Context) ([]model.TelemetryData, error) {
-	return s.telemetryRepo.GetLatest(ctx)
+	data, err := s.telemetryRepo.GetLatest(ctx)
+	if err != nil {
+		return nil, errors.NewDatabaseError(err.Error())
+	}
+	return data, nil
 }
 
 // GetStats retrieves statistics for a device
 func (s *TelemetryService) GetStats(ctx context.Context, deviceID string, start, end time.Time) (*model.DeviceStats, error) {
-	return s.telemetryRepo.GetStats(ctx, deviceID, start, end)
+	stats, err := s.telemetryRepo.GetStats(ctx, deviceID, start, end)
+	if err != nil {
+		return nil, errors.NewDatabaseError(err.Error())
+	}
+	return stats, nil
 }
 
 // WebSocket connection manager
+// BE-P2-02: 使用常量替换魔法数字
 // FIX-059: 移除 init() goroutine
 // 使用 sync.Once 确保 broadcaster 只启动一次，避免在 init() 中启动 goroutine
 // broadcaster 应在需要时显式调用 StartWSBroadcaster()，而不是在 init() 中自动启动
@@ -115,7 +132,7 @@ func (s *TelemetryService) GetStats(ctx context.Context, deviceID string, start,
 var (
 	wsClients   = make(map[*websocket.Conn]bool)
 	wsClientsMu sync.RWMutex
-	wsBroadcast = make(chan model.WSMessage, 100)
+	wsBroadcast = make(chan model.WSMessage, constants.WSBroadcastChannelSize)
 
 	// FIX-059: 使用 sync.Once 确保 broadcaster 只启动一次
 	broadcasterStarted sync.Once
@@ -288,12 +305,17 @@ func (s *TelemetryService) GetSystemStatus(ctx context.Context) (*model.SystemSt
 }
 
 // GetHistoricalData retrieves historical telemetry with time range
+// BE-P2-02: 使用常量替换魔法数字
 func (s *TelemetryService) GetHistoricalData(ctx context.Context, deviceID string, timeRange string, limit int) ([]model.TelemetryData, error) {
 	start, end := ParseTimeRange(timeRange)
 	if limit <= 0 {
-		limit = 1000
+		limit = constants.MaxTelemetryLimit
 	}
-	return s.telemetryRepo.GetByDeviceID(ctx, deviceID, start, end, limit)
+	data, err := s.telemetryRepo.GetByDeviceID(ctx, deviceID, start, end, limit)
+	if err != nil {
+		return nil, errors.NewDatabaseError(err.Error())
+	}
+	return data, nil
 }
 
 // FormatTimestamp formats a timestamp for display
@@ -302,12 +324,46 @@ func FormatTimestamp(t time.Time) string {
 }
 
 // ValidateTelemetryData validates incoming telemetry data
+// SEC-MED-04: Enhanced validation including device_id format check
 func ValidateTelemetryData(data *model.TelemetryData) error {
 	if data.DeviceID == "" {
 		return fmt.Errorf("device_id is required")
 	}
+	
+	// SEC-MED-04: Validate device_id format
+	// Device ID must be UUID format or safe alphanumeric ID
+	if len(data.DeviceID) > 100 {
+		return fmt.Errorf("device_id too long (max 100 characters)")
+	}
+	
+	// Basic format validation - alphanumeric, dash, underscore allowed
+	for _, c := range data.DeviceID {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return fmt.Errorf("device_id contains invalid characters (only alphanumeric, dash, underscore allowed)")
+		}
+	}
+	
 	if data.Timestamp.IsZero() {
 		data.Timestamp = time.Now()
 	}
+	
+	// Validate numerical ranges for sensor data
+	if data.Temperature < -100 || data.Temperature > 1000 {
+		return fmt.Errorf("temperature value out of valid range")
+	}
+	if data.Pressure < 0 || data.Pressure > 1000 {
+		return fmt.Errorf("pressure value out of valid range")
+	}
+	if data.Vibration < 0 || data.Vibration > 100 {
+		return fmt.Errorf("vibration value out of valid range")
+	}
+	if data.Humidity < 0 || data.Humidity > 100 {
+		return fmt.Errorf("humidity value out of valid range (0-100)")
+	}
+	if data.Power < 0 || data.Power > 10000 {
+		return fmt.Errorf("power value out of valid range")
+	}
+	
 	return nil
 }

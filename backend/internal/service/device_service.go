@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/constants"
 	"github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
@@ -192,8 +193,9 @@ func (s *DeviceService) CreateDeviceWithUser(ctx context.Context, device *model.
 }
 
 // GetGraph returns device relationship graph
+// BE-P2-02: 使用常量替换魔法数字
 func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, error) {
-	devices, _, err := s.deviceRepo.List(ctx, 1, 100)
+	devices, _, err := s.deviceRepo.List(ctx, 1, constants.MaxPageSize)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
 	}

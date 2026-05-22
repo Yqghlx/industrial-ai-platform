@@ -1,120 +1,147 @@
 // Package constants provides application-wide constants
-// FIX-026: 魔法数字常量化
+// BE-P2-02: 魔法数字定义为常量
 package constants
 
-import "time"
+// ============================================
+// 分页和限制常量
+// ============================================
 
-// Pagination constants
 const (
+	// 默认分页大小
 	DefaultPageSize = 20
-	MaxPageSize     = 100
-	MinPageSize     = 1
+
+	// 最大分页大小
+	MaxPageSize = 100
+
+	// 默认数据查询限制
+	DefaultLimit = 1000
+
+	// 最大数据查询限制
+	MaxLimit = 10000
+
+	// 默认遥测数据限制
+	DefaultTelemetryLimit = 100
+
+	// 最大遥测数据限制
+	MaxTelemetryLimit = 1000
 )
 
-// Tenant constants
+// ============================================
+// 时间和超时常量
+// ============================================
+
 const (
-	TenantPlanFree       = "free"
-	TenantPlanBasic      = "basic"
-	TenantPlanPro        = "pro"
-	TenantPlanEnterprise = "enterprise"
+	// 默认请求超时时间（秒）
+	DefaultRequestTimeoutSec = 30
 
-	TenantStatusActive    = "active"
-	TenantStatusSuspended = "suspended"
-	TenantStatusDeleted   = "deleted"
+	// 默认租户请求超时时间（秒）
+	DefaultTenantTimeoutSec = 30
+
+	// 默认告警冷却时间（秒）
+	DefaultAlertCooldownSec = 300
+
+	// 短告警冷却时间（秒）
+	ShortAlertCooldownSec = 180
+
+	// 长告警冷却时间（秒）
+	LongAlertCooldownSec = 600
+
+	// WebSocket 广播通道容量
+	WSBroadcastChannelSize = 100
 )
 
-// Device constants
+// ============================================
+// 验证常量
+// ============================================
+
 const (
-	DeviceStatusOnline      = "online"
-	DeviceStatusOffline     = "offline"
-	DeviceStatusMaintenance = "maintenance"
-	DeviceStatusError       = "error"
+	// ID 最小长度
+	MinIDLength = 1
+
+	// ID 最大长度
+	MaxIDLength = 100
+
+	// 设备名称最大长度
+	MaxDeviceNameLength = 200
+
+	// 设备描述最大长度
+	MaxDeviceDescriptionLength = 1000
+
+	// 租户名称最小长度
+	MinTenantNameLength = 2
+
+	// 租户名称最大长度
+	MaxTenantNameLength = 100
+
+	// 租户 Slug 最大长度
+	MaxTenantSlugLength = 50
+
+	// 用户名最小长度
+	MinUsernameLength = 3
+
+	// 用户名最大长度
+	MaxUsernameLength = 50
+
+	// 密码最小长度
+	MinPasswordLength = 12
+
+	// 密码最大长度
+	MaxPasswordLength = 100
 )
 
-// User constants
+// ============================================
+// 告警阈值常量
+// ============================================
+
 const (
-	RoleAdmin    = "admin"
-	RoleOperator = "operator"
-	RoleViewer   = "viewer"
+	// 高温告警阈值
+	HighTemperatureThreshold = 100
 
-	UserStatusActive   = "active"
-	UserStatusDisabled = "disabled"
-	UserStatusPending  = "pending"
+	// 严重高温告警阈值
+	CriticalTemperatureThreshold = 120
+
+	// 振动异常阈值
+	AbnormalVibrationThreshold = 3.0
+
+	// 严重振动阈值
+	CriticalVibrationThreshold = 5.0
+
+	// 压力异常阈值
+	AbnormalPressureThreshold = 150
 )
 
-// Token constants
+// ============================================
+// 租户计划限制常量
+// ============================================
+
 const (
-	AccessTokenDurationHours  = 24
-	RefreshTokenDurationDays  = 7
-	RefreshTokenDurationHours = 168
-	TokenMinSecretLength      = 32
+	// Free 计划设备限制
+	FreePlanMaxDevices = 10
+
+	// Free 计划用户限制
+	FreePlanMaxUsers = 3
+
+	// Free 计划告警限制
+	FreePlanMaxAlerts = 20
+
+	// Pro 计划设备限制
+	ProPlanMaxDevices = 100
+
+	// Pro 计划用户限制
+	ProPlanMaxUsers = 20
+
+	// Pro 计划告警限制
+	ProPlanMaxAlerts = 200
 )
 
-// Password constants
+// ============================================
+// 黑匣子快照常量
+// ============================================
+
 const (
-	PasswordMinLength = 8
-	PasswordMaxLength = 72
+	// 黑匣子快照时间范围（分钟）
+	BlackBoxSnapshotMinutes = 5
+
+	// 黑匣子快照数据点限制
+	BlackBoxSnapshotLimit = 100
 )
-
-// Timeout constants
-const (
-	DefaultRequestTimeout = 15 * time.Second
-	MaxRequestTimeout     = 30 * time.Second
-	DBQueryTimeout        = 10 * time.Second
-)
-
-// HTTP status codes (standardized)
-const (
-	HTTPStatusOK                  = 200
-	HTTPStatusCreated             = 201
-	HTTPStatusNoContent           = 204
-	HTTPStatusBadRequest          = 400
-	HTTPStatusUnauthorized        = 401
-	HTTPStatusForbidden           = 403
-	HTTPStatusNotFound            = 404
-	HTTPStatusConflict            = 409
-	HTTPStatusInternalServerError = 500
-	HTTPStatusServiceUnavailable  = 503
-)
-
-// Bearer token prefix
-const BearerTokenPrefix = "Bearer "
-
-// Validation helper functions
-func IsValidTenantPlan(plan string) bool {
-	return plan == TenantPlanFree || plan == TenantPlanBasic ||
-		plan == TenantPlanPro || plan == TenantPlanEnterprise
-}
-
-func IsValidTenantStatus(status string) bool {
-	return status == TenantStatusActive || status == TenantStatusSuspended ||
-		status == TenantStatusDeleted
-}
-
-func IsValidDeviceStatus(status string) bool {
-	return status == DeviceStatusOnline || status == DeviceStatusOffline ||
-		status == DeviceStatusMaintenance || status == DeviceStatusError
-}
-
-func IsValidUserRole(role string) bool {
-	return role == RoleAdmin || role == RoleOperator || role == RoleViewer
-}
-
-func HasPermission(role, requiredRole string) bool {
-	level := GetRoleLevel(role)
-	requiredLevel := GetRoleLevel(requiredRole)
-	return level >= requiredLevel
-}
-
-func GetRoleLevel(role string) int {
-	switch role {
-	case RoleAdmin:
-		return 3
-	case RoleOperator:
-		return 2
-	case RoleViewer:
-		return 1
-	default:
-		return 0
-	}
-}
