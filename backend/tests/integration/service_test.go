@@ -21,6 +21,9 @@ import (
 // ============================================
 
 func TestUserService_Integration_Create(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
@@ -46,6 +49,9 @@ func TestUserService_Integration_Create(t *testing.T) {
 }
 
 func TestUserService_Integration_GetByID(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
@@ -66,6 +72,9 @@ func TestUserService_Integration_GetByID(t *testing.T) {
 }
 
 func TestUserService_Integration_GetTokenVersion(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
@@ -85,6 +94,9 @@ func TestUserService_Integration_GetTokenVersion(t *testing.T) {
 }
 
 func TestUserService_Integration_UpdateTokenVersion(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
@@ -111,6 +123,9 @@ func TestUserService_Integration_UpdateTokenVersion(t *testing.T) {
 }
 
 func TestUserService_Integration_UpdatePassword(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	userRepo := repository.NewUserRepository(database.NewDBWrapper(testDB))
@@ -142,6 +157,9 @@ func TestUserService_Integration_UpdatePassword(t *testing.T) {
 // ============================================
 
 func TestDeviceService_Integration_Create(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
@@ -169,6 +187,9 @@ func TestDeviceService_Integration_Create(t *testing.T) {
 }
 
 func TestDeviceService_Integration_GetByID(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
@@ -188,6 +209,9 @@ func TestDeviceService_Integration_GetByID(t *testing.T) {
 }
 
 func TestDeviceService_Integration_Delete(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
@@ -213,6 +237,9 @@ func TestDeviceService_Integration_Delete(t *testing.T) {
 }
 
 func TestDeviceService_Integration_List(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(testDB))
@@ -244,6 +271,9 @@ func TestDeviceService_Integration_List(t *testing.T) {
 // ============================================
 
 func TestAlertService_Integration_CreateAlert(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -270,6 +300,9 @@ func TestAlertService_Integration_CreateAlert(t *testing.T) {
 }
 
 func TestAlertService_Integration_CreateRule(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -288,6 +321,9 @@ func TestAlertService_Integration_CreateRule(t *testing.T) {
 // ============================================
 
 func TestTelemetry_Integration_Insert(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -319,6 +355,9 @@ func TestTelemetry_Integration_Insert(t *testing.T) {
 // ============================================
 
 func TestRBAC_Integration_CreateRole(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -340,6 +379,9 @@ func TestRBAC_Integration_CreateRole(t *testing.T) {
 }
 
 func TestRBAC_Integration_AssignRole(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -374,6 +416,9 @@ func TestRBAC_Integration_AssignRole(t *testing.T) {
 }
 
 func TestRBAC_Integration_CreatePermission(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 
@@ -387,6 +432,9 @@ func TestRBAC_Integration_CreatePermission(t *testing.T) {
 }
 
 func TestRBAC_Integration_AssignPermission(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Integration tests skipped: database not available")
+	}
 	truncateAllTables(t)
 	ctx := context.Background()
 

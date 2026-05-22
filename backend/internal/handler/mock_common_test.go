@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/internal/service"
 	"github.com/stretchr/testify/mock"
 )
 

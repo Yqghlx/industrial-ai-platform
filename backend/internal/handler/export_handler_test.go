@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/industrial-ai/platform/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
 )
 
 // ============================================
