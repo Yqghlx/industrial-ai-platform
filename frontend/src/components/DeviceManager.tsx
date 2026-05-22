@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
@@ -6,9 +6,10 @@ import { SkeletonTable } from './Skeleton';
 import { useToast } from './Toast';
 import ExportButton from './ExportButton';
 import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Device, DeviceStatus } from '../types/api';
+import { Device, DeviceStatus, DeviceCreateInput, DeviceUpdateInput } from '../types/api';
 import { getDeviceStatusBadgeClass } from '../lib/colorUtils';
 import { useConfirmDialog } from './UI/ConfirmDialog';
+import { useCRUD } from '../hooks/useCRUD';
 
 const PAGE_SIZE = 20;
 
@@ -17,14 +18,26 @@ export default function DeviceManager() {
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
   const { showConfirm } = useConfirmDialog();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+
+  // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
+  const [state, actions] = useCRUD<Device>({
+    apiGetAll: (page, pageSize) => api.getDevices(page, pageSize),
+    apiGetOne: (id) => api.getDevice(id),
+    apiCreate: (data) => api.createDevice(data as DeviceCreateInput),
+    apiUpdate: (id, data) => api.updateDevice(id, data as DeviceUpdateInput),
+    apiDelete: (id) => api.deleteDevice(id),
+    entityName: 'Device',
+    initialPageSize: PAGE_SIZE,
+    onError: (error) => showToast({ type: 'error', message: t('device.loadFailed') }),
+    onSuccess: (_action) => {}, // 组件自行处理成功提示
+  });
+
+  const { items: devices, loading, total, page } = state;
+  const { refresh, setPage, create, update, delete: deleteItem } = actions;
 
   // FE-P1-01: 使用 useMemo 包裹设备类型数组，避免每次渲染创建新对象
   const DEVICE_TYPES = useMemo(() => [
@@ -59,27 +72,9 @@ export default function DeviceManager() {
     { value: 'gauge', label: t('device.gauge') },
   ] as const, [t]);
 
-  const loadDevices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.getDevices(page, 20);
-      setDevices(res.data ?? []);
-      setTotal(res.total ?? 0);
-    } catch (error) {
-      console.error('Failed to load devices:', error);
-      showToast({ type: 'error', message: t('device.loadFailed') });
-      setDevices([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, showToast, t]);
+  // FE-P2-09: loadDevices 已由 useCRUD hook 的 refresh() 处理
 
-  useEffect(() => {
-    loadDevices();
-  }, [loadDevices]);
-
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     // FE-P2-11: 使用自定义确认框替代原生 confirm()
     const confirmed = await showConfirm({
       title: t('device.deleteConfirmTitle'),
@@ -89,14 +84,13 @@ export default function DeviceManager() {
       cancelText: t('common.cancel'),
     });
     if (!confirmed) return;
-    try {
-      await api.deleteDevice(id);
+    const success = await deleteItem(id);
+    if (success) {
       showToast({ type: 'success', message: t('device.deleteSuccess') });
-      loadDevices();
-    } catch (error) {
+    } else {
       showToast({ type: 'error', message: t('device.deleteFailed') });
     }
-  };
+  }, [showConfirm, deleteItem, showToast, t]);
 
   // FE-P2-02: 使用 useMemo 优化 filteredDevices 过滤计算
   const filteredDevices = useMemo(() => devices.filter(d => {
@@ -225,7 +219,7 @@ export default function DeviceManager() {
             <div className="flex items-center gap-2">
               <button
                 data-testid="prev-page-btn"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
                 className="btn btn-secondary disabled:opacity-50 flex items-center gap-1"
               >
@@ -237,7 +231,7 @@ export default function DeviceManager() {
               </span>
               <button
                 data-testid="next-page-btn"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
                 className="btn btn-secondary disabled:opacity-50 flex items-center gap-1"
               >
@@ -271,20 +265,20 @@ export default function DeviceManager() {
                   description: formData.get('description') as string,
                 };
 
-                try {
-                  if (editingDevice) {
-                    await api.updateDevice(editingDevice.id, data);
-                    showToast({ type: 'success', message: t('device.updateSuccess') });
-                  } else {
-                    await api.createDevice(data);
-                    showToast({ type: 'success', message: t('device.createSuccess') });
-                  }
-                  setShowCreateModal(false);
-                  setEditingDevice(null);
-                  loadDevices();
-                } catch (error) {
+                // FE-P2-09: 使用 useCRUD hook 的 create/update 方法
+                let success = false;
+                if (editingDevice) {
+                  success = await update(editingDevice.id, data) !== null;
+                  if (success) showToast({ type: 'success', message: t('device.updateSuccess') });
+                } else {
+                  success = await create(data) !== null;
+                  if (success) showToast({ type: 'success', message: t('device.createSuccess') });
+                }
+                if (!success) {
                   showToast({ type: 'error', message: t('device.operationFailed') });
                 }
+                setShowCreateModal(false);
+                setEditingDevice(null);
               }}>
                 <div className="space-y-4">
                   {!editingDevice && (

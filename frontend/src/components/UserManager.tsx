@@ -1,43 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Plus, Trash2, Shield, User as UserIcon } from 'lucide-react';
-import { User, UserRole } from '../types/api';
-import { asUserArraySafe } from '../types/typeGuards';
+import { User, UserRole, UserCreateInput } from '../types/api';
 import { useConfirmDialog } from './UI/ConfirmDialog';
+import { useCRUD } from '../hooks/useCRUD';
 
 export default function UserManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
   const { showConfirm } = useConfirmDialog();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    loadUsers();
-  }, [isAdmin]);
+  // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
+  const [state, actions] = useCRUD<User>({
+    apiGetAll: (page, pageSize) => api.getUsers(page, pageSize),
+    apiGetOne: async (id) => {
+      // 注: User API 没有 getOne，这里通过 getAll 获取并查找
+      const res = await api.getUsers(1, 100);
+      return res.data?.find(u => String(u.id) === String(id)) || null as unknown as User;
+    },
+    apiCreate: (data) => api.createUser(data as UserCreateInput),
+    apiUpdate: (_id, _data) => Promise.resolve(null as unknown as User), // User API 没有 update
+    apiDelete: (id) => api.deleteUser(Number(id)),
+    entityName: 'User',
+    initialPageSize: 50,
+    onError: (error) => showToast({ type: 'error', message: error }),
+    onSuccess: (_action) => {},
+  });
 
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await api.getUsers(1, 50);
-      // FE-P1-01: 使用类型守卫安全转换数组
-      setUsers(asUserArraySafe(res.data));
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      showToast({ type: 'error', message: t('errors.loadFailedUsers') });
-    } finally {
-      setLoading(false);
+  const { items: users, loading } = state;
+  const { refresh, create, delete: deleteItem } = actions;
+
+  // FE-P2-09: 初始加载由 useCRUD 处理，但需要 isAdmin 检查
+  const loadUsers = useCallback(async () => {
+    if (isAdmin) {
+      await actions.fetchAll(1, 50);
     }
-  };
+  }, [isAdmin, actions]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = useCallback(async (id: number) => {
     // FE-P2-11: 使用自定义确认框替代原生 confirm()
     const confirmed = await showConfirm({
       title: t('user.confirmDeleteTitle'),
@@ -47,14 +53,13 @@ export default function UserManager() {
       cancelText: t('common.cancel'),
     });
     if (!confirmed) return;
-    try {
-      await api.deleteUser(id);
+    const success = await deleteItem(String(id));
+    if (success) {
       showToast({ type: 'success', message: t('user.deleteSuccess') });
-      loadUsers();
-    } catch (error) {
+    } else {
       showToast({ type: 'error', message: t('errors.unknown') });
     }
-  };
+  }, [showConfirm, deleteItem, showToast, t]);
 
   if (!isAdmin) {
     return (
@@ -160,14 +165,14 @@ export default function UserManager() {
                   role: formData.get('role') as UserRole,
                 };
 
-                try {
-                  await api.createUser(data);
+                // FE-P2-09: 使用 useCRUD hook 的 create 方法
+                const success = await create(data) !== null;
+                if (success) {
                   showToast({ type: 'success', message: '用户已创建' });
-                  setShowCreateModal(false);
-                  loadUsers();
-                } catch (error) {
+                } else {
                   showToast({ type: 'error', message: '创建失败' });
                 }
+                setShowCreateModal(false);
               }}>
                 <div className="space-y-4">
                   <div>

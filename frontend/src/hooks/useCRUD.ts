@@ -1,8 +1,8 @@
 // 通用CRUD Hook
 // FIX-038: CRUD逻辑提取
+// FE-P2-09: 支持多种API返回类型（直接返回和包装返回）
 
 import { useState, useCallback, useEffect } from 'react';
-import { ApiResponse } from '../lib/typeGuards';
 import { sanitizeErrorMessage } from '../utils/security';
 
 // Simple toast fallback
@@ -31,19 +31,25 @@ interface CRUDActions<T> {
   resetError: () => void;
 }
 
+// FE-P2-09: 支持多种API返回类型
 interface CRUDConfig<T> {
-  apiGetAll: (page: number, pageSize: number) => Promise<ApiResponse<T[]>>;
-  apiGetOne: (id: string) => Promise<ApiResponse<T>>;
-  apiCreate: (data: Partial<T>) => Promise<ApiResponse<T>>;
-  apiUpdate: (id: string, data: Partial<T>) => Promise<ApiResponse<T>>;
-  apiDelete: (id: string) => Promise<ApiResponse<void>>;
+  // 列表API - 返回分页响应（包含 data 和 total）
+  apiGetAll: (page: number, pageSize: number) => Promise<{ data: T[]; total?: number }>;
+  // 单项API - 直接返回对象
+  apiGetOne: (id: string) => Promise<T>;
+  // 创建API - 直接返回创建的对象
+  apiCreate: (data: Partial<T>) => Promise<T>;
+  // 更新API - 直接返回更新后的对象
+  apiUpdate: (id: string, data: Partial<T>) => Promise<T>;
+  // 删除API - 返回消息响应
+  apiDelete: (id: string) => Promise<{ message?: string }>;
   entityName?: string;
   initialPageSize?: number;
   onError?: (error: string) => void;
   onSuccess?: (action: string) => void;
 }
 
-export function useCRUD<T extends { id?: string }>(
+export function useCRUD<T extends { id?: string | number }>(
   config: CRUDConfig<T>
 ): [CRUDState<T>, CRUDActions<T>] {
   const [state, setState] = useState<CRUDState<T>>({
@@ -100,10 +106,10 @@ export function useCRUD<T extends { id?: string }>(
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await config.apiGetOne(id);
+      const result = await config.apiGetOne(id);
       setState((prev) => ({ ...prev, loading: false }));
       handleSuccess('获取详情');
-      return response.data || null;
+      return result;
     } catch (error) {
       handleError(error, '获取详情');
       return null;
@@ -115,16 +121,16 @@ export function useCRUD<T extends { id?: string }>(
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await config.apiCreate(data);
-      if (response.data) {
+      const result = await config.apiCreate(data);
+      if (result) {
         setState((prev) => ({
           ...prev,
-          items: [...prev.items, response.data!],
+          items: [...prev.items, result],
           total: prev.total + 1,
           loading: false,
         }));
         handleSuccess('创建');
-        return response.data;
+        return result;
       }
       setState((prev) => ({ ...prev, loading: false }));
       return null;
@@ -139,17 +145,17 @@ export function useCRUD<T extends { id?: string }>(
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await config.apiUpdate(id, data);
-      if (response.data) {
+      const result = await config.apiUpdate(id, data);
+      if (result) {
         setState((prev) => ({
           ...prev,
           items: prev.items.map((item) =>
-            item.id === id ? response.data! : item
+            String(item.id) === String(id) ? result : item
           ),
           loading: false,
         }));
         handleSuccess('更新');
-        return response.data;
+        return result;
       }
       setState((prev) => ({ ...prev, loading: false }));
       return null;
@@ -167,7 +173,7 @@ export function useCRUD<T extends { id?: string }>(
       await config.apiDelete(id);
       setState((prev) => ({
         ...prev,
-        items: prev.items.filter((item) => item.id !== id),
+        items: prev.items.filter((item) => String(item.id) !== String(id)),
         total: prev.total - 1,
         loading: false,
       }));

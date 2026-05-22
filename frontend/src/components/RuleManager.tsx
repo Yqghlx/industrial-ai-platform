@@ -1,52 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Bell, Plus, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
-import { AlertRule, AlertSeverity, DeviceType, AlertOperator } from '../types/api';
-import { asAlertRuleArraySafe, isAlertOperator, isAlertSeverity } from '../types/typeGuards';
+import { AlertRule, AlertSeverity, DeviceType, AlertOperator, AlertRuleCreateInput, AlertRuleUpdateInput } from '../types/api';
+import { isAlertOperator, isAlertSeverity } from '../types/typeGuards';
 import { useConfirmDialog } from './UI/ConfirmDialog';
+import { useCRUD } from '../hooks/useCRUD';
 
 export default function RuleManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
   const { showConfirm } = useConfirmDialog();
-  const [rules, setRules] = useState<AlertRule[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    loadRules();
-  }, []);
-
-  const loadRules = async () => {
-    setLoading(true);
-    try {
+  // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
+  // 由于 Rule API 返回格式不同（无分页），需要适配
+  const [state, actions] = useCRUD<AlertRule>({
+    apiGetAll: async () => {
       const res = await api.getRules();
-      // FE-P1-01: 使用类型守卫安全转换数组
-      setRules(asAlertRuleArraySafe(res.data));
-    } catch (error) {
-      console.error('Failed to load rules:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { data: res.data ?? [], total: res.data?.length ?? 0 };
+    },
+    apiGetOne: (id) => api.getRule(Number(id)),
+    apiCreate: (data) => api.createRule(data as AlertRuleCreateInput),
+    apiUpdate: (id, data) => api.updateRule(Number(id), data as AlertRuleUpdateInput),
+    apiDelete: (id) => api.deleteRule(Number(id)),
+    entityName: 'AlertRule',
+    initialPageSize: 100,
+    onError: (error) => showToast({ type: 'error', message: error }),
+    onSuccess: (_action) => {},
+  });
 
-  const handleToggle = async (id: number, enabled: boolean) => {
+  const { items: rules, loading } = state;
+  const { refresh, create, update, delete: deleteItem } = actions;
+
+  const handleToggle = useCallback(async (id: number, enabled: boolean) => {
     try {
       await api.toggleRule(id, enabled);
       showToast({ type: 'success', message: enabled ? t('alert.ruleEnabled') : t('alert.ruleDisabled') });
-      loadRules();
+      refresh();
     } catch (error) {
       showToast({ type: 'error', message: t('errors.unknown') });
     }
-  };
+  }, [refresh, showToast, t]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = useCallback(async (id: number) => {
     // FE-P2-11: 使用自定义确认框替代原生 confirm()
     const confirmed = await showConfirm({
       title: t('alert.confirmDeleteTitle'),
@@ -56,14 +58,13 @@ export default function RuleManager() {
       cancelText: t('common.cancel'),
     });
     if (!confirmed) return;
-    try {
-      await api.deleteRule(id);
+    const success = await deleteItem(String(id));
+    if (success) {
       showToast({ type: 'success', message: t('alert.ruleDeleted') });
-      loadRules();
-    } catch (error) {
+    } else {
       showToast({ type: 'error', message: '删除失败' });
     }
-  };
+  }, [showConfirm, deleteItem, showToast, t]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -195,19 +196,20 @@ export default function RuleManager() {
                   actions: '[{"type": "notification"}]',
                 };
 
-                try {
-                  if (editingRule) {
-                    await api.updateRule(editingRule.id, data);
-                  } else {
-                    await api.createRule(data);
-                  }
+                // FE-P2-09: 使用 useCRUD hook 的 create/update 方法
+                let success = false;
+                if (editingRule) {
+                  success = await update(String(editingRule.id), data) !== null;
+                } else {
+                  success = await create(data) !== null;
+                }
+                if (success) {
                   showToast({ type: 'success', message: '规则已保存' });
-                  setShowCreateModal(false);
-                  setEditingRule(null);
-                  loadRules();
-                } catch (error) {
+                } else {
                   showToast({ type: 'error', message: '保存失败' });
                 }
+                setShowCreateModal(false);
+                setEditingRule(null);
               }}>
                 <div className="space-y-4">
                   <div>
