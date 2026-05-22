@@ -15,8 +15,8 @@ import {
 
 describe('sanitizeHTML', () => {
   it('should escape HTML entities', () => {
-    expect(sanitizeHTML('<script>alert("xss")</script>')).toBe(
-      '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+    expect(sanitizeHTML('<script>alert("xss")<\/script>')).toBe(
+      '&lt;script&gt;alert(&quot;xss&quot;)&lt;&#x2F;script&gt;'
     );
   });
 

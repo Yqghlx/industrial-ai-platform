@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import pako from 'pako';
-import { WebSocketCompressionHandler, CompressedWebSocket, createWebSocketURL } from '../wsCompression';
+import { WebSocketCompressionHandler, CompressedWebSocket, createWebSocketURL } from './wsCompression';
 
 describe('WebSocketCompressionHandler', () => {
   let handler: WebSocketCompressionHandler;
