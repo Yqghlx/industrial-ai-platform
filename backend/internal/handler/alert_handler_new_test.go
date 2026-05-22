@@ -351,3 +351,182 @@ func TestAlertHandler_AcknowledgeAlert_ServiceError(t *testing.T) {
 
 	mockAlertSvc.AssertExpectations(t)
 }
+
+func TestAlertHandler_ListAlerts_WithSeverityFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAlertSvc := new(mocks.MockAlertService)
+	broadcastChan := make(chan model.WSMessage, 100)
+	broadcastFunc := func(msg model.WSMessage) {
+		broadcastChan <- msg
+	}
+
+	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
+
+	alerts := []model.Alert{
+		{ID: 1, DeviceID: "device-1", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
+		{ID: 2, DeviceID: "device-2", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+		{ID: 3, DeviceID: "device-3", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
+	}
+
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 3, nil)
+
+	router.GET("/alerts", handler.ListAlerts)
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts?severity=critical", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	data := response["data"].([]interface{})
+	// Should filter to 2 critical alerts
+	assert.Len(t, data, 2)
+
+	mockAlertSvc.AssertExpectations(t)
+}
+
+func TestAlertHandler_ListAlerts_WithDeviceIDFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAlertSvc := new(mocks.MockAlertService)
+	broadcastChan := make(chan model.WSMessage, 100)
+	broadcastFunc := func(msg model.WSMessage) {
+		broadcastChan <- msg
+	}
+
+	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
+
+	alerts := []model.Alert{
+		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+		{ID: 2, DeviceID: "device-2", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
+	}
+
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 2, nil)
+
+	router.GET("/alerts", handler.ListAlerts)
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts?device_id=device-1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	data := response["data"].([]interface{})
+	assert.Len(t, data, 1)
+
+	mockAlertSvc.AssertExpectations(t)
+}
+
+func TestAlertHandler_ListAlerts_WithBothFilters(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAlertSvc := new(mocks.MockAlertService)
+	broadcastChan := make(chan model.WSMessage, 100)
+	broadcastFunc := func(msg model.WSMessage) {
+		broadcastChan <- msg
+	}
+
+	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
+
+	alerts := []model.Alert{
+		{ID: 1, DeviceID: "device-1", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
+		{ID: 2, DeviceID: "device-2", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+		{ID: 3, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+	}
+
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 3, nil)
+
+	router.GET("/alerts", handler.ListAlerts)
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts?severity=critical&device_id=device-1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	data := response["data"].([]interface{})
+	// Should filter to 1 alert (critical + device-1)
+	assert.Len(t, data, 1)
+
+	mockAlertSvc.AssertExpectations(t)
+}
+
+func TestAlertHandler_ListAlerts_DefaultStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAlertSvc := new(mocks.MockAlertService)
+	broadcastChan := make(chan model.WSMessage, 100)
+	broadcastFunc := func(msg model.WSMessage) {
+		broadcastChan <- msg
+	}
+
+	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
+
+	alerts := []model.Alert{
+		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+	}
+
+	// Default status should be "all"
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 1, nil)
+
+	router.GET("/alerts", handler.ListAlerts)
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	mockAlertSvc.AssertExpectations(t)
+}
+
+func TestAlertHandler_ListAlerts_CustomPagination(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAlertSvc := new(mocks.MockAlertService)
+	broadcastChan := make(chan model.WSMessage, 100)
+	broadcastFunc := func(msg model.WSMessage) {
+		broadcastChan <- msg
+	}
+
+	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
+
+	alerts := []model.Alert{
+		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
+	}
+
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 2, 50).Return(alerts, 1, nil)
+
+	router.GET("/alerts", handler.ListAlerts)
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts?page=2&page_size=50", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	mockAlertSvc.AssertExpectations(t)
+}

@@ -498,6 +498,52 @@ func TestRBACHandler_AssignRole_InvalidUserID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// TestRBACHandler_AssignRole_NoTenantID tests role assignment when tenant ID comes from context
+func TestRBACHandler_AssignRole_NoTenantID(t *testing.T) {
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	req := model.AssignRoleRequest{RoleID: 2} // No TenantID
+	body, _ := json.Marshal(req)
+	c.Params = gin.Params{{Key: "id", Value: "10"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users/10/roles", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	// Set tenant ID in context
+	c.Set("tenant_id", "tenant-ctx")
+
+	mockRBACSvc.On("AssignRole", mock.Anything, 10, 2, "tenant-ctx").Return(nil)
+
+	handler.AssignRole(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRBACSvc.AssertExpectations(t)
+}
+
+// TestRBACHandler_AssignRole_Error tests role assignment service error
+func TestRBACHandler_AssignRole_Error(t *testing.T) {
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	req := model.AssignRoleRequest{RoleID: 2, TenantID: "tenant-001"}
+	body, _ := json.Marshal(req)
+	c.Params = gin.Params{{Key: "id", Value: "10"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users/10/roles", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	mockRBACSvc.On("AssignRole", mock.Anything, 10, 2, "tenant-001").Return(assert.AnError)
+
+	handler.AssignRole(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRBACSvc.AssertExpectations(t)
+}
+
 // TestRBACHandler_RemoveRole_Success tests successful role removal
 func TestRBACHandler_RemoveRole_Success(t *testing.T) {
 	mockRBACSvc := new(MockRBACService)
@@ -532,6 +578,41 @@ func TestRBACHandler_RemoveRole_InvalidIDs(t *testing.T) {
 	handler.RemoveRole(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestRBACHandler_RemoveRole_InvalidRoleID tests role removal with invalid role ID
+func TestRBACHandler_RemoveRole_InvalidRoleID(t *testing.T) {
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Params = gin.Params{{Key: "id", Value: "10"}, {Key: "role_id", Value: "invalid"}}
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/users/10/roles/invalid", nil)
+
+	handler.RemoveRole(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestRBACHandler_RemoveRole_ServiceError tests role removal service error
+func TestRBACHandler_RemoveRole_ServiceError(t *testing.T) {
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	mockRBACSvc.On("RemoveRoleFromUser", mock.Anything, 10, 2).Return(assert.AnError)
+
+	c.Params = gin.Params{{Key: "id", Value: "10"}, {Key: "role_id", Value: "2"}}
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/users/10/roles/2", nil)
+
+	handler.RemoveRole(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRBACSvc.AssertExpectations(t)
 }
 
 // TestRBACHandler_GetUserRoles_Success tests successful user roles retrieval
@@ -620,23 +701,112 @@ func TestRBACHandler_AssignPermission_Success(t *testing.T) {
 	mockRBACSvc.AssertExpectations(t)
 }
 
-// TestRBACHandler_RemovePermission_Success tests successful permission removal
-func TestRBACHandler_RemovePermission_Success(t *testing.T) {
+func TestRBACHandler_AssignPermission_InvalidRoleID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	mockRBACSvc := new(MockRBACService)
 	handler := NewRBACHandler(mockRBACSvc)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	mockRBACSvc.On("RemovePermissionFromRole", mock.Anything, 2, 1).Return(nil)
+	req := model.AssignPermissionRequest{PermissionID: 1}
+	body, _ := json.Marshal(req)
+	c.Params = gin.Params{{Key: "id", Value: "invalid"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/roles/invalid/permissions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.AssignPermission(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRBACHandler_AssignPermission_InvalidRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Params = gin.Params{{Key: "id", Value: "2"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/roles/2/permissions", bytes.NewReader([]byte("invalid json")))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.AssignPermission(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRBACHandler_AssignPermission_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	req := model.AssignPermissionRequest{PermissionID: 1}
+	body, _ := json.Marshal(req)
+	c.Params = gin.Params{{Key: "id", Value: "2"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/roles/2/permissions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	mockRBACSvc.On("AssignPermissionToRole", mock.Anything, 2, 1).Return(assert.AnError)
+
+	handler.AssignPermission(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRBACSvc.AssertExpectations(t)
+}
+
+func TestRBACHandler_RemovePermission_InvalidRoleID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Params = gin.Params{{Key: "id", Value: "invalid"}, {Key: "perm_id", Value: "1"}}
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/roles/invalid/permissions/1", nil)
+
+	handler.RemovePermission(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRBACHandler_RemovePermission_InvalidPermID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Params = gin.Params{{Key: "id", Value: "2"}, {Key: "perm_id", Value: "invalid"}}
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/roles/2/permissions/invalid", nil)
+
+	handler.RemovePermission(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRBACHandler_RemovePermission_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockRBACSvc := new(MockRBACService)
+	handler := NewRBACHandler(mockRBACSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
 
 	c.Params = gin.Params{{Key: "id", Value: "2"}, {Key: "perm_id", Value: "1"}}
 	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/roles/2/permissions/1", nil)
 
+	mockRBACSvc.On("RemovePermissionFromRole", mock.Anything, 2, 1).Return(assert.AnError)
+
 	handler.RemovePermission(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	mockRBACSvc.AssertExpectations(t)
 }
 

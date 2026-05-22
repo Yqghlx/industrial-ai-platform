@@ -240,6 +240,33 @@ func TestBusinessHandlerNew_MarkNotificationRead_Success(t *testing.T) {
 	mockNotificationSvc.AssertExpectations(t)
 }
 
+func TestBusinessHandlerNew_MarkNotificationRead_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockWorkOrderSvc := new(MockWorkOrderService)
+	mockNotificationSvc := new(MockNotificationService)
+	mockBlackBoxSvc := new(MockBlackBoxService)
+	mockReportSvc := new(MockReportService)
+	mockAlertSvc := new(MockAlertService)
+
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc)
+
+	mockNotificationSvc.On("MarkRead", mock.Anything, 1).Return(assert.AnError)
+
+	router.PUT("/notifications/:id/read", handler.MarkNotificationRead)
+
+	req := httptest.NewRequest(http.MethodPut, "/notifications/1/read", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	mockNotificationSvc.AssertExpectations(t)
+}
+
 func TestBusinessHandlerNew_ListBlackBox_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -272,6 +299,33 @@ func TestBusinessHandlerNew_ListBlackBox_Success(t *testing.T) {
 	mockBlackBoxSvc.AssertExpectations(t)
 }
 
+func TestBusinessHandlerNew_ListBlackBox_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockWorkOrderSvc := new(MockWorkOrderService)
+	mockNotificationSvc := new(MockNotificationService)
+	mockBlackBoxSvc := new(MockBlackBoxService)
+	mockReportSvc := new(MockReportService)
+	mockAlertSvc := new(MockAlertService)
+
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc)
+
+	mockBlackBoxSvc.On("List", mock.Anything, "", 1, 20).Return(nil, 0, assert.AnError)
+
+	router.GET("/black-box", handler.ListBlackBox)
+
+	req := httptest.NewRequest(http.MethodGet, "/black-box", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	mockBlackBoxSvc.AssertExpectations(t)
+}
+
 func TestBusinessHandlerNew_ListReports_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -301,6 +355,33 @@ func TestBusinessHandlerNew_ListReports_Success(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 
+	mockReportSvc.AssertExpectations(t)
+}
+
+func TestBusinessHandlerNew_ListReports_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockWorkOrderSvc := new(MockWorkOrderService)
+	mockNotificationSvc := new(MockNotificationService)
+	mockBlackBoxSvc := new(MockBlackBoxService)
+	mockReportSvc := new(MockReportService)
+	mockAlertSvc := new(MockAlertService)
+
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc)
+
+	mockReportSvc.On("ListReports", mock.Anything, "", 1, 20).Return(nil, 0, assert.AnError)
+
+	router.GET("/reports", handler.ListReports)
+
+	req := httptest.NewRequest(http.MethodGet, "/reports", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
 	mockReportSvc.AssertExpectations(t)
 }
 
@@ -377,6 +458,60 @@ func TestBusinessHandlerNew_GetROIStats_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	mockReportSvc.AssertExpectations(t)
+}
+
+func TestBusinessHandlerNew_GetROIStats_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockWorkOrderSvc := new(MockWorkOrderService)
+	mockNotificationSvc := new(MockNotificationService)
+	mockBlackBoxSvc := new(MockBlackBoxService)
+	mockReportSvc := new(MockReportService)
+	mockAlertSvc := new(MockAlertService)
+
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc)
+
+	mockReportSvc.On("GetROIStats", mock.Anything).Return(nil, assert.AnError)
+
+	router.GET("/roi-stats", handler.GetROIStats)
+
+	req := httptest.NewRequest(http.MethodGet, "/roi-stats", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	mockReportSvc.AssertExpectations(t)
+}
+
+func TestBusinessHandlerNew_GetAlertStats_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockWorkOrderSvc := new(MockWorkOrderService)
+	mockNotificationSvc := new(MockNotificationService)
+	mockBlackBoxSvc := new(MockBlackBoxService)
+	mockReportSvc := new(MockReportService)
+	mockAlertSvc := new(MockAlertService)
+
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc)
+
+	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 1000).Return(nil, 0, assert.AnError)
+
+	router.GET("/alert-stats", handler.GetAlertStats)
+
+	req := httptest.NewRequest(http.MethodGet, "/alert-stats", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestBusinessHandlerNew_GetAlertStats_Success(t *testing.T) {
