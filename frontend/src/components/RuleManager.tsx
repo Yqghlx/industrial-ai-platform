@@ -6,6 +6,7 @@ import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Bell, Plus, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
 import { AlertRule, AlertSeverity, DeviceType, AlertOperator } from '../types/api';
+import { asAlertRuleArraySafe, isAlertOperator, isAlertSeverity } from '../types/typeGuards';
 
 export default function RuleManager() {
   const { t } = useI18n();
@@ -24,7 +25,8 @@ export default function RuleManager() {
     setLoading(true);
     try {
       const res = await api.getRules();
-      setRules(res.data as AlertRule[]);
+      // FE-P1-01: 使用类型守卫安全转换数组
+      setRules(asAlertRuleArraySafe(res.data));
     } catch (error) {
       console.error('Failed to load rules:', error);
     } finally {
@@ -35,18 +37,18 @@ export default function RuleManager() {
   const handleToggle = async (id: number, enabled: boolean) => {
     try {
       await api.toggleRule(id, enabled);
-      showToast({ type: 'success', message: enabled ? '规则已启用' : '规则已禁用' });
+      showToast({ type: 'success', message: enabled ? t('alert.ruleEnabled') : t('alert.ruleDisabled') });
       loadRules();
     } catch (error) {
-      showToast({ type: 'error', message: '操作失败' });
+      showToast({ type: 'error', message: t('errors.unknown') });
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确认删除此规则？')) return;
+    if (!confirm(t('alert.confirmDelete'))) return;
     try {
       await api.deleteRule(id);
-      showToast({ type: 'success', message: '规则已删除' });
+      showToast({ type: 'success', message: t('alert.ruleDeleted') });
       loadRules();
     } catch (error) {
       showToast({ type: 'error', message: '删除失败' });

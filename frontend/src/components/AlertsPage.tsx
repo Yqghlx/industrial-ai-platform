@@ -15,17 +15,8 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface Alert {
-  id: number;
-  rule_id: number;
-  device_id: string;
-  message: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'active' | 'acknowledged' | 'resolved';
-  triggered_at: string;
-  resolved_at?: string;
-}
+import { Alert as AlertType } from '../types/api';
+import { isAlert, asAlertStatusSafe } from '../types/typeGuards';
 
 interface AlertStats {
   active_count: number;
@@ -51,7 +42,7 @@ export default function AlertsPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [stats, setStats] = useState<AlertStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,37 +53,50 @@ export default function AlertsPage() {
   useWebSocket({
     onMessage: (message) => {
       if (message.type === 'alert') {
-        const newAlert = message.payload as Alert;
-        setAlerts(prev => [newAlert, ...prev]);
-        setStats(prev => prev ? {
-          ...prev,
-          active_count: prev.active_count + 1,
-          total_count: prev.total_count + 1,
-          by_severity: {
-            ...prev.by_severity,
-            [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
-          },
-          by_status: {
-            ...prev.by_status,
-            active: (prev.by_status.active || 0) + 1,
-          },
-        } : null);
+        // FE-P1-01: 使用类型守卫替代 as Type 断言
+        if (isAlert(message.payload)) {
+          const newAlert = message.payload;
+          setAlerts(prev => [newAlert, ...prev]);
+          setStats(prev => prev ? {
+            ...prev,
+            active_count: prev.active_count + 1,
+            total_count: prev.total_count + 1,
+            by_severity: {
+              ...prev.by_severity,
+              [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
+            },
+            by_status: {
+              ...prev.by_status,
+              active: (prev.by_status.active || 0) + 1,
+            },
+          } : null);
 
-        showToast({
-          type: newAlert.severity === 'critical' ? 'error' : 'info',
-          message: `${severityConfig[newAlert.severity].label}: ${newAlert.message}`,
-        });
+          showToast({
+            type: newAlert.severity === 'critical' ? 'error' : 'info',
+            message: `${severityConfig[newAlert.severity].label}: ${newAlert.message || ''}`,
+          });
+        }
       } else if (message.type === 'alert_resolved' || message.type === 'alert_acknowledged') {
-        const payload = message.payload as { id: number; status: string };
-        const alertId = payload.id;
-        const newStatus = payload.status as Alert['status'];
-        setAlerts(prev => prev.map(a => 
-          a.id === alertId ? { ...a, status: newStatus } : a
-        ));
+        // FE-P1-01: 使用类型守卫安全转换
+        if (hasProperty(message.payload, 'id') && hasProperty(message.payload, 'status')) {
+          const payload = message.payload as { id: number; status: string };
+          const alertId = payload.id;
+          const newStatus = asAlertStatusSafe(payload.status);
+          if (newStatus) {
+            setAlerts(prev => prev.map(a => 
+              a.id === alertId ? { ...a, status: newStatus } : a
+            ));
+          }
+        }
         fetchStats();
       }
     },
   });
+
+// Helper function for type checking
+function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
+  return typeof obj === 'object' && obj !== null && key in obj;
+}
 
   // Fetch alerts
   const fetchAlerts = useCallback(async () => {

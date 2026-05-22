@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
@@ -10,22 +10,6 @@ import { Device, DeviceStatus } from '../types/api';
 import { getDeviceStatusBadgeClass } from '../lib/colorUtils';
 
 const PAGE_SIZE = 20;
-
-const DEVICE_TYPES = [
-  { value: '', label: '全部类型' },
-  { value: 'CNC', label: '数控机床' },
-  { value: 'InjectionMolder', label: '注塑机' },
-  { value: 'AssemblyRobot', label: '工业机器人' },
-  { value: 'Conveyor', label: '装配线' },
-  { value: 'Sensor', label: '传感器' },
-  { value: 'PLC', label: 'PLC控制器' },
-  { value: 'motor', label: '电机' },
-  { value: 'pump', label: '泵' },
-  { value: 'valve', label: '阀门' },
-  { value: 'heater', label: '加热器' },
-  { value: 'cooler', label: '冷却器' },
-  { value: 'gauge', label: '仪表' },
-] as const;
 
 export default function DeviceManager() {
   const { t } = useI18n();
@@ -40,6 +24,39 @@ export default function DeviceManager() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
 
+  // FE-P1-01: 使用 useMemo 包裹设备类型数组，避免每次渲染创建新对象
+  const DEVICE_TYPES = useMemo(() => [
+    { value: '', label: t('device.allTypes') },
+    { value: 'CNC', label: t('device.cnc') },
+    { value: 'InjectionMolder', label: t('device.injectionMolder') },
+    { value: 'AssemblyRobot', label: t('device.assemblyRobot') },
+    { value: 'Conveyor', label: t('device.assemblyLine') },
+    { value: 'Sensor', label: t('device.sensor') },
+    { value: 'PLC', label: t('device.plc') },
+    { value: 'motor', label: t('device.motor') },
+    { value: 'pump', label: t('device.pump') },
+    { value: 'valve', label: t('device.valve') },
+    { value: 'heater', label: t('device.heater') },
+    { value: 'cooler', label: t('device.cooler') },
+    { value: 'gauge', label: t('device.gauge') },
+  ] as const, [t]);
+
+  // FE-P1-01: 使用 useMemo 包裹设备类型选项数组，避免每次渲染创建新对象
+  const DEVICE_TYPE_OPTIONS = useMemo(() => [
+    { value: 'CNC', label: t('device.cnc') },
+    { value: 'InjectionMolder', label: t('device.injectionMolder') },
+    { value: 'AssemblyRobot', label: t('device.assemblyRobot') },
+    { value: 'Conveyor', label: t('device.assemblyLine') },
+    { value: 'Sensor', label: t('device.sensor') },
+    { value: 'PLC', label: t('device.plc') },
+    { value: 'motor', label: t('device.motor') },
+    { value: 'pump', label: t('device.pump') },
+    { value: 'valve', label: t('device.valve') },
+    { value: 'heater', label: t('device.heater') },
+    { value: 'cooler', label: t('device.cooler') },
+    { value: 'gauge', label: t('device.gauge') },
+  ] as const, [t]);
+
   const loadDevices = useCallback(async () => {
     setLoading(true);
     try {
@@ -48,26 +65,26 @@ export default function DeviceManager() {
       setTotal(res.total ?? 0);
     } catch (error) {
       console.error('Failed to load devices:', error);
-      showToast({ type: 'error', message: '加载设备失败' });
+      showToast({ type: 'error', message: t('device.loadFailed') });
       setDevices([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page, showToast]);
+  }, [page, showToast, t]);
 
   useEffect(() => {
     loadDevices();
   }, [loadDevices]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确认删除此设备？')) return;
+    if (!confirm(t('device.deleteConfirm'))) return;
     try {
       await api.deleteDevice(id);
-      showToast({ type: 'success', message: '设备已删除' });
+      showToast({ type: 'success', message: t('device.deleteSuccess') });
       loadDevices();
     } catch (error) {
-      showToast({ type: 'error', message: '删除失败' });
+      showToast({ type: 'error', message: t('device.deleteFailed') });
     }
   };
 
@@ -246,16 +263,16 @@ export default function DeviceManager() {
                 try {
                   if (editingDevice) {
                     await api.updateDevice(editingDevice.id, data);
-                    showToast({ type: 'success', message: '设备已更新' });
+                    showToast({ type: 'success', message: t('device.updateSuccess') });
                   } else {
                     await api.createDevice(data);
-                    showToast({ type: 'success', message: '设备已创建' });
+                    showToast({ type: 'success', message: t('device.createSuccess') });
                   }
                   setShowCreateModal(false);
                   setEditingDevice(null);
                   loadDevices();
                 } catch (error) {
-                  showToast({ type: 'error', message: '操作失败' });
+                  showToast({ type: 'error', message: t('device.operationFailed') });
                 }
               }}>
                 <div className="space-y-4">
@@ -272,18 +289,9 @@ export default function DeviceManager() {
                   <div>
                     <label className="label">{t('device.type')}</label>
                     <select name="device-type" className="input" defaultValue={editingDevice?.type}>
-                      <option value="CNC">数控机床</option>
-                      <option value="InjectionMolder">注塑机</option>
-                      <option value="AssemblyRobot">工业机器人</option>
-                      <option value="Conveyor">装配线</option>
-                      <option value="Sensor">传感器</option>
-                      <option value="PLC">PLC控制器</option>
-                      <option value="motor">电机</option>
-                      <option value="pump">泵</option>
-                      <option value="valve">阀门</option>
-                      <option value="heater">加热器</option>
-                      <option value="cooler">冷却器</option>
-                      <option value="gauge">仪表</option>
+                      {DEVICE_TYPE_OPTIONS.map(dt => (
+                        <option key={dt.value} value={dt.value}>{dt.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

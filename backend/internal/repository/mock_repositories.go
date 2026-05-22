@@ -168,6 +168,15 @@ func (m *MockAlertRepository) GetRecentByDevice(ctx context.Context, deviceID st
 	return args.Get(0).(*model.Alert), args.Error(1)
 }
 
+// FIX-P1-01: N+1 查询优化 - 新增批量查询 mock 方法
+func (m *MockAlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, deviceID string, ruleIDs []int, cooldownSec int) (map[int]*model.Alert, error) {
+	args := m.Called(ctx, deviceID, ruleIDs, cooldownSec)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[int]*model.Alert), args.Error(1)
+}
+
 // MockRuleRepository implements RuleRepositoryInterface for testing
 type MockRuleRepository struct {
 	mock.Mock

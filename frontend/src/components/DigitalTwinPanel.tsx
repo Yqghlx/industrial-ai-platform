@@ -6,16 +6,8 @@ import { useToast } from './Toast';
 import { Activity, Thermometer, Waves, Zap, Settings } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getGaugeColor, getGaugeStrokeColor, getGaugePercentage, getTelemetryStatusColor } from '../lib/colorUtils';
-
-interface Telemetry {
-  device_id: string;
-  timestamp: string;
-  temperature: number;
-  pressure: number;
-  vibration: number;
-  power: number;
-  status: string;
-}
+import { isTelemetry, isTelemetryArray, asTelemetryArraySafe } from '../types/typeGuards';
+import { Telemetry } from '../types/api';
 
 export default function DigitalTwinPanel() {
   const { t } = useI18n();
@@ -35,16 +27,19 @@ export default function DigitalTwinPanel() {
   useWebSocket({
     onMessage: (message) => {
       if (message.type === 'telemetry') {
-        const payload = message.payload as Telemetry;
-        setTelemetry(prev => {
-          const exists = prev.find(t => t.device_id === payload.device_id);
-          if (exists) {
-            return prev.map(t =>
-              t.device_id === payload.device_id ? payload : t
-            );
-          }
-          return [...prev, payload];
-        });
+        // FE-P1-01: 使用类型守卫替代 as Type 断言
+        if (isTelemetry(message.payload)) {
+          const payload = message.payload;
+          setTelemetry(prev => {
+            const exists = prev.find(t => t.device_id === payload.device_id);
+            if (exists) {
+              return prev.map(t =>
+                t.device_id === payload.device_id ? payload : t
+              );
+            }
+            return [...prev, payload];
+          });
+        }
       }
     },
   });
@@ -52,9 +47,11 @@ export default function DigitalTwinPanel() {
   const loadData = async () => {
     try {
       const res = await api.getLatestTelemetry();
-      setTelemetry(res.data as Telemetry[]);
-      if (!selectedDevice && res.data.length > 0) {
-        setSelectedDevice((res.data[0] as Telemetry).device_id);
+      // FE-P1-01: 使用类型守卫安全转换数组
+      const telemetryData = asTelemetryArraySafe(res.data);
+      setTelemetry(telemetryData);
+      if (!selectedDevice && telemetryData.length > 0) {
+        setSelectedDevice(telemetryData[0].device_id);
       }
     } catch (error) {
       // FIX-023: 使用统一 showError toast 服务

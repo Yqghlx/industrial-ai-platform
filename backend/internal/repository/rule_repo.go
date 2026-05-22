@@ -286,3 +286,42 @@ func (r *AlertRepository) GetRecentByDevice(ctx context.Context, deviceID string
 	}
 	return &a, nil
 }
+// GetRecentAlertsByDeviceBatch 批量查询设备最近的告警（用于 cooldown 检查，避免 N+1 查询）
+// FIX-P1-01: N+1 查询优化
+func (r *AlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, deviceID string, ruleIDs []int, cooldownSec int) (map[int]*model.Alert, error) {
+	if len(ruleIDs) == 0 {
+		return nil, nil
+	}
+
+	// 使用单次查询获取所有规则的最近告警
+	query := `
+		SELECT DISTINCT ON (rule_id) id, rule_id, device_id, message, severity, status, triggered_at, resolved_at
+		FROM alerts
+		WHERE device_id = $1 AND rule_id = ANY($2) AND triggered_at > NOW() - INTERVAL '1 second' * $3
+		ORDER BY rule_id, triggered_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, deviceID, ruleIDs, cooldownSec)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int]*model.Alert)
+	for rows.Next() {
+		var a model.Alert
+		var resolvedAt sql.NullTime
+		if err := rows.Scan(
+			&a.ID, &a.RuleID, &a.DeviceID, &a.Message, &a.Severity,
+			&a.Status, &a.TriggeredAt, &resolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		if resolvedAt.Valid {
+			a.ResolvedAt = &resolvedAt.Time
+		}
+		result[a.RuleID] = &a
+	}
+
+	return result, nil
+}

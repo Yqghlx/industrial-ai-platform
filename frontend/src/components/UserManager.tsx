@@ -6,6 +6,7 @@ import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Plus, Trash2, Shield, User as UserIcon } from 'lucide-react';
 import { User, UserRole } from '../types/api';
+import { asUserArraySafe } from '../types/typeGuards';
 
 export default function UserManager() {
   const { t } = useI18n();
@@ -24,7 +25,8 @@ export default function UserManager() {
     setLoading(true);
     try {
       const res = await api.getUsers(1, 50);
-      setUsers(res.data as User[]);
+      // FE-P1-01: 使用类型守卫安全转换数组
+      setUsers(asUserArraySafe(res.data));
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -33,13 +35,13 @@ export default function UserManager() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确认删除此用户？')) return;
+    if (!confirm(t('user.confirmDelete'))) return;
     try {
       await api.deleteUser(id);
-      showToast({ type: 'success', message: '用户已删除' });
+      showToast({ type: 'success', message: t('user.deleteSuccess') });
       loadUsers();
     } catch (error) {
-      showToast({ type: 'error', message: '删除失败' });
+      showToast({ type: 'error', message: t('errors.unknown') });
     }
   };
 
@@ -47,8 +49,8 @@ export default function UserManager() {
     return (
       <div className="text-center py-12">
         <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-100">需要管理员权限</h2>
-        <p className="text-slate-400">您没有权限访问此页面</p>
+        <h2 className="text-xl font-bold text-slate-100">{t('user.adminRequired')}</h2>
+        <p className="text-slate-400">{t('user.noPermission')}</p>
       </div>
     );
   }

@@ -7,6 +7,7 @@ import { useToast } from './Toast';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Thermometer, Waves, BarChart3 } from 'lucide-react';
 import { Device, Telemetry, DeviceStats } from '../types/api';
+import { asDeviceSafe, asTelemetryArraySafe, asDeviceStatsSafe } from '../types/typeGuards';
 
 export default function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,9 +34,14 @@ export default function DeviceDetail() {
         api.getDeviceStats(id, timeRange),
       ]);
       
-      setDevice(deviceRes as Device);
-      setTelemetry(telemetryRes.data as Telemetry[]);
-      setStats(statsRes as DeviceStats); // FIX-007: 使用正确的类型 DeviceStats
+      // FE-P1-01: 使用类型守卫安全转换
+      const device = asDeviceSafe(deviceRes);
+      const telemetry = asTelemetryArraySafe(telemetryRes.data);
+      const stats = asDeviceStatsSafe(statsRes);
+      
+      setDevice(device);
+      setTelemetry(telemetry);
+      setStats(stats);
     } catch (error) {
       // FIX-023: 使用统一 showError toast 服务
       showToast({ type: 'error', message: t('errors.unknown') });
@@ -105,7 +111,7 @@ export default function DeviceDetail() {
           </div>
         </div>
       ) : (
-        <div className="text-red-400">设备不存在</div>
+        <div className="text-red-400">{t('device.notFound')}</div>
       )}
 
       {/* Stats cards */}

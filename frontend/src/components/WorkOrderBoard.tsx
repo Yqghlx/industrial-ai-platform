@@ -5,6 +5,7 @@ import { SkeletonTable } from './Skeleton';
 import { useToast } from './Toast';
 import { Plus, Search } from 'lucide-react';
 import { WorkOrder } from '../types/api';
+import { asWorkOrderArraySafe } from '../types/typeGuards';
 import { getWorkOrderStatusColor, getWorkOrderPriorityColor } from '../lib/colorUtils';
 
 export default function WorkOrderBoard() {
@@ -19,7 +20,8 @@ export default function WorkOrderBoard() {
     setLoading(true);
     try {
       const res = await api.getWorkOrders({ status: statusFilter });
-      setOrders(res.data as WorkOrder[]);
+      // FE-P1-01: 使用类型守卫安全转换数组
+      setOrders(asWorkOrderArraySafe(res.data));
     } catch (error) {
       console.error('Failed to load work orders:', error);
     } finally {

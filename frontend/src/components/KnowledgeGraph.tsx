@@ -5,6 +5,7 @@ import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Network, RefreshCw } from 'lucide-react';
 import { DeviceGraph } from '../types/api';
+import { asDeviceGraphSafe } from '../types/typeGuards';
 
 export default function KnowledgeGraph() {
   const { t } = useI18n();
@@ -22,7 +23,8 @@ export default function KnowledgeGraph() {
     setLoading(true);
     try {
       const res = await api.getDeviceGraph();
-      setGraphData(res as DeviceGraph); // FIX-007: 使用正确的类型 DeviceGraph
+      // FE-P1-01: 使用类型守卫安全转换
+      setGraphData(asDeviceGraphSafe(res));
     } catch (error) {
       // FIX-023: 使用统一 showError toast 服务
       showToast({ type: 'error', message: t('errors.unknown') });

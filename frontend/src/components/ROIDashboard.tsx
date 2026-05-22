@@ -5,6 +5,7 @@ import Skeleton from './Skeleton';
 import ExportButton from './ExportButton';
 import { BarChart3, TrendingUp, Clock, DollarSign, Activity, RefreshCw } from 'lucide-react';
 import { ROIStats } from '../types/api';
+import { asROIStatsSafe } from '../types/typeGuards';
 
 export default function ROIDashboard() {
   const { t } = useI18n();
@@ -21,7 +22,8 @@ export default function ROIDashboard() {
     setLoading(true);
     try {
       const res = await api.getROIStats();
-      setStats(res as ROIStats);
+      // FE-P1-01: 使用类型守卫安全转换
+      setStats(asROIStatsSafe(res));
     } catch (error) {
       console.error('Failed to load ROI stats:', error);
     } finally {

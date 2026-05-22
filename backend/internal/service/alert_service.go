@@ -68,33 +68,52 @@ func (s *AlertService) EvaluateRules(ctx context.Context, data *model.TelemetryD
 		)
 		device = &model.Device{ID: data.DeviceID, Type: "unknown"}
 	}
-
 	// Get enabled rules
 	rules, err := s.ruleRepo.ListEnabled(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get rules: %w", err)
 	}
-
+	// FIX-P1-01: N+1 查询优化 - 使用批量查询检查 cooldown
+	// 1. 过滤出适用于该设备类型的规则
+	applicableRules := make([]model.AlertRule, 0)
+	ruleIDs := make([]int, 0)
+	maxCooldownSec := 0
 	for _, rule := range rules {
-		// Check if rule applies to device type
-		if rule.DeviceType != "*" && rule.DeviceType != "" && rule.DeviceType != device.Type {
-			continue
+		if rule.DeviceType == "*" || rule.DeviceType == "" || rule.DeviceType == device.Type {
+			applicableRules = append(applicableRules, rule)
+			ruleIDs = append(ruleIDs, rule.ID)
+			if rule.CooldownSec > maxCooldownSec {
+				maxCooldownSec = rule.CooldownSec
+			}
 		}
+	}
 
+	// 2. 批量查询最近的告警（使用最大 cooldown 时间）
+	recentAlertsMap := make(map[int]*model.Alert)
+	if len(ruleIDs) > 0 {
+		recentAlerts, err := s.alertRepo.GetRecentAlertsByDeviceBatch(ctx, data.DeviceID, ruleIDs, maxCooldownSec)
+		if err != nil {
+			logger.L().Warn("Error batch checking cooldown",
+				zap.String("device_id", data.DeviceID),
+				zap.Error(err),
+			)
+			// 继续处理，但不跳过检查 - 使用空 map 作为 fallback
+		} else {
+			recentAlertsMap = recentAlerts
+		}
+	}
+
+	// 3. 遍历规则并检查
+	for _, rule := range applicableRules {
 		// Evaluate rule condition
 		if s.evaluateCondition(data, rule) {
-			// Check cooldown
-			recentAlert, err := s.alertRepo.GetRecentByDevice(ctx, data.DeviceID, rule.ID, rule.CooldownSec)
-			if err != nil {
-				logger.L().Warn("Error checking cooldown",
-					zap.String("device_id", data.DeviceID),
-					zap.Int("rule_id", rule.ID),
-					zap.Error(err),
-				)
-				continue
-			}
-			if recentAlert != nil {
-				continue // Still in cooldown period
+			// Check cooldown using pre-fetched data
+			if recentAlert, exists := recentAlertsMap[rule.ID]; exists {
+				// 检查是否仍在该规则的 cooldown 时间内
+				cooldownTime := recentAlert.TriggeredAt.Add(time.Duration(rule.CooldownSec) * time.Second)
+				if time.Now().Before(cooldownTime) {
+					continue // Still in cooldown period
+				}
 			}
 
 			// Trigger alert actions
@@ -107,7 +126,6 @@ func (s *AlertService) EvaluateRules(ctx context.Context, data *model.TelemetryD
 			}
 		}
 	}
-
 	return nil
 }
 
