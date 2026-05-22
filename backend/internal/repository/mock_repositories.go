@@ -216,44 +216,51 @@ type MockTenantRepository struct {
 	mock.Mock
 }
 
-func (m *MockTenantRepository) Create(tenant *model.Tenant) error {
-	args := m.Called(tenant)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) Create(ctx context.Context, tenant *model.Tenant) error {
+	args := m.Called(ctx, tenant)
 	return args.Error(0)
 }
 
-func (m *MockTenantRepository) GetByID(id string) (*model.Tenant, error) {
-	args := m.Called(id)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) GetByID(ctx context.Context, id string) (*model.Tenant, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantRepository) GetBySlug(slug string) (*model.Tenant, error) {
-	args := m.Called(slug)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) GetBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
+	args := m.Called(ctx, slug)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantRepository) List(limit, offset int) ([]model.Tenant, error) {
-	args := m.Called(limit, offset)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) List(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
+	args := m.Called(ctx, limit, offset)
 	return args.Get(0).([]model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantRepository) Update(tenant *model.Tenant) error {
-	args := m.Called(tenant)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) Update(ctx context.Context, tenant *model.Tenant) error {
+	args := m.Called(ctx, tenant)
 	return args.Error(0)
 }
 
-func (m *MockTenantRepository) Delete(id string) error {
-	args := m.Called(id)
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) Delete(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *MockTenantRepository) Count() (int, error) {
-	args := m.Called()
+// FIX-003: 添加 context 参数
+func (m *MockTenantRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
 	return args.Get(0).(int), args.Error(1)
 }
 

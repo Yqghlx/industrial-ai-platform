@@ -156,12 +156,15 @@ type BlackBoxServiceInterface interface {
 }
 
 // TenantServiceInterface 租户服务接口
+// FIX-003: 添加 context 支持
 type TenantServiceInterface interface {
-	CreateTenant(name, slug, plan string, maxDevices int) (*model.Tenant, error)
-	UpdateTenant(id, name, slug, plan string, maxDevices int) (*model.Tenant, error)
-	GetTenantByID(id string) (*model.Tenant, error)
-	ListTenants(page, pageSize int) ([]model.Tenant, int, error)
-	DeleteTenant(id string) error
+	CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error)
+	GetTenant(ctx context.Context, id string) (*model.Tenant, error)
+	GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error)
+	ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error)
+	UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error)
+	DeleteTenant(ctx context.Context, id string) error
+	CountTenants(ctx context.Context) (int, error)
 }
 
 // RBACServiceInterface RBAC服务接口

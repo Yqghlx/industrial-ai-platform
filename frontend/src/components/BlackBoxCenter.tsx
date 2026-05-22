@@ -19,6 +19,12 @@ function isBlackBoxRecord(obj: unknown): obj is BlackBoxRecord {
   );
 }
 
+// FE-P0-02: 数组类型守卫，验证 BlackBoxRecord[] 响应
+function isBlackBoxRecordArray(data: unknown): data is BlackBoxRecord[] {
+  if (!Array.isArray(data)) return false;
+  return data.every(isBlackBoxRecord);
+}
+
 export default function BlackBoxCenter() {
   const { t } = useI18n();
   const [records, setRecords] = useState<BlackBoxRecord[]>([]);
@@ -33,7 +39,13 @@ export default function BlackBoxCenter() {
     setLoading(true);
     try {
       const res = await api.getBlackBoxRecords();
-      setRecords(res.data as BlackBoxRecord[]);
+      // FE-P0-02: 使用类型守卫替代类型断言
+      if (isBlackBoxRecordArray(res.data)) {
+        setRecords(res.data);
+      } else {
+        console.error('Invalid BlackBoxRecord[] response:', res.data);
+        setRecords([]);
+      }
     } catch (error) {
       console.error('Failed to load black box records:', error);
     } finally {

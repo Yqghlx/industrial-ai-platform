@@ -269,57 +269,58 @@ func (m *MockTelemetryRepository) GetStats(ctx context.Context, deviceID string,
 }
 
 // MockTenantService 模拟租户服务 (用于 Tenant Handler)
+// FIX-003: 更新方法签名添加 context.Context 参数
 type MockTenantService struct {
 	mock.Mock
 }
 
-func (m *MockTenantService) CreateTenant(name, slug, plan string, maxDevices int) (*model.Tenant, error) {
-	args := m.Called(name, slug, plan, maxDevices)
+func (m *MockTenantService) CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error) {
+	args := m.Called(ctx, name, slug, plan, maxDevices)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) GetTenant(id string) (*model.Tenant, error) {
-	args := m.Called(id)
+func (m *MockTenantService) GetTenant(ctx context.Context, id string) (*model.Tenant, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) GetTenantBySlug(slug string) (*model.Tenant, error) {
-	args := m.Called(slug)
+func (m *MockTenantService) GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
+	args := m.Called(ctx, slug)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) ListTenants(limit, offset int) ([]model.Tenant, error) {
-	args := m.Called(limit, offset)
+func (m *MockTenantService) ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
+	args := m.Called(ctx, limit, offset)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) UpdateTenant(id string, updates map[string]interface{}) (*model.Tenant, error) {
-	args := m.Called(id, updates)
+func (m *MockTenantService) UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error) {
+	args := m.Called(ctx, id, updates)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) DeleteTenant(id string) error {
-	args := m.Called(id)
+func (m *MockTenantService) DeleteTenant(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *MockTenantService) CountTenants() (int, error) {
-	args := m.Called()
+func (m *MockTenantService) CountTenants(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
 	return args.Get(0).(int), args.Error(1)
 }
 

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/model"
@@ -10,14 +12,15 @@ import (
 )
 
 // TenantServiceInterface 定义租户服务接口，用于测试和依赖注入
+// FIX-003: 添加 context 支持
 type TenantServiceInterface interface {
-	CreateTenant(name, slug, plan string, maxDevices int) (*model.Tenant, error)
-	GetTenant(id string) (*model.Tenant, error)
-	GetTenantBySlug(slug string) (*model.Tenant, error)
-	ListTenants(limit, offset int) ([]model.Tenant, error)
-	UpdateTenant(id string, updates map[string]interface{}) (*model.Tenant, error)
-	DeleteTenant(id string) error
-	CountTenants() (int, error)
+	CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error)
+	GetTenant(ctx context.Context, id string) (*model.Tenant, error)
+	GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error)
+	ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error)
+	UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error)
+	DeleteTenant(ctx context.Context, id string) error
+	CountTenants(ctx context.Context) (int, error)
 }
 
 // 确保 TenantService 实现了 TenantServiceInterface
@@ -31,8 +34,19 @@ func NewTenantHandler(tenantSvc TenantServiceInterface) *TenantHandler {
 	return &TenantHandler{tenantSvc: tenantSvc}
 }
 
+// getTenantRequestContext creates a context with timeout for tenant operations
+// FIX-003: 默认超时控制
+func getTenantRequestContext(c *gin.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	return ctx, cancel
+}
+
 // CreateTenant - POST /api/v1/tenants (Admin)
+// FIX-003: 使用带超时的请求上下文
 func (h *TenantHandler) CreateTenant(c *gin.Context) {
+	ctx, cancel := getTenantRequestContext(c)
+	defer cancel()
+
 	var req model.TenantCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{
@@ -51,7 +65,7 @@ func (h *TenantHandler) CreateTenant(c *gin.Context) {
 		return
 	}
 
-	tenant, err := h.tenantSvc.CreateTenant(req.Name, req.Slug, req.Plan, 0) // maxDevices default 0
+	tenant, err := h.tenantSvc.CreateTenant(ctx, req.Name, req.Slug, req.Plan, 0) // maxDevices default 0
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{
 			Success: false,
@@ -67,11 +81,15 @@ func (h *TenantHandler) CreateTenant(c *gin.Context) {
 }
 
 // ListTenants - GET /api/v1/tenants (Admin)
+// FIX-003: 使用带超时的请求上下文
 func (h *TenantHandler) ListTenants(c *gin.Context) {
+	ctx, cancel := getTenantRequestContext(c)
+	defer cancel()
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
-	tenants, err := h.tenantSvc.ListTenants(limit, offset)
+	tenants, err := h.tenantSvc.ListTenants(ctx, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{
 			Success: false,
@@ -80,7 +98,7 @@ func (h *TenantHandler) ListTenants(c *gin.Context) {
 		return
 	}
 
-	count, err := h.tenantSvc.CountTenants()
+	count, err := h.tenantSvc.CountTenants(ctx)
 	if err != nil {
 		count = 0
 	}
@@ -97,7 +115,11 @@ func (h *TenantHandler) ListTenants(c *gin.Context) {
 }
 
 // GetTenant - GET /api/v1/tenants/:id
+// FIX-003: 使用带超时的请求上下文
 func (h *TenantHandler) GetTenant(c *gin.Context) {
+	ctx, cancel := getTenantRequestContext(c)
+	defer cancel()
+
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, model.APIResponse{
@@ -107,7 +129,7 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 		return
 	}
 
-	tenant, err := h.tenantSvc.GetTenant(id)
+	tenant, err := h.tenantSvc.GetTenant(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, model.APIResponse{
 			Success: false,
@@ -123,7 +145,11 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 }
 
 // UpdateTenant - PUT /api/v1/tenants/:id
+// FIX-003: 使用带超时的请求上下文
 func (h *TenantHandler) UpdateTenant(c *gin.Context) {
+	ctx, cancel := getTenantRequestContext(c)
+	defer cancel()
+
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, model.APIResponse{
@@ -156,7 +182,7 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 		updates["max_devices"] = req.MaxDevices
 	}
 
-	tenant, err := h.tenantSvc.UpdateTenant(id, updates)
+	tenant, err := h.tenantSvc.UpdateTenant(ctx, id, updates)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{
 			Success: false,
@@ -172,7 +198,11 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 }
 
 // DeleteTenant - DELETE /api/v1/tenants/:id (Admin)
+// FIX-003: 使用带超时的请求上下文
 func (h *TenantHandler) DeleteTenant(c *gin.Context) {
+	ctx, cancel := getTenantRequestContext(c)
+	defer cancel()
+
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, model.APIResponse{
@@ -182,7 +212,7 @@ func (h *TenantHandler) DeleteTenant(c *gin.Context) {
 		return
 	}
 
-	err := h.tenantSvc.DeleteTenant(id)
+	err := h.tenantSvc.DeleteTenant(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{
 			Success: false,

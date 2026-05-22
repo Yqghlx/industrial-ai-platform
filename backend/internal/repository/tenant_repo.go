@@ -25,12 +25,13 @@ func (r *TenantRepo) WithTx(tx database.TransactionInterface) *TenantRepo {
 	return &TenantRepo{db: tx}
 }
 
-func (r *TenantRepo) Create(tenant *model.Tenant) error {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) Create(ctx context.Context, tenant *model.Tenant) error {
 	query := `
 		INSERT INTO tenants (id, name, slug, plan, max_devices, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := r.db.Exec(context.Background(), query,
+	_, err := r.db.Exec(ctx, query,
 		tenant.ID,
 		tenant.Name,
 		tenant.Slug,
@@ -42,14 +43,15 @@ func (r *TenantRepo) Create(tenant *model.Tenant) error {
 	return err
 }
 
-func (r *TenantRepo) GetByID(id string) (*model.Tenant, error) {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) GetByID(ctx context.Context, id string) (*model.Tenant, error) {
 	query := `
 		SELECT id, name, slug, plan, max_devices, created_at, updated_at
 		FROM tenants
 		WHERE id = $1
 	`
 	tenant := &model.Tenant{}
-	err := r.db.QueryRow(context.Background(), query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&tenant.ID,
 		&tenant.Name,
 		&tenant.Slug,
@@ -67,14 +69,15 @@ func (r *TenantRepo) GetByID(id string) (*model.Tenant, error) {
 	return tenant, nil
 }
 
-func (r *TenantRepo) GetBySlug(slug string) (*model.Tenant, error) {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) GetBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
 	query := `
 		SELECT id, name, slug, plan, max_devices, created_at, updated_at
 		FROM tenants
 		WHERE slug = $1
 	`
 	tenant := &model.Tenant{}
-	err := r.db.QueryRow(context.Background(), query, slug).Scan(
+	err := r.db.QueryRow(ctx, query, slug).Scan(
 		&tenant.ID,
 		&tenant.Name,
 		&tenant.Slug,
@@ -92,14 +95,15 @@ func (r *TenantRepo) GetBySlug(slug string) (*model.Tenant, error) {
 	return tenant, nil
 }
 
-func (r *TenantRepo) List(limit, offset int) ([]model.Tenant, error) {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) List(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
 	query := `
 		SELECT id, name, slug, plan, max_devices, created_at, updated_at
 		FROM tenants
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	rows, err := r.db.Query(context.Background(), query, limit, offset)
+	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -125,13 +129,14 @@ func (r *TenantRepo) List(limit, offset int) ([]model.Tenant, error) {
 	return tenants, nil
 }
 
-func (r *TenantRepo) Update(tenant *model.Tenant) error {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) Update(ctx context.Context, tenant *model.Tenant) error {
 	query := `
 		UPDATE tenants
 		SET name = $2, slug = $3, plan = $4, max_devices = $5, updated_at = $6
 		WHERE id = $1
 	`
-	result, err := r.db.Exec(context.Background(), query,
+	result, err := r.db.Exec(ctx, query,
 		tenant.ID,
 		tenant.Name,
 		tenant.Slug,
@@ -152,9 +157,10 @@ func (r *TenantRepo) Update(tenant *model.Tenant) error {
 	return nil
 }
 
-func (r *TenantRepo) Delete(id string) error {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM tenants WHERE id = $1`
-	result, err := r.db.Exec(context.Background(), query, id)
+	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}
@@ -168,9 +174,10 @@ func (r *TenantRepo) Delete(id string) error {
 	return nil
 }
 
-func (r *TenantRepo) Count() (int, error) {
+// FIX-003: 添加 context 参数，替换 context.Background()
+func (r *TenantRepo) Count(ctx context.Context) (int, error) {
 	query := `SELECT COUNT(*) FROM tenants`
 	var count int
-	err := r.db.QueryRow(context.Background(), query).Scan(&count)
+	err := r.db.QueryRow(ctx, query).Scan(&count)
 	return count, err
 }

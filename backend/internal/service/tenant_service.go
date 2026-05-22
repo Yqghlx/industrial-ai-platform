@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,9 +18,10 @@ func NewTenantService(repo repository.TenantRepositoryInterface) *TenantService 
 	return &TenantService{repo: repo}
 }
 
-func (s *TenantService) CreateTenant(name, slug, plan string, maxDevices int) (*model.Tenant, error) {
+// FIX-003: 添加 context 参数
+func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error) {
 	// Check if slug exists
-	existing, err := s.repo.GetBySlug(slug)
+	existing, err := s.repo.GetBySlug(ctx, slug)
 	if err == nil && existing != nil {
 		return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", slug)
 	}
@@ -45,7 +47,7 @@ func (s *TenantService) CreateTenant(name, slug, plan string, maxDevices int) (*
 		UpdatedAt:  time.Now(),
 	}
 
-	err = s.repo.Create(tenant)
+	err = s.repo.Create(ctx, tenant)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
 	}
@@ -62,34 +64,38 @@ func (s *TenantService) getDefaultMaxDevices(plan string) int {
 	return limits[plan]
 }
 
-func (s *TenantService) GetTenant(id string) (*model.Tenant, error) {
-	return s.repo.GetByID(id)
+// FIX-003: 添加 context 参数
+func (s *TenantService) GetTenant(ctx context.Context, id string) (*model.Tenant, error) {
+	return s.repo.GetByID(ctx, id)
 }
 
-func (s *TenantService) GetTenantBySlug(slug string) (*model.Tenant, error) {
-	tenant, err := s.repo.GetBySlug(slug)
+// FIX-003: 添加 context 参数
+func (s *TenantService) GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
+	tenant, err := s.repo.GetBySlug(ctx, slug)
 	if err != nil {
 		return nil, errors.NewTenantNotFoundError(slug)
 	}
 	return tenant, nil
 }
 
-func (s *TenantService) ListTenants(limit, offset int) ([]model.Tenant, error) {
+// FIX-003: 添加 context 参数
+func (s *TenantService) ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	if offset < 0 {
 		offset = 0
 	}
-	tenants, err := s.repo.List(limit, offset)
+	tenants, err := s.repo.List(ctx, limit, offset)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
 	}
 	return tenants, nil
 }
 
-func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) (*model.Tenant, error) {
-	tenant, err := s.repo.GetByID(id)
+// FIX-003: 添加 context 参数
+func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error) {
+	tenant, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, errors.NewTenantNotFoundError(id)
 	}
@@ -100,7 +106,7 @@ func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) 
 	}
 	if slug, ok := updates["slug"].(string); ok && slug != "" {
 		// Check if new slug exists for another tenant
-		existing, err := s.repo.GetBySlug(slug)
+		existing, err := s.repo.GetBySlug(ctx, slug)
 		if err == nil && existing != nil && existing.ID != id {
 			return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", slug)
 		}
@@ -118,7 +124,7 @@ func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) 
 
 	tenant.UpdatedAt = time.Now()
 
-	err = s.repo.Update(tenant)
+	err = s.repo.Update(ctx, tenant)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
 	}
@@ -126,15 +132,17 @@ func (s *TenantService) UpdateTenant(id string, updates map[string]interface{}) 
 	return tenant, nil
 }
 
-func (s *TenantService) DeleteTenant(id string) error {
-	if err := s.repo.Delete(id); err != nil {
+// FIX-003: 添加 context 参数
+func (s *TenantService) DeleteTenant(ctx context.Context, id string) error {
+	if err := s.repo.Delete(ctx, id); err != nil {
 		return errors.NewDatabaseError(err.Error())
 	}
 	return nil
 }
 
-func (s *TenantService) CountTenants() (int, error) {
-	count, err := s.repo.Count()
+// FIX-003: 添加 context 参数
+func (s *TenantService) CountTenants(ctx context.Context) (int, error) {
+	count, err := s.repo.Count(ctx)
 	if err != nil {
 		return 0, errors.NewDatabaseError(err.Error())
 	}
