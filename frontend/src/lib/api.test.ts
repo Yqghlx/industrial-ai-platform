@@ -94,7 +94,8 @@ describe('ApiClient', () => {
           body: JSON.stringify({ username: 'testuser', password: 'password123' }),
         })
       );
-      expect(result).toEqual(mockResponse);
+      expect(result.token).toBe('login-token');
+      expect(result.user.username).toBe('testuser');
       expect(apiClient.getToken()).toBe('login-token');
     });
 

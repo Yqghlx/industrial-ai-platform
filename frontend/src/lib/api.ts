@@ -180,8 +180,8 @@ class ApiClient {
       { username, password }
     );
     
-    // 使用 access_token
-    const token = response.access_token;
+    // 后端返回 token 字段
+    const token = response.token || response.access_token;
     if (!token) {
       throw new Error('Login failed: no token in response');
     }
