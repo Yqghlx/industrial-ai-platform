@@ -514,6 +514,11 @@ type MockAgentTaskLogRepository struct {
 	mock.Mock
 }
 
+// NewMockAgentTaskLogRepository creates a new MockAgentTaskLogRepository
+func NewMockAgentTaskLogRepository() *MockAgentTaskLogRepository {
+	return &MockAgentTaskLogRepository{}
+}
+
 func (m *MockAgentTaskLogRepository) Create(ctx context.Context, log *model.AgentTaskLog) error {
 	args := m.Called(ctx, log)
 	return args.Error(0)
