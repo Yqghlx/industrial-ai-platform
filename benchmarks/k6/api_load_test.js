@@ -128,7 +128,7 @@ function testSubmitTelemetry(headers) {
       pressure: 100 + Math.random() * 30,
       power_consumption: 500 + Math.random() * 100,
     },
-    status: 'running',
+    status: 'normal',  // Valid values: normal, warning, fault
   };
   
   const res = http.post(`${BASE_URL}${API_PREFIX}/devices/telemetry`, JSON.stringify(payload), {
