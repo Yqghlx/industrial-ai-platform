@@ -107,7 +107,7 @@ func CreateMockServiceFactory() *service.ServiceFactory {
 // CreateMockHandlerFactory 创建 Mock Handler 工厂
 func CreateMockHandlerFactory() *HandlerFactory {
 	sf := CreateMockServiceFactory()
-	return NewHandlerFactory(sf, func(msg model.WSMessage) {})
+	return NewHandlerFactory(sf, func(msg model.WSMessage) {}, new(MockCache))
 }
 
 // ============================================

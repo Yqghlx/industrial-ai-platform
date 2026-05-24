@@ -103,6 +103,7 @@ func (h *TelemetryHandlerNew) GetAIStatus(c *gin.Context) {
 // SEC-MED-02: Public endpoint for edge device telemetry ingestion
 // SEC-MED-04: Device ID format validation is required
 func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
+	ctx := c.Request.Context()
 	var data model.TelemetryData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		response.BadRequest(c, err.Error())
@@ -145,7 +146,12 @@ func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
 		data.Status = "normal"
 	}
 
-	// 占位实现 - 实际需要 TelemetryService.IngestTelemetry 方法
+	// 实际存储遥测数据
+	if err := h.telemetrySvc.Ingest(ctx, &data); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "Telemetry ingested successfully",
 		"device_id": data.DeviceID,

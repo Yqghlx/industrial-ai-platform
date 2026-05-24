@@ -5,6 +5,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/cache"
 )
 
 // ============================================
@@ -16,13 +17,15 @@ import (
 type HandlerFactory struct {
 	serviceFactory *service.ServiceFactory
 	broadcastFunc  func(msg model.WSMessage)
+	cache          cache.CacheService // 添加缓存
 }
 
 // NewHandlerFactory 创建 Handler 工厂
-func NewHandlerFactory(sf *service.ServiceFactory, broadcastFunc func(msg model.WSMessage)) *HandlerFactory {
+func NewHandlerFactory(sf *service.ServiceFactory, broadcastFunc func(msg model.WSMessage), cacheSvc cache.CacheService) *HandlerFactory {
 	return &HandlerFactory{
 		serviceFactory: sf,
 		broadcastFunc:  broadcastFunc,
+		cache:          cacheSvc,
 	}
 }
 
@@ -89,6 +92,7 @@ func (f *HandlerFactory) CreateBusinessHandler() *BusinessHandlerNew {
 		f.serviceFactory.GetReportService(),
 		f.serviceFactory.GetAlertService(),
 		f.broadcastFunc,
+		f.cache,
 	)
 }
 

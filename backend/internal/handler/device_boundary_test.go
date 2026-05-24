@@ -259,7 +259,7 @@ func TestDeviceHandlerNew_CreateDevice_ServiceError(t *testing.T) {
 
 	router.POST("/devices", handler.CreateDevice)
 
-	body := map[string]string{"id": "new-device", "name": "Test", "type": "sensor"}
+	body := map[string]string{"id": "new-device", "name": "Test", "type": "Sensor"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/devices", bytes.NewBuffer(jsonBody))
@@ -286,7 +286,11 @@ func TestDeviceHandlerNew_UpdateDevice_ServiceError(t *testing.T) {
 
 	router.PUT("/devices/:id", handler.UpdateDevice)
 
-	body := map[string]string{"name": "Updated", "type": "sensor"}
+	body := map[string]interface{}{
+		"id":   "device-1",
+		"name": "Updated",
+		"type": "Sensor",
+	}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPut, "/devices/device-1", bytes.NewBuffer(jsonBody))
@@ -313,7 +317,13 @@ func TestDeviceHandlerNew_CreateRule_ServiceError(t *testing.T) {
 
 	router.POST("/rules", handler.CreateRule)
 
-	body := map[string]interface{}{"name": "Rule", "metric": "temp", "operator": ">", "threshold": 80.0}
+	body := map[string]interface{}{
+		"name":      "Rule",
+		"metric":    "temperature",
+		"operator":  ">",
+		"threshold": 80.0,
+		"severity":  "high",
+	}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/rules", bytes.NewBuffer(jsonBody))

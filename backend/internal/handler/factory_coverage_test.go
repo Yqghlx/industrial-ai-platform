@@ -21,7 +21,7 @@ func TestNewHandlerFactory(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 
 	require.NotNil(t, factory)
 	assert.NotNil(t, factory.serviceFactory)
@@ -34,7 +34,7 @@ func TestHandlerFactory_CreateDeviceHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateDeviceHandler()
 
 	assert.NotNil(t, handler)
@@ -46,7 +46,7 @@ func TestHandlerFactory_CreateAlertHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateAlertHandler()
 
 	assert.NotNil(t, handler)
@@ -58,7 +58,7 @@ func TestHandlerFactory_CreateTelemetryHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateTelemetryHandler()
 
 	assert.NotNil(t, handler)
@@ -70,7 +70,7 @@ func TestHandlerFactory_CreateAuthHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateAuthHandler()
 
 	assert.NotNil(t, handler)
@@ -82,7 +82,7 @@ func TestHandlerFactory_CreateAdminHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateAdminHandler()
 
 	assert.NotNil(t, handler)
@@ -94,7 +94,7 @@ func TestHandlerFactory_CreateHealthHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateHealthHandler()
 
 	assert.NotNil(t, handler)
@@ -106,7 +106,7 @@ func TestHandlerFactory_CreateExportHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateExportHandler()
 
 	assert.NotNil(t, handler)
@@ -118,7 +118,7 @@ func TestHandlerFactory_CreateBusinessHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateBusinessHandler()
 
 	assert.NotNil(t, handler)
@@ -130,7 +130,7 @@ func TestHandlerFactory_CreateRBACHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateRBACHandler()
 
 	// TODO: returns nil until unified interface
@@ -143,7 +143,7 @@ func TestHandlerFactory_CreateTenantHandler(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	handler := factory.CreateTenantHandler()
 
 	// TODO: returns nil until unified interface
@@ -160,7 +160,7 @@ func TestNewHandlerRegistry(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	router := gin.New()
 
 	registry := NewHandlerRegistry(factory, router)
@@ -176,7 +176,7 @@ func TestHandlerRegistry_RegisterAll(t *testing.T) {
 	mockSF := service.NewServiceFactory()
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	factory := NewHandlerFactory(mockSF, broadcastFunc)
+factory := NewHandlerFactory(mockSF, broadcastFunc, new(MockCache))
 	router := gin.New()
 
 	registry := NewHandlerRegistry(factory, router)

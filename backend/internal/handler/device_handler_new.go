@@ -122,16 +122,24 @@ func (h *DeviceHandlerNew) UpdateDevice(c *gin.Context) {
 	ctx := c.Request.Context()
 	deviceID := c.Param("id")
 
-	var device model.Device
-	if err := c.ShouldBindJSON(&device); err != nil {
+	var req model.DeviceUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "INVALID_REQUEST"})
 		return
 	}
 
-	device.ID = deviceID
-	device.UpdatedAt = time.Now()
+	// Build device from request and URL ID
+	device := &model.Device{
+		ID:          deviceID,
+		Name:        req.Name,
+		Type:        req.Type,
+		Location:    req.Location,
+		Status:      req.Status,
+		Description: req.Description,
+		UpdatedAt:   time.Now(),
+	}
 
-	if err := h.deviceSvc.Update(ctx, &device); err != nil {
+	if err := h.deviceSvc.Update(ctx, device); err != nil {
 		response.HandleError(c, err)
 		return
 	}

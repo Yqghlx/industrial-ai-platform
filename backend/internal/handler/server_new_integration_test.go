@@ -17,6 +17,7 @@ import (
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/mocks"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/cache"
 )
 
 // ============================================
@@ -68,29 +69,52 @@ type MockCache struct {
 	mock.Mock
 }
 
-func (m *MockCache) Get(key string) (interface{}, error) {
-	args := m.Called(key)
-	return args.Get(0), args.Error(1)
+func (m *MockCache) Get(ctx context.Context, key string) ([]byte, error) {
+	args := m.Called(ctx, key)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockCache) Set(key string, value interface{}, ttl time.Duration) error {
-	args := m.Called(key, value, ttl)
+func (m *MockCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	args := m.Called(ctx, key, value, ttl)
 	return args.Error(0)
 }
 
-func (m *MockCache) Delete(key string) error {
-	args := m.Called(key)
+func (m *MockCache) Delete(ctx context.Context, key string) error {
+	args := m.Called(ctx, key)
 	return args.Error(0)
+}
+
+func (m *MockCache) DeleteByPattern(ctx context.Context, pattern string) error {
+	args := m.Called(ctx, pattern)
+	return args.Error(0)
+}
+
+func (m *MockCache) Exists(ctx context.Context, key string) bool {
+	args := m.Called(ctx, key)
+	return args.Bool(0)
+}
+
+func (m *MockCache) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	args := m.Called(ctx, key)
+	return args.Get(0).(time.Duration), args.Error(1)
+}
+
+func (m *MockCache) IsAvailable() bool {
+	args := m.Called()
+	return args.Bool(0)
+}
+
+func (m *MockCache) GetStats() cache.Stats {
+	args := m.Called()
+	return args.Get(0).(cache.Stats)
 }
 
 func (m *MockCache) Close() error {
 	args := m.Called()
 	return args.Error(0)
-}
-
-func (m *MockCache) GetStats() map[string]interface{} {
-	args := m.Called()
-	return args.Get(0).(map[string]interface{})
 }
 
 // ============================================
@@ -184,7 +208,7 @@ func TestHTTPServerNew_setupHandlers_Basic(t *testing.T) {
 	broadcastFunc := func(msg model.WSMessage) {}
 
 	// Create handlers using factory
-	handlerFactory := NewHandlerFactory(sf, broadcastFunc)
+	handlerFactory := NewHandlerFactory(sf, broadcastFunc, new(MockCache))
 
 	// Setup routes manually (simulating setupHandlers)
 	deviceHandler := handlerFactory.CreateDeviceHandler()

@@ -26,6 +26,10 @@ import (
 	"github.com/industrial-ai/platform/pkg/wscompression"
 
 	_ "github.com/lib/pq" // PostgreSQL driver registration
+	
+	// Swagger documentation
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
 )
 
 // ============================================
@@ -74,14 +78,17 @@ type HTTPServerNew struct {
 	rbacRepo   repository.RBACRepositoryInterface
 
 	// Services
-	authSvc   service.AuthServiceInterface
-	userSvc   service.UserServiceInterface
-	deviceSvc service.DeviceServiceInterface
-	alertSvc  service.AlertServiceInterface
-	tenantSvc *service.TenantService
-	rbacSvc   *service.RBACService
-	exportSvc *service.ExportService
-	cacheSvc  *cache_service.CacheServiceIntegration
+	authSvc       service.AuthServiceInterface
+	userSvc       service.UserServiceInterface
+	deviceSvc     service.DeviceServiceInterface
+	alertSvc      service.AlertServiceInterface
+	telemetrySvc  service.TelemetryServiceInterface
+	tenantSvc     *service.TenantService
+	rbacSvc       *service.RBACService
+	exportSvc     *service.ExportService
+	reportSvc     service.ReportServiceInterface
+	cacheSvc      *cache_service.CacheServiceIntegration
+	agentSvc      service.AgentServiceInterface
 
 	// Handlers (new architecture)
 	alertHandler     *AlertHandler
@@ -153,15 +160,31 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	alertRepo := repository.NewAlertRepository(dbpkg.NewDBWrapper(db))
 	tenantRepo := repository.NewTenantRepo(dbpkg.NewDBWrapper(db))
 	rbacRepo := repository.NewRBACRepository(dbpkg.NewDBWrapper(db))
+	ruleRepo := repository.NewRuleRepository(dbpkg.NewDBWrapper(db))
+	notificationRepo := repository.NewNotificationRepository(dbpkg.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(dbpkg.NewDBWrapper(db))
+	telemetryRepo := repository.NewTelemetryRepository(dbpkg.NewDBWrapper(db))
+	blackBoxRepo := repository.NewBlackBoxRepository(dbpkg.NewDBWrapper(db))
+	reportRepo := repository.NewReportRepository(dbpkg.NewDBWrapper(db))
 
 	// Initialize services
 	authSvc := service.NewAuthService(userRepo)
 	userSvc := service.NewUserService(userRepo)
-	alertSvc := service.NewAlertService(nil, alertRepo, nil, nil, nil, nil, deviceRepo, service.AlertServiceConfig{})
+	alertSvc := service.NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, service.AlertServiceConfig{})
 	deviceSvc := service.NewDeviceService(deviceRepo, userRepo)
+	telemetrySvc := service.NewTelemetryService(telemetryRepo, deviceRepo, alertSvc)
 	tenantSvc := service.NewTenantService(tenantRepo)
 	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
 	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
+	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
+	
+	// Initialize AgentService for AI features
+	taskLogRepo := repository.NewMockAgentTaskLogRepository()
+	agentSvc := service.NewAgentService(
+		taskLogRepo,
+		deviceRepo,
+		telemetryRepo,
+	)
 
 	// Initialize Gin router
 	router := gin.New()
@@ -184,14 +207,13 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			if isProduction {
-				if origin == "" {
-					return false
-				}
-				return wsAllowedOrigins[origin]
-			}
-			if origin == "" && len(wsAllowedOrigins) == 0 {
+			// 开发环境允许所有 origin
+			if !isProduction {
 				return true
+			}
+			// 生产环境严格检查
+			if origin == "" {
+				return false
 			}
 			return wsAllowedOrigins[origin] || wsAllowedOrigins["*"]
 		},
@@ -230,10 +252,13 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		userSvc:       userSvc,
 		deviceSvc:     deviceSvc,
 		alertSvc:      alertSvc,
+		telemetrySvc:  telemetrySvc,
 		tenantSvc:     tenantSvc,
 		rbacSvc:       rbacSvc,
 		exportSvc:     exportSvc,
+		reportSvc:     reportSvc,
 		cacheSvc:      cacheSvc,
+		agentSvc:      agentSvc,
 		cache:         cacheSvc.GetCache(),
 		wsClients:     make(map[*websocket.Conn]bool),
 		broadcastChan: make(chan model.WSMessage, 100),
@@ -274,9 +299,9 @@ func (s *HTTPServerNew) setupMiddleware(corsOrigins []string) {
 func (s *HTTPServerNew) setupHandlers() {
 	// Initialize handlers
 	s.alertHandler = NewAlertHandler(s.alertSvc, s.broadcastFn)
-	s.deviceHandler = NewDeviceHandlerNew(s.deviceSvc, s.alertSvc, s.authSvc, nil, s.broadcastFn)
-	s.businessHandler = NewBusinessHandlerNew(nil, nil, nil, nil, s.alertSvc, s.broadcastFn)
-	s.telemetryHandler = NewTelemetryHandlerNew(nil, nil)
+	s.deviceHandler = NewDeviceHandlerNew(s.deviceSvc, s.alertSvc, s.authSvc, s.telemetrySvc, s.broadcastFn)
+	s.businessHandler = NewBusinessHandlerNew(nil, nil, nil, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
+	s.telemetryHandler = NewTelemetryHandlerNew(s.telemetrySvc, s.agentSvc)
 	s.authHandler = NewAuthHandlerNew(s.authSvc, s.userSvc)
 	s.tenantHandler = NewTenantHandler(s.tenantSvc)
 	s.rbacHandler = NewRBACHandler(s.rbacSvc)
@@ -286,6 +311,11 @@ func (s *HTTPServerNew) setupHandlers() {
 
 	// Setup public routes
 	s.router.GET("/health", s.healthCheck)
+	
+	// Swagger API Documentation
+	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	s.router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	
 	middleware.SetupPrometheusEndpoint(s.router)
 
 	// SEC-MED-02: Public telemetry endpoint - intentionally public for edge device ingestion

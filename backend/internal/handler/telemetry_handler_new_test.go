@@ -248,6 +248,8 @@ func TestTelemetryHandlerNew_IngestTelemetry_Placeholder(t *testing.T) {
 
 	handler := NewTelemetryHandlerNew(mockTelemetrySvc, mockAgentSvc)
 
+	mockTelemetrySvc.On("Ingest", mock.Anything, mock.AnythingOfType("*model.TelemetryData")).Return(nil)
+
 	router.POST("/telemetry/ingest", handler.IngestTelemetry)
 
 	body := map[string]interface{}{

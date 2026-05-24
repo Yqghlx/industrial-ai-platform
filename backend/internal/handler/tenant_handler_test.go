@@ -36,7 +36,7 @@ func TestTenantHandler_CreateTenant(t *testing.T) {
 				Plan: "pro",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("CreateTenant", "Test Tenant", "test-tenant", "pro", 0).Return(&model.Tenant{
+				m.On("CreateTenant", mock.Anything, "Test Tenant", "test-tenant", "pro", 0).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Test Tenant",
 					Slug:       "test-tenant",
@@ -76,7 +76,7 @@ func TestTenantHandler_CreateTenant(t *testing.T) {
 				Plan: "free",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("CreateTenant", "Test Tenant", "existing-slug", "free", 0).Return(nil, errors.New("tenant slug already exists"))
+				m.On("CreateTenant", mock.Anything, "Test Tenant", "existing-slug", "free", 0).Return(nil, errors.New("tenant slug already exists"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,
@@ -88,7 +88,7 @@ func TestTenantHandler_CreateTenant(t *testing.T) {
 				Slug: "new-tenant",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("CreateTenant", "New Tenant", "new-tenant", "", 0).Return(&model.Tenant{
+				m.On("CreateTenant", mock.Anything, "New Tenant", "new-tenant", "", 0).Return(&model.Tenant{
 					ID:         "tenant-002",
 					Name:       "New Tenant",
 					Slug:       "new-tenant",
@@ -150,11 +150,11 @@ func TestTenantHandler_ListTenants(t *testing.T) {
 			name:        "successful list tenants",
 			queryParams: "",
 			mockSetup: func(m *MockTenantService) {
-				m.On("ListTenants", 50, 0).Return([]model.Tenant{
+				m.On("ListTenants", mock.Anything, 50, 0).Return([]model.Tenant{
 					{ID: "tenant-001", Name: "Tenant 1", Slug: "tenant-1", Plan: "pro"},
 					{ID: "tenant-002", Name: "Tenant 2", Slug: "tenant-2", Plan: "free"},
 				}, nil)
-				m.On("CountTenants").Return(2, nil)
+				m.On("CountTenants", mock.Anything).Return(2, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectSuccess:  true,
@@ -164,8 +164,8 @@ func TestTenantHandler_ListTenants(t *testing.T) {
 			name:        "list tenants with pagination",
 			queryParams: "?limit=10&offset=20",
 			mockSetup: func(m *MockTenantService) {
-				m.On("ListTenants", 10, 20).Return([]model.Tenant{}, nil)
-				m.On("CountTenants").Return(50, nil)
+				m.On("ListTenants", mock.Anything, 10, 20).Return([]model.Tenant{}, nil)
+				m.On("CountTenants", mock.Anything).Return(50, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectSuccess:  true,
@@ -175,7 +175,7 @@ func TestTenantHandler_ListTenants(t *testing.T) {
 			name:        "list tenants service error",
 			queryParams: "",
 			mockSetup: func(m *MockTenantService) {
-				m.On("ListTenants", 50, 0).Return(nil, errors.New("database error"))
+				m.On("ListTenants", mock.Anything, 50, 0).Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,
@@ -184,10 +184,10 @@ func TestTenantHandler_ListTenants(t *testing.T) {
 			name:        "list tenants with count error",
 			queryParams: "",
 			mockSetup: func(m *MockTenantService) {
-				m.On("ListTenants", 50, 0).Return([]model.Tenant{
+				m.On("ListTenants", mock.Anything, 50, 0).Return([]model.Tenant{
 					{ID: "tenant-001", Name: "Tenant 1", Slug: "tenant-1", Plan: "pro"},
 				}, nil)
-				m.On("CountTenants").Return(0, errors.New("count error"))
+				m.On("CountTenants", mock.Anything).Return(0, errors.New("count error"))
 			},
 			expectedStatus: http.StatusOK,
 			expectSuccess:  true,
@@ -247,7 +247,7 @@ func TestTenantHandler_GetTenant(t *testing.T) {
 				c.Params = gin.Params{{Key: "id", Value: tenantID}}
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("GetTenant", "tenant-001").Return(&model.Tenant{
+				m.On("GetTenant", mock.Anything, "tenant-001").Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Test Tenant",
 					Slug:       "test-tenant",
@@ -268,7 +268,7 @@ func TestTenantHandler_GetTenant(t *testing.T) {
 				c.Params = gin.Params{{Key: "id", Value: tenantID}}
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("GetTenant", "non-existent").Return(nil, errors.New("tenant not found"))
+				m.On("GetTenant", mock.Anything, "non-existent").Return(nil, errors.New("tenant not found"))
 			},
 			expectedStatus: http.StatusNotFound,
 			expectSuccess:  false,
@@ -336,7 +336,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				MaxDevices: 500,
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Updated Tenant",
 					Slug:       "test-tenant",
@@ -359,7 +359,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				"name": "Only Name Updated",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Only Name Updated",
 					Slug:       "test-tenant",
@@ -395,7 +395,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				Name: "Updated Tenant",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", "non-existent", mock.AnythingOfType("map[string]interface {}")).Return(nil, errors.New("tenant not found"))
+				m.On("UpdateTenant", mock.Anything, "non-existent", mock.AnythingOfType("map[string]interface {}")).Return(nil, errors.New("tenant not found"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,
@@ -408,7 +408,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 			},
 			requestBody: map[string]interface{}{},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Test Tenant",
 					Slug:       "test-tenant",
@@ -471,7 +471,7 @@ func TestTenantHandler_DeleteTenant(t *testing.T) {
 				c.Params = gin.Params{{Key: "id", Value: tenantID}}
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("DeleteTenant", "tenant-001").Return(nil)
+				m.On("DeleteTenant", mock.Anything, "tenant-001").Return(nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectSuccess:  true,
@@ -483,7 +483,7 @@ func TestTenantHandler_DeleteTenant(t *testing.T) {
 				c.Params = gin.Params{{Key: "id", Value: tenantID}}
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("DeleteTenant", "non-existent").Return(errors.New("tenant not found"))
+				m.On("DeleteTenant", mock.Anything, "non-existent").Return(errors.New("tenant not found"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,
@@ -505,7 +505,7 @@ func TestTenantHandler_DeleteTenant(t *testing.T) {
 				c.Params = gin.Params{{Key: "id", Value: tenantID}}
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("DeleteTenant", "tenant-002").Return(errors.New("database connection error"))
+				m.On("DeleteTenant", mock.Anything, "tenant-002").Return(errors.New("database connection error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,

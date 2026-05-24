@@ -155,7 +155,13 @@ func TestAlertHandlerNew_UpdateRule_ServiceError(t *testing.T) {
 
 	router.PUT("/rules/:id", handler.UpdateRule)
 
-	body := map[string]interface{}{"name": "Updated", "metric": "temp", "threshold": 90.0}
+	body := map[string]interface{}{
+		"name":      "Updated",
+		"metric":    "temperature",
+		"operator":  ">",
+		"threshold": 90.0,
+		"severity":  "high",
+	}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPut, "/rules/1", bytes.NewBuffer(jsonBody))

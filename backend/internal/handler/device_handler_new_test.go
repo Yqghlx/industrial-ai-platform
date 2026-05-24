@@ -192,7 +192,7 @@ func TestDeviceHandlerNew_CreateDevice_Success(t *testing.T) {
 	body := map[string]string{
 		"id":   "new-device-1",
 		"name": "New Device",
-		"type": "sensor",
+		"type": "Sensor", // Use valid type (capitalized)
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -201,6 +201,11 @@ func TestDeviceHandlerNew_CreateDevice_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
+
+	// Debug: print response body if not OK
+	if w.Code != http.StatusOK {
+		t.Logf("Response body: %s", w.Body.String())
+	}
 
 	require.Equal(t, http.StatusOK, w.Code)
 
@@ -498,8 +503,9 @@ func TestDeviceHandlerNew_UpdateDevice_Success(t *testing.T) {
 	router.PUT("/devices/:id", handler.UpdateDevice)
 
 	body := map[string]string{
+		"id":   "device-1", // Include ID for binding validation
 		"name": "Updated Device",
-		"type": "sensor",
+		"type": "Sensor",
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -508,6 +514,11 @@ func TestDeviceHandlerNew_UpdateDevice_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
+
+	// Debug: print response body if not OK
+	if w.Code != http.StatusOK {
+		t.Logf("Response body: %s", w.Body.String())
+	}
 
 	require.Equal(t, http.StatusOK, w.Code)
 
@@ -582,6 +593,7 @@ func TestDeviceHandlerNew_UpdateRule_Success(t *testing.T) {
 		"metric":    "temperature",
 		"operator":  ">",
 		"threshold": 90.0,
+		"severity":  "high",
 	}
 	jsonBody, _ := json.Marshal(body)
 
