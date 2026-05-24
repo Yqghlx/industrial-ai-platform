@@ -53,6 +53,9 @@ func (h *AlertHandler) ListAlerts(c *gin.Context) {
 	}
 
 	// Apply additional filters
+	// TODO-P2: 当前在Handler层内存过滤，大数据量时性能可能受影响
+	// 未来优化方案：将severity/deviceID传递到Repository层进行SQL WHERE过滤
+	// 当前实现：对于中等规模数据（<1000条），性能足够
 	if severity != "" || deviceID != "" {
 		filtered := []model.Alert{}
 		for _, a := range alerts {
