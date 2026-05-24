@@ -29,8 +29,8 @@ const API_PREFIX = '/api/v1';
 
 // Test data
 const TEST_USER = {
-  username: 'admin',
-  password: 'admin123',  // In production, use environment variable
+  username: 'k6test',
+  password: 'K6Test@12345',  // Performance test user
 };
 
 let authToken = '';
@@ -43,10 +43,17 @@ export function setup() {
   
   check(loginRes, {
     'login successful': (r) => r.status === 200,
-    'received token': (r) => r.json('data.token') !== undefined,
+    'received token': (r) => {
+      try {
+        const data = r.json();
+        return data?.token !== undefined;
+      } catch (e) {
+        return false;
+      }
+    },
   });
   
-  return { token: loginRes.json('data.token') };
+  return { token: loginRes.json('token') };
 }
 
 // Main test function
