@@ -3,6 +3,7 @@ package middleware
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +32,7 @@ func validateJWTToken(tokenString, secret string) (string, error) {
 		if userID, ok := claims["user_id"]; ok {
 			switch v := userID.(type) {
 			case float64:
-				return string(int(v)), nil
+				return strconv.Itoa(int(v)), nil
 			case string:
 				return v, nil
 			default:

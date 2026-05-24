@@ -36,10 +36,10 @@ export const options = {
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const API_PREFIX = '/api/v1';
 
-// Test user credentials
+// Test user credentials (same as api_load_test.js)
 const TEST_USER = {
-  username: 'admin',
-  password: 'admin123',
+  username: 'k6test',
+  password: 'K6Test@12345',
 };
 
 export function setup() {
