@@ -238,7 +238,7 @@ func TestTenantService_UpdateTenant(t *testing.T) {
 	updates := map[string]interface{}{
 		"name": "New Name",
 	}
-	tenant, err := svc.UpdateTenant("t-1", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.NotNil(t, tenant)
 	assert.Equal(t, "New Name", tenant.Name)
@@ -266,7 +266,7 @@ func TestTenantService_UpdateTenant_Slug(t *testing.T) {
 	updates := map[string]interface{}{
 		"slug": "new-slug",
 	}
-	tenant, err := svc.UpdateTenant("t-1", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, "new-slug", tenant.Slug)
 }
@@ -292,7 +292,7 @@ func TestTenantService_UpdateTenant_SlugConflict(t *testing.T) {
 	updates := map[string]interface{}{
 		"slug": "new-slug",
 	}
-	tenant, err := svc.UpdateTenant("t-1", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "t-1", updates)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Tenant slug already exists")
 	assert.Nil(t, tenant)
@@ -315,7 +315,7 @@ func TestTenantService_UpdateTenant_Plan(t *testing.T) {
 	updates := map[string]interface{}{
 		"plan": "pro",
 	}
-	tenant, err := svc.UpdateTenant("t-1", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, "pro", tenant.Plan)
 }
@@ -337,7 +337,7 @@ func TestTenantService_UpdateTenant_MaxDevices(t *testing.T) {
 	updates := map[string]interface{}{
 		"max_devices": 200,
 	}
-	tenant, err := svc.UpdateTenant("t-1", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, tenant.MaxDevices)
 }
@@ -350,7 +350,7 @@ func TestTenantService_UpdateTenant_NotFound(t *testing.T) {
 		WillReturnError(repository.ErrTenantNotFound)
 
 	updates := map[string]interface{}{"name": "New"}
-	tenant, err := svc.UpdateTenant("nonexistent", updates)
+	tenant, err := svc.UpdateTenant(context.TODO(), "nonexistent", updates)
 	assert.Error(t, err)
 	assert.Nil(t, tenant)
 }
@@ -362,7 +362,7 @@ func TestTenantService_DeleteTenant(t *testing.T) {
 		WithArgs("t-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := svc.DeleteTenant("t-1")
+	err := svc.DeleteTenant(context.TODO(), "t-1")
 	assert.NoError(t, err)
 }
 
@@ -373,7 +373,7 @@ func TestTenantService_DeleteTenant_NotFound(t *testing.T) {
 		WithArgs("nonexistent").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := svc.DeleteTenant("nonexistent")
+	err := svc.DeleteTenant(context.TODO(), "nonexistent")
 	assert.Error(t, err)
 }
 
@@ -383,7 +383,7 @@ func TestTenantService_CountTenants(t *testing.T) {
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM tenants`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(42))
 
-	count, err := svc.CountTenants()
+	count, err := svc.CountTenants(context.TODO())
 	assert.NoError(t, err)
 	assert.Equal(t, 42, count)
 }
