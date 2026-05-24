@@ -148,6 +148,9 @@ export default {
     range24h: '最近 24 小时',
     range7d: '最近 7 天',
     range30d: '最近 30 天',
+    records: '{count} 条记录',
+    noHistoryData: '暂无历史数据',
+    selectDevice: '请选择设备查看历史数据',
   },
   alert: {
     title: '告警',
@@ -221,6 +224,19 @@ export default {
     activeLabel: '活跃',
     acknowledgedLabel: '已确认',
     resolvedLabel: '已解决',
+    // 告警页面
+    activeAlerts: '活跃告警',
+    criticalAlerts: '紧急告警',
+    alertList: '告警列表',
+    noAlerts: '暂无告警',
+    acknowledge: '确认',
+    resolve: '解决',
+    processed: '已处理',
+    alertResolved: '告警 #{id} 已解决',
+    alertAcknowledged: '告警 #{id} 已确认',
+    device: '设备',
+    triggered: '触发',
+    resolvedTime: '解决',
   },
  workOrder: {
     title: '工单',
@@ -269,6 +285,7 @@ export default {
     list: '报告列表',
     noReports: '暂无报告',
     details: '详细信息',
+    analysis: '报表分析',
   },
   ai: {
     title: 'AI智能体',

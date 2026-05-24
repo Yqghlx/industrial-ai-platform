@@ -176,9 +176,9 @@ func TestGetNotificationRepository(t *testing.T) {
 	}
 }
 
-// TestGetTenantRepository tests getting TenantRepository from factory
-// Note: Currently returns nil as per TODO in factory.go
-func TestGetTenantRepository(t *testing.T) {
+// TestGetTenantRepo tests getting TenantRepo from factory
+// FIX-001: Updated to use new method signature that returns error
+func TestGetTenantRepo(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -186,18 +186,20 @@ func TestGetTenantRepository(t *testing.T) {
 	factory := NewRepositoryFactory(db)
 	require.NotNil(t, factory)
 
-	repo := factory.GetTenantRepository()
-	// Currently returns nil per TODO implementation
-	assert.Nil(t, repo, "TenantRepository currently returns nil (TODO)")
+	repo, err := factory.GetTenantRepo()
+	// FIX-001: Now returns (*TenantRepo, error) instead of nil
+	assert.NoError(t, err, "GetTenantRepo should not return error")
+	assert.NotNil(t, repo, "TenantRepo should not be nil")
+	assert.IsType(t, &TenantRepo{}, repo, "Should return TenantRepo type")
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
 }
 
-// TestGetPermissionRepository tests getting PermissionRepository from factory
-// Note: Currently returns nil as per TODO in factory.go
-func TestGetPermissionRepository(t *testing.T) {
+// TestGetPermissionRepo tests getting PermissionRepo from factory
+// FIX-001: Updated to use new method signature that returns error
+func TestGetPermissionRepo(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -205,18 +207,20 @@ func TestGetPermissionRepository(t *testing.T) {
 	factory := NewRepositoryFactory(db)
 	require.NotNil(t, factory)
 
-	repo := factory.GetPermissionRepository()
-	// Currently returns nil per TODO implementation
-	assert.Nil(t, repo, "PermissionRepository currently returns nil (TODO)")
+	repo, err := factory.GetPermissionRepo()
+	// FIX-001: Now returns (*PermissionRepo, error) instead of nil
+	assert.NoError(t, err, "GetPermissionRepo should not return error")
+	assert.NotNil(t, repo, "PermissionRepo should not be nil")
+	assert.IsType(t, &PermissionRepo{}, repo, "Should return PermissionRepo type")
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
 }
 
-// TestGetRoleRepository tests getting RoleRepository from factory
-// Note: Currently returns nil as per TODO in factory.go
-func TestGetRoleRepository(t *testing.T) {
+// TestGetRoleRepo tests getting RoleRepo from factory
+// FIX-001: Updated to use new method signature that returns error
+func TestGetRoleRepo(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -224,9 +228,11 @@ func TestGetRoleRepository(t *testing.T) {
 	factory := NewRepositoryFactory(db)
 	require.NotNil(t, factory)
 
-	repo := factory.GetRoleRepository()
-	// Currently returns nil per TODO implementation
-	assert.Nil(t, repo, "RoleRepository currently returns nil (TODO)")
+	repo, err := factory.GetRoleRepo()
+	// FIX-001: Now returns (*RoleRepo, error) instead of nil
+	assert.NoError(t, err, "GetRoleRepo should not return error")
+	assert.NotNil(t, repo, "RoleRepo should not be nil")
+	assert.IsType(t, &RoleRepo{}, repo, "Should return RoleRepo type")
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
@@ -251,9 +257,9 @@ func TestGetRuleRepository(t *testing.T) {
 	}
 }
 
-// TestGetUserRoleRepository tests getting UserRoleRepository from factory
-// Note: Currently returns nil as per TODO in factory.go
-func TestGetUserRoleRepository(t *testing.T) {
+// TestGetRBACRepository tests getting RBACRepository from factory
+// FIX-001: Updated to use new method that combines role/permission/user-role management
+func TestGetRBACRepository(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -261,9 +267,11 @@ func TestGetUserRoleRepository(t *testing.T) {
 	factory := NewRepositoryFactory(db)
 	require.NotNil(t, factory)
 
-	repo := factory.GetUserRoleRepository()
-	// Currently returns nil per TODO implementation
-	assert.Nil(t, repo, "UserRoleRepository currently returns nil (TODO)")
+	repo, err := factory.GetRBACRepository()
+	// FIX-001: Now returns (*RBACRepository, error) instead of nil
+	assert.NoError(t, err, "GetRBACRepository should not return error")
+	assert.NotNil(t, repo, "RBACRepository should not be nil")
+	assert.IsType(t, &RBACRepository{}, repo, "Should return RBACRepository type")
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
@@ -330,15 +338,26 @@ func TestRepositoryFactory_AllRepositories(t *testing.T) {
 	t.Run("Rule", func(t *testing.T) {
 		assert.NotNil(t, factory.GetRuleRepository())
 	})
-	// TODO items return nil
+	// FIX-001: Updated tests for new method signatures
 	t.Run("Tenant", func(t *testing.T) {
-		assert.Nil(t, factory.GetTenantRepository())
+		repo, err := factory.GetTenantRepo()
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
 	})
 	t.Run("Role", func(t *testing.T) {
-		assert.Nil(t, factory.GetRoleRepository())
+		repo, err := factory.GetRoleRepo()
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
 	})
 	t.Run("Permission", func(t *testing.T) {
-		assert.Nil(t, factory.GetPermissionRepository())
+		repo, err := factory.GetPermissionRepo()
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
+	})
+	t.Run("RBAC", func(t *testing.T) {
+		repo, err := factory.GetRBACRepository()
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
 	})
 
 	if err := mock.ExpectationsWereMet(); err != nil {

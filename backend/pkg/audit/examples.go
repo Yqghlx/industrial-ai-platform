@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -17,7 +18,14 @@ import (
 // ExampleUsage 展示审计日志服务的基本使用
 func ExampleUsage() {
 	// 1. 初始化数据库连接
-	db, err := sqlx.Connect("postgres", "postgres://user:password@localhost:5432/dbname?sslmode=disable")
+	// FIX-003: 使用环境变量而非硬编码连接字符串，防止敏感信息泄露
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		// 仅用于示例演示，实际使用必须设置环境变量
+		fmt.Println("Warning: DATABASE_URL not set. This is an example only.")
+		return
+	}
+	db, err := sqlx.Connect("postgres", dbURL)
 	if err != nil {
 		panic(err)
 	}

@@ -237,7 +237,7 @@ export default function TelemetryPage() {
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
-              {range === '1h' ? '1小时' : range === '6h' ? '6小时' : '24小时'}
+              {range === '1h' ? t('telemetry.range1h') : range === '6h' ? t('telemetry.range6h') : t('telemetry.range24h')}
             </button>
           ))}
         </div>
@@ -287,17 +287,17 @@ export default function TelemetryPage() {
       <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-slate-700">
           <span className="text-slate-100 font-medium">{t('telemetry.history')}</span>
-          <span className="text-slate-400 text-sm ml-2">({history.length} 条记录)</span>
+          <span className="text-slate-400 text-sm ml-2">({t('telemetry.records', { count: history.length })})</span>
         </div>
         {historyLoading ? (
           <div className="p-8 text-center text-slate-400">
             <Activity className="w-6 h-6 animate-spin mx-auto mb-2" />
-            加载中...
+            {t('common.loading')}
           </div>
         ) : history.length === 0 ? (
           <div className="p-8 text-center">
             <AlertCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-            <p className="text-slate-400">{selectedDevice ? '暂无历史数据' : '请选择设备查看历史数据'}</p>
+            <p className="text-slate-400">{selectedDevice ? t('telemetry.noHistoryData') : t('telemetry.selectDevice')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

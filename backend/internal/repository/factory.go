@@ -2,9 +2,14 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/industrial-ai/platform/pkg/database"
 )
+
+// ErrDatabaseNotInitialized 数据库未初始化错误
+// FIX-001: 添加错误定义，防止 nil 返回导致的 panic
+var ErrDatabaseNotInitialized = errors.New("database not initialized")
 
 // ============================================
 // Repository 工厂 (简化版 - 用于测试依赖注入)
@@ -66,26 +71,38 @@ func (f *RepositoryFactory) GetReportRepository() *ReportRepository {
 	return NewReportRepository(f.db)
 }
 
-// GetTenantRepository 获取租户 Repository
-// TODO: 实现后返回具体类型
-func (f *RepositoryFactory) GetTenantRepository() interface{} {
-	return nil
+// GetTenantRepo 获取租户 Repository
+// FIX-001: 返回具体类型而非 interface{}，添加错误检查防止 panic
+func (f *RepositoryFactory) GetTenantRepo() (*TenantRepo, error) {
+	if f.db == nil {
+		return nil, ErrDatabaseNotInitialized
+	}
+	return NewTenantRepo(f.db), nil
 }
 
-// GetRoleRepository 获取角色 Repository
-// TODO: 实现后返回具体类型
-func (f *RepositoryFactory) GetRoleRepository() interface{} {
-	return nil
+// GetRoleRepo 获取角色 Repository
+// FIX-001: 返回具体类型而非 interface{}，添加错误检查防止 panic
+func (f *RepositoryFactory) GetRoleRepo() (*RoleRepo, error) {
+	if f.db == nil {
+		return nil, ErrDatabaseNotInitialized
+	}
+	return NewRoleRepo(f.db), nil
 }
 
-// GetPermissionRepository 获取权限 Repository
-// TODO: 实现后返回具体类型
-func (f *RepositoryFactory) GetPermissionRepository() interface{} {
-	return nil
+// GetPermissionRepo 获取权限 Repository
+// FIX-001: 返回具体类型而非 interface{}，添加错误检查防止 panic
+func (f *RepositoryFactory) GetPermissionRepo() (*PermissionRepo, error) {
+	if f.db == nil {
+		return nil, ErrDatabaseNotInitialized
+	}
+	return NewPermissionRepo(f.db), nil
 }
 
-// GetUserRoleRepository 获取用户角色 Repository
-// TODO: 实现后返回具体类型
-func (f *RepositoryFactory) GetUserRoleRepository() interface{} {
-	return nil
+// GetRBACRepository 获取 RBAC Repository（综合角色、权限、用户角色管理）
+// FIX-001: 返回具体类型而非 interface{}，添加错误检查防止 panic
+func (f *RepositoryFactory) GetRBACRepository() (*RBACRepository, error) {
+	if f.db == nil {
+		return nil, ErrDatabaseNotInitialized
+	}
+	return NewRBACRepository(f.db), nil
 }

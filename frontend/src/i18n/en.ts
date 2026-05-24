@@ -148,6 +148,9 @@ export default {
     range24h: 'Last 24 hours',
     range7d: 'Last 7 days',
     range30d: 'Last 30 days',
+    records: '{count} records',
+    noHistoryData: 'No history data',
+    selectDevice: 'Select a device to view history',
   },
   alert: {
     title: 'Alert',
@@ -221,6 +224,19 @@ export default {
     activeLabel: 'Active',
     acknowledgedLabel: 'Acknowledged',
     resolvedLabel: 'Resolved',
+    // Alert page
+    activeAlerts: 'Active Alerts',
+    criticalAlerts: 'Critical Alerts',
+    alertList: 'Alert List',
+    noAlerts: 'No alerts',
+    acknowledge: 'Acknowledge',
+    resolve: 'Resolve',
+    processed: 'Processed',
+    alertResolved: 'Alert #{id} resolved',
+    alertAcknowledged: 'Alert #{id} acknowledged',
+    device: 'Device',
+    triggered: 'Triggered',
+    resolvedTime: 'Resolved',
   },
   workOrder: {
     title: 'Work Order',
@@ -269,6 +285,7 @@ export default {
     list: 'Report List',
     noReports: 'No Reports',
     details: 'Details',
+    analysis: 'Report Analysis',
   },
   ai: {
     title: 'AI Agent',
