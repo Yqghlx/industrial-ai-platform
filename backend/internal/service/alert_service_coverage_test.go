@@ -74,7 +74,7 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 	t.Run("TriggersAlert", func(t *testing.T) {
 		mockDeviceRepo.On("GetByID", ctx, "device-1").Return(device, nil).Once()
 		mockRuleRepo.On("ListEnabled", ctx).Return(rules, nil).Once()
-		mockAlertRepo.On("GetRecentByDevice", ctx, "device-1", 1, 300).Return(nil, nil).Once()
+		mockAlertRepo.On("GetRecentAlertsByDeviceBatch", ctx, "device-1", mock.AnythingOfType("[]int"), 300).Return(map[int]*model.Alert{}, nil).Once()
 		mockAlertRepo.On("Create", ctx, mock.AnythingOfType("*model.Alert")).Return(nil).Once()
 		mockNotifRepo.On("Create", ctx, mock.AnythingOfType("*model.Notification")).Return(nil).Once()
 
@@ -86,7 +86,7 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 	t.Run("DeviceNotFound", func(t *testing.T) {
 		mockDeviceRepo.On("GetByID", ctx, "device-1").Return(nil, errors.New("not found")).Once()
 		mockRuleRepo.On("ListEnabled", ctx).Return(rules, nil).Once()
-		mockAlertRepo.On("GetRecentByDevice", ctx, "device-1", 1, 300).Return(nil, nil).Once()
+		mockAlertRepo.On("GetRecentAlertsByDeviceBatch", ctx, "device-1", mock.AnythingOfType("[]int"), 300).Return(map[int]*model.Alert{}, nil).Once()
 		mockAlertRepo.On("Create", ctx, mock.AnythingOfType("*model.Alert")).Return(nil).Once()
 		mockNotifRepo.On("Create", ctx, mock.AnythingOfType("*model.Notification")).Return(nil).Once()
 
@@ -105,7 +105,7 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 
 		mockDeviceRepo.On("GetByID", ctx, "device-1").Return(device, nil).Once()
 		mockRuleRepo.On("ListEnabled", ctx).Return(rules, nil).Once()
-		mockAlertRepo.On("GetRecentByDevice", ctx, "device-1", 1, 300).Return(recentAlert, nil).Once()
+		mockAlertRepo.On("GetRecentAlertsByDeviceBatch", ctx, "device-1", mock.AnythingOfType("[]int"), 300).Return(map[int]*model.Alert{1: recentAlert}, nil).Once()
 
 		err := service.EvaluateRules(ctx, data)
 		assert.NoError(t, err)

@@ -196,7 +196,7 @@ func TestTenantService_ListTenants(t *testing.T) {
 		AddRow("t-2", "Tenant 2", "slug-2", "pro", 100, time.Now(), time.Now())
 
 	mock.ExpectQuery(`SELECT .* FROM tenants ORDER BY created_at DESC LIMIT .* OFFSET .*`).
-		WithArgs(50, 0).
+		WithArgs(100, 0).
 		WillReturnRows(rows)
 
 	tenants, err := svc.ListTenants(ctx, 0, 0)
@@ -211,7 +211,7 @@ func TestTenantService_ListTenants_DefaultLimit(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "name", "slug", "plan", "max_devices", "created_at", "updated_at"})
 
 	mock.ExpectQuery(`SELECT .* FROM tenants ORDER BY created_at DESC LIMIT .* OFFSET .*`).
-		WithArgs(50, 0).
+		WithArgs(100, 0).
 		WillReturnRows(rows)
 
 	tenants, err := svc.ListTenants(ctx, 0, 0)
@@ -397,8 +397,8 @@ func TestTenantService_getDefaultMaxDevices(t *testing.T) {
 	}{
 		{"free", 10},
 		{"pro", 100},
-		{"enterprise", 1000},
-		{"unknown", 0},
+		{"enterprise", 10000},
+		{"unknown", 10},
 	}
 
 	for _, tt := range tests {
