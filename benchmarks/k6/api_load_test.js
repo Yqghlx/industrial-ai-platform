@@ -165,11 +165,19 @@ function testAgentQuery(headers) {
     device_ids: ['device-001'],
   };
   
-  const res = http.post(`${BASE_URL}${API_PREFIX}/agent/query`, JSON.stringify(payload), { headers });
+  const res = http.post(`${BASE_URL}${API_PREFIX}/agent/query`, JSON.stringify(payload), { headers, timeout: '35s' });
   
   check(res, {
-    'agent query status 200': (r) => r.status === 200,
-    'agent has response': (r) => r.json('data.response') !== undefined || r.status === 429, // Rate limited is OK
+    'agent query status 200': (r) => r.status === 200 || r.status === 429,
+    'agent has response': (r) => {
+      try {
+        const data = r.json();
+        const resp = data?.response?.response || data?.response?.data || data?.response;
+        return (resp !== undefined && resp !== '') || r.status === 429;
+      } catch (e) {
+        return r.status === 429;  // Rate limited or timeout is OK
+      }
+    },
   });
   
   errorRate.add(res.status >= 500);
@@ -177,10 +185,18 @@ function testAgentQuery(headers) {
 }
 
 function testROIStats(headers) {
-  const res = http.get(`${BASE_URL}${API_PREFIX}/roi/stats`, { headers });
+  const res = http.get(`${BASE_URL}${API_PREFIX}/roi/stats`, { headers, timeout: '10s' });
   
   check(res, {
     'ROI stats status 200': (r) => r.status === 200,
+    'ROI stats has data': (r) => {
+      try {
+        const data = r.json();
+        return data?.total_devices !== undefined || r.status === 429;
+      } catch (e) {
+        return r.status === 429;
+      }
+    },
   });
   
   errorRate.add(res.status >= 500);
