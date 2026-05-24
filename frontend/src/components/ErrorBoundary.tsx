@@ -16,6 +16,7 @@ const getMessages = (t: (key: string, params?: Record<string, string | number>) 
   errorMessage: t('errorBoundary.message', { defaultValue: '发生了未知错误' }),
   refreshPage: t('errorBoundary.refresh', { defaultValue: '刷新页面' }),
   goBack: t('errorBoundary.goBack', { defaultValue: '返回上一页' }),
+  errorDetails: t('errorBoundary.errorDetails', { defaultValue: '错误详情 (仅开发环境显示)' }),
 });
 
 // 默认消息（备用）
@@ -24,6 +25,7 @@ const defaultMessages = {
   errorMessage: '发生了未知错误',
   refreshPage: '刷新页面',
   goBack: '返回上一页',
+  errorDetails: '错误详情 (仅开发环境显示)',
 };
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -78,7 +80,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                     {import.meta.env.DEV && this.state.error && (
                       <details className="mt-4 text-left">
                         <summary className="text-slate-500 cursor-pointer text-sm">
-                          错误详情 (仅开发环境显示)
+                          {messages.errorDetails}
                         </summary>
                         <pre className="mt-2 p-3 bg-slate-800 rounded text-xs text-red-400 overflow-auto max-h-40">
                           {this.state.error.stack}

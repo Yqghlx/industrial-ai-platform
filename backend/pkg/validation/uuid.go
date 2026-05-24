@@ -72,7 +72,18 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-// ValidatePassword validates password length
+// Password complexity error types
+// FIX-P2: 增强密码复杂度验证
+type PasswordComplexityError struct {
+	Errors []string
+}
+
+func (e *PasswordComplexityError) Error() string {
+	return "password validation failed: " + strings.Join(e.Errors, ", ")
+}
+
+// ValidatePassword validates password length (basic validation)
+// For stronger validation, use ValidatePasswordComplexity
 func ValidatePassword(password string, minLen, maxLen int) error {
 	if password == "" {
 		return errors.New("password is required")
@@ -84,6 +95,69 @@ func ValidatePassword(password string, minLen, maxLen int) error {
 		return errors.New("password is too long")
 	}
 	return nil
+}
+
+// ValidatePasswordComplexity validates password with complexity requirements
+// FIX-P2: 增强密码复杂度验证 - 检查大小写字母、数字、特殊字符
+// Requirements:
+//   - Minimum length of 12 characters
+//   - At least one uppercase letter
+//   - At least one lowercase letter
+//   - At least one digit
+//   - At least one special character
+func ValidatePasswordComplexity(password string) error {
+	var errors []string
+
+	// Check minimum length (12 characters minimum for security)
+	if len(password) < 12 {
+		errors = append(errors, "must be at least 12 characters long")
+	}
+
+	// Check maximum length (prevent DoS)
+	if len(password) > 128 {
+		errors = append(errors, "must be at most 128 characters long")
+	}
+
+	// Check for uppercase letter
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	if !hasUpper {
+		errors = append(errors, "must contain at least one uppercase letter")
+	}
+
+	// Check for lowercase letter
+	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+	if !hasLower {
+		errors = append(errors, "must contain at least one lowercase letter")
+	}
+
+	// Check for digit
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+	if !hasDigit {
+		errors = append(errors, "must contain at least one digit")
+	}
+
+	// Check for special character
+	hasSpecial := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?` + "`" + `~]`).MatchString(password)
+	if !hasSpecial {
+		errors = append(errors, "must contain at least one special character (e.g., !@#$%^&*)")
+	}
+
+	if len(errors) > 0 {
+		return &PasswordComplexityError{Errors: errors}
+	}
+
+	return nil
+}
+
+// ValidatePasswordWithComplexity validates password with both length and complexity requirements
+// FIX-P2: 组合长度和复杂度验证
+func ValidatePasswordWithComplexity(password string, minLen, maxLen int) error {
+	// First validate length
+	if err := ValidatePassword(password, minLen, maxLen); err != nil {
+		return err
+	}
+	// Then validate complexity
+	return ValidatePasswordComplexity(password)
 }
 
 // ValidateLength validates string length

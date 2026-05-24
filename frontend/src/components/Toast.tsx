@@ -1,6 +1,24 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { useI18n } from '../i18n';
 
+// Close icon component
+const CloseIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="14" 
+    height="14" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 interface ToastMessage {
   id: number;
   type: 'success' | 'error' | 'warning' | 'info';
@@ -67,7 +85,7 @@ export default function Toast({ toasts, removeToast }: ToastProps) {
           className={`
             w-full max-w-sm lg:w-80
             bg-slate-800 border rounded-lg shadow-lg px-4 py-3
-            animate-slide-down touch-manipulation
+            animate-slide-down touch-manipulation relative
             ${toast.type === 'success' ? 'border-green-500' :
               toast.type === 'error' ? 'border-red-500' :
               toast.type === 'warning' ? 'border-yellow-500' :
@@ -102,7 +120,7 @@ export default function Toast({ toasts, removeToast }: ToastProps) {
             className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-200 active:text-slate-100 touch-manipulation"
             aria-label={t('common.close')}
           >
-            ×
+            <CloseIcon />
           </button>
         </div>
       ))}

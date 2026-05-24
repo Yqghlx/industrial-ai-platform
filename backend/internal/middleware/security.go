@@ -206,3 +206,10 @@ func HSTS(maxAge int, includeSubDomains bool, preload bool) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// HSTSDefault 生产环境默认 HSTS 配置
+// FIX-P2: 默认启用 preload，确保最大安全保护
+// 包含: max-age=1年, includeSubDomains, preload
+func HSTSDefault() gin.HandlerFunc {
+	return HSTS(HSTSMaxAgeSeconds, true, true)
+}

@@ -147,10 +147,16 @@ func LoadWAFConfigFromEnv() WAFConfig {
 		}
 	}
 
-	// 是否启用 WAF
-	// 格式: WAF_ENABLED=true/false
-	if v := os.Getenv("WAF_ENABLED"); v != "" {
-		config.Enabled = strings.ToLower(v) == "true"
+	// FIX-P2: 生产环境强制启用 WAF，不允许禁用
+	// 格式: WAF_ENABLED=true/false (仅开发环境有效)
+	if gin.Mode() == gin.ReleaseMode {
+		// 生产环境强制启用 WAF
+		config.Enabled = true
+	} else {
+		// 开发环境允许通过环境变量控制
+		if v := os.Getenv("WAF_ENABLED"); v != "" {
+			config.Enabled = strings.ToLower(v) == "true"
+		}
 	}
 
 	return config

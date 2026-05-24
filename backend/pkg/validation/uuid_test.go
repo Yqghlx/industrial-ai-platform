@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -443,6 +444,91 @@ func makeString(length int) string {
 	result := ""
 	for i := 0; i < length; i++ {
 		result += "a"
+	}
+	return result
+}
+
+// FIX-P2: Password complexity tests
+func TestValidatePasswordComplexity(t *testing.T) {
+	tests := []struct {
+		name        string
+		password    string
+		wantErr     bool
+		errContains string
+	}{
+		{"valid password", "Admin@123456!", false, ""},
+		{"too short", "Abc@1", true, "12 characters"},
+		{"missing uppercase", "admin@123456!", true, "uppercase"},
+		{"missing lowercase", "ADMIN@123456!", true, "lowercase"},
+		{"missing digit", "Admin@Password!", true, "digit"},
+		{"missing special", "Admin12345678", true, "special"},
+		{"empty password", "", true, "12 characters"},
+		{"12 chars valid", "Admin@123456", false, ""},
+		{"very long valid", "MyVeryLongP@ssw0rd!2024#Secure", false, ""},
+		{"too long over 128", makeComplexString(129), true, "128"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePasswordComplexity(tt.password)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ValidatePasswordComplexity(%s) expected error, got nil", tt.password)
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("Error should contain '%s', got '%s'", tt.errContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ValidatePasswordComplexity(%s) unexpected error: %v", tt.password, err)
+				}
+			}
+		})
+	}
+}
+
+func TestValidatePasswordWithComplexity(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		minLen   int
+		maxLen   int
+		wantErr  bool
+	}{
+		{"valid", "Admin@123456!", 8, 128, false},
+		{"too short by minLen", "Admin@123456!", 20, 128, true}, // fails length check
+		{"too short by complexity", "Abc@1", 1, 128, true},      // fails complexity (12 chars)
+		{"too long", makeComplexString(130), 1, 128, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePasswordWithComplexity(tt.password, tt.minLen, tt.maxLen)
+			if tt.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestPasswordComplexityError(t *testing.T) {
+	err := &PasswordComplexityError{Errors: []string{"too short", "missing uppercase"}}
+	expected := "password validation failed: too short, missing uppercase"
+	if err.Error() != expected {
+		t.Errorf("Error() = '%s', want '%s'", err.Error(), expected)
+	}
+}
+
+// Helper for creating a long complex password
+func makeComplexString(length int) string {
+	result := "Aa1!"
+	for i := 4; i < length; i++ {
+		result += "x"
 	}
 	return result
 }
