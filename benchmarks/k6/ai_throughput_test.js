@@ -53,7 +53,9 @@ export function setup() {
     return { token: '' };
   }
   
-  return { token: loginRes.json('data.token') || '' };
+  // Token is at root level, not in data.token
+  const body = loginRes.json();
+  return { token: body?.token || '' };
 }
 
 // Sample queries for testing
