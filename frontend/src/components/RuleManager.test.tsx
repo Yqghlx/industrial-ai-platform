@@ -266,9 +266,7 @@ describe('RuleManager', () => {
 
   describe('delete rule', () => {
     it('should show confirmation dialog for admin users', async () => {
-      // Mock confirm
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-
+it('should show confirmation dialog for admin users', async () => {
       renderRuleManager();
 
       await waitFor(() => {
@@ -281,8 +279,9 @@ describe('RuleManager', () => {
       if (deleteButtons.length > 0) {
         fireEvent.click(deleteButtons[0]);
 
+        // showConfirm is mocked to return true, so delete should proceed
         await waitFor(() => {
-          expect(window.confirm).toHaveBeenCalled();
+          expect(api.deleteRule).toHaveBeenCalled();
         });
       }
     });

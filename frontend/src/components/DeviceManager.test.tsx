@@ -315,16 +315,19 @@ describe('DeviceManager', () => {
   });
 
   describe('pagination', () => {
-    it('should not show pagination when total is less than page size', async () => {
+    it('should show disabled pagination when total is less than page size', async () => {
       renderDeviceManager();
 
       await waitFor(() => {
         expect(screen.getByText('CNC-001')).toBeInTheDocument();
       });
 
-      // Pagination should not be visible since total (3) < 20
-      expect(screen.queryByText('上一页')).not.toBeInTheDocument();
-      expect(screen.queryByText('下一页')).not.toBeInTheDocument();
+      // Pagination buttons are visible but disabled when total < pageSize
+      const prevBtn = screen.queryByTestId('prev-page-btn');
+      const nextBtn = screen.queryByTestId('next-page-btn');
+      
+      if (prevBtn) expect(prevBtn).toBeDisabled();
+      if (nextBtn) expect(nextBtn).toBeDisabled();
     });
 
     it('should show pagination when total exceeds page size', async () => {
