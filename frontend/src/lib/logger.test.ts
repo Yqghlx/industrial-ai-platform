@@ -8,7 +8,7 @@ describe('logger', () => {
   });
 
   it('should log info message', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
     loggerModule.logger?.info?.('test message');
     
     // 如果 logger 存在，应该调用 console

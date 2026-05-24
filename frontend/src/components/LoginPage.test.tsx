@@ -149,7 +149,7 @@ describe('LoginPage', () => {
       fireEvent.click(registerTab);
       
       expect(registerTab).toHaveClass('bg-primary-600');
-      expect(screen.getByRole('button', { type: 'submit' })).toHaveTextContent('注册');
+      expect(screen.getByTestId('submit-button')).toHaveTextContent('注册');
     });
   });
 
@@ -157,8 +157,9 @@ describe('LoginPage', () => {
     it('should have submit button with type submit', () => {
       renderLoginPage();
       
-      const submitButton = screen.getByRole('button', { type: 'submit' });
+      const submitButton = screen.getByTestId('submit-button');
       expect(submitButton).toBeInTheDocument();
+      expect(submitButton).toHaveAttribute('type', 'submit');
     });
 
     it('should show loading state during submission', async () => {
@@ -170,7 +171,7 @@ describe('LoginPage', () => {
       fireEvent.change(usernameInput, { target: { value: 'admin' } });
       fireEvent.change(passwordInput, { target: { value: 'admin123' } });
       
-      const submitButton = screen.getByRole('button', { type: 'submit' });
+      const submitButton = screen.getByTestId('submit-button');
       
       // Submit form
       fireEvent.click(submitButton);
@@ -187,7 +188,7 @@ describe('LoginPage', () => {
       renderLoginPage();
       
       expect(screen.getByText(/演示账户/)).toBeInTheDocument();
-      expect(screen.getByText(/admin \/ admin123/)).toBeInTheDocument();
+      expect(screen.getByText(/admin.*Admin@123456/)).toBeInTheDocument();
     });
   });
 
@@ -205,7 +206,7 @@ describe('LoginPage', () => {
       fireEvent.change(screen.getByPlaceholderText('邮箱'), { target: { value: 'new@example.com' } });
       
       // Submit
-      fireEvent.click(screen.getByRole('button', { type: 'submit' }));
+      fireEvent.click(screen.getByTestId('submit-button'));
       
       await waitFor(() => {
         expect(mockRegister).toHaveBeenCalledWith({

@@ -27,7 +27,7 @@ describe('useCRUD', () => {
 
   it('should fetch data successfully', async () => {
     const mockData = [{ id: 1, name: 'test' }];
-    const { api } = await import('./api');
+    const { api } = await import('../lib/api');
     vi.mocked(api.get).mockResolvedValueOnce({ data: mockData });
 
     const { result } = renderHook(() => useCRUD('/api/test'));
@@ -39,7 +39,7 @@ describe('useCRUD', () => {
 
   it('should handle fetch error', async () => {
     const mockError = new Error('Network error');
-    const { api } = await import('./api');
+    const { api } = await import('../lib/api');
     vi.mocked(api.get).mockRejectedValueOnce(mockError);
 
     const { result } = renderHook(() => useCRUD('/api/test'));
@@ -52,7 +52,7 @@ describe('useCRUD', () => {
   it('should create new item', async () => {
     const newItem = { name: 'new' };
     const createdItem = { id: 2, name: 'new' };
-    const { api } = await import('./api');
+    const { api } = await import('../lib/api');
     vi.mocked(api.post).mockResolvedValueOnce({ data: createdItem });
 
     const { result } = renderHook(() => useCRUD('/api/test'));

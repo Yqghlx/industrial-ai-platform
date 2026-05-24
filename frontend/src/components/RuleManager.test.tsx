@@ -25,6 +25,12 @@ vi.mock('./Toast', () => ({
   }),
 }));
 
+vi.mock('./UI/ConfirmDialog', () => ({
+  useConfirmDialog: () => ({
+    showConfirm: vi.fn().mockResolvedValue(true),
+  }),
+}));
+
 vi.mock('./Skeleton', () => ({
   default: ({ variant }: { variant?: string }) => (
     <div data-testid={`skeleton-${variant || 'default'}`}>Loading...</div>
