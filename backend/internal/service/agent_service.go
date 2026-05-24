@@ -106,6 +106,7 @@ type AgentService struct {
 	model         string
 	httpClient    HTTPClientInterface // FIX-019: HTTP Client 接口化
 	config        *AgentServiceConfig
+	optimizer     *AgentOptimizer // P2-3: Queue + Cache optimization
 }
 
 // NewAgentService creates a new agent service
@@ -192,6 +193,7 @@ func NewAgentServiceWithConfig(
 }
 
 // Query processes an AI agent query
+// P2-3: Optimized with queue + cache
 func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*model.AgentResponse, error) {
 	// Generate session ID if not provided
 	sessionID := query.SessionID
@@ -202,19 +204,57 @@ func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*mode
 	// Determine which agent to use
 	agent := s.determineAgent(query.Query)
 
+	// P2-3: Try cached answer first
+	if s.optimizer != nil {
+		if cachedAnswer, found := s.optimizer.GetCachedAnswer(ctx, query.Query); found {
+			logger.L().Info("Using cached answer",
+				zap.String("session_id", sessionID),
+			)
+			return &model.AgentResponse{
+				SessionID: sessionID,
+				Response:  cachedAnswer,
+				Agent:     agent,
+			}, nil
+		}
+	}
+
 	// Try to get real response from LLM
 	var response string
 	var err error
 
 	if s.apiKey != "" {
-		// Use real LLM
-		response, err = s.callLLM(ctx, query.Query, query.Context, agent)
-		if err != nil {
-			logger.L().Warn("LLM call failed, falling back to mock",
-				zap.String("session_id", sessionID),
-				zap.Error(err),
-			)
-			response = s.mockResponse(query.Query, agent)
+		// P2-3: Acquire slot for LLM call (queue mechanism)
+		if s.optimizer != nil {
+			if err := s.optimizer.AcquireSlot(ctx); err != nil {
+				logger.L().Warn("Queue wait timeout, using mock response",
+					zap.String("session_id", sessionID),
+					zap.Error(err),
+				)
+				response = s.mockResponse(query.Query, agent)
+			} else {
+				defer s.optimizer.ReleaseSlot()
+				response, err = s.callLLM(ctx, query.Query, query.Context, agent)
+				if err != nil {
+					logger.L().Warn("LLM call failed, falling back to mock",
+						zap.String("session_id", sessionID),
+						zap.Error(err),
+					)
+					response = s.mockResponse(query.Query, agent)
+				} else {
+					// Cache successful answer
+					s.optimizer.CacheAnswer(ctx, query.Query, response)
+				}
+			}
+		} else {
+			// Use real LLM without optimizer
+			response, err = s.callLLM(ctx, query.Query, query.Context, agent)
+			if err != nil {
+				logger.L().Warn("LLM call failed, falling back to mock",
+					zap.String("session_id", sessionID),
+					zap.Error(err),
+				)
+				response = s.mockResponse(query.Query, agent)
+			}
 		}
 	} else {
 		// Use mock response
