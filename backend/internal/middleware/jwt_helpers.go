@@ -185,7 +185,7 @@ func GetJWTSecret() []byte {
 // SetJWTSecret sets the JWT secret (向后兼容)
 // Deprecated: Use NewJWTConfig instead
 func SetJWTSecret(secret string) {
-	if secret != "" && globalJWTConfig == nil {
+	if secret != "" {
 		globalJWTConfig, _ = NewJWTConfig(secret)
 	}
 }
