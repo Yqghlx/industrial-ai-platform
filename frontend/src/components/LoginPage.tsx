@@ -95,6 +95,7 @@ export default function LoginPage() {
             {/* Tabs */}
             <div className="flex gap-2 mb-6">
               <button
+                data-testid="login-tab"
                 onClick={() => setMode('login')}
                 className={`flex-1 py-2 rounded-lg text-center transition-colors ${
                   mode === 'login'
@@ -105,6 +106,7 @@ export default function LoginPage() {
                 {t('auth.login')}
               </button>
               <button
+                data-testid="register-tab"
                 onClick={() => setMode('register')}
                 className={`flex-1 py-2 rounded-lg text-center transition-colors ${
                   mode === 'register'
@@ -181,6 +183,7 @@ export default function LoginPage() {
               {/* Submit */}
               <button
                 type="submit"
+                data-testid="submit-button"
                 disabled={loading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2"
               >

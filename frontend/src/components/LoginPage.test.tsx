@@ -73,14 +73,14 @@ describe('LoginPage', () => {
       expect(screen.getByText('Industrial AI Platform')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('用户名')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('密码')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '登录' })).toBeInTheDocument();
+      expect(screen.getByTestId('submit-button')).toBeInTheDocument();
     });
 
     it('should render login and register tabs', () => {
       renderLoginPage();
       
-      expect(screen.getByRole('button', { name: '登录' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '注册' })).toBeInTheDocument();
+      expect(screen.getByTestId('login-tab')).toBeInTheDocument();
+      expect(screen.getByTestId('register-tab')).toBeInTheDocument();
     });
 
     it('should not show email field in login mode', () => {
@@ -92,7 +92,7 @@ describe('LoginPage', () => {
     it('should show email field when switching to register mode', () => {
       renderLoginPage();
       
-      const registerTab = screen.getByRole('button', { name: '注册' });
+      const registerTab = screen.getByTestId('register-tab');
       fireEvent.click(registerTab);
       
       expect(screen.getByPlaceholderText('邮箱')).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('LoginPage', () => {
       renderLoginPage();
       
       // Switch to register mode
-      fireEvent.click(screen.getByRole('button', { name: '注册' }));
+      fireEvent.click(screen.getByTestId('register-tab'));
       
       const emailInput = screen.getByPlaceholderText('邮箱');
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -135,8 +135,8 @@ describe('LoginPage', () => {
     it('should highlight login tab by default', () => {
       renderLoginPage();
       
-      const loginTab = screen.getByRole('button', { name: '登录' });
-      const registerTab = screen.getByRole('button', { name: '注册' });
+      const loginTab = screen.getByTestId('login-tab');
+      const registerTab = screen.getByTestId('register-tab');
       
       expect(loginTab).toHaveClass('bg-primary-600');
       expect(registerTab).not.toHaveClass('bg-primary-600');
@@ -145,7 +145,7 @@ describe('LoginPage', () => {
     it('should switch to register mode', () => {
       renderLoginPage();
       
-      const registerTab = screen.getByRole('button', { name: '注册' });
+      const registerTab = screen.getByTestId('register-tab');
       fireEvent.click(registerTab);
       
       expect(registerTab).toHaveClass('bg-primary-600');
@@ -197,7 +197,7 @@ describe('LoginPage', () => {
       renderLoginPage();
       
       // Switch to register mode
-      fireEvent.click(screen.getByRole('button', { name: '注册' }));
+      fireEvent.click(screen.getByTestId('register-tab'));
       
       // Fill form
       fireEvent.change(screen.getByPlaceholderText('用户名'), { target: { value: 'newuser' } });
