@@ -6,6 +6,7 @@ import { useToast } from './Toast';
 import { Activity, Thermometer, Waves, Gauge, Zap, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getGaugeColor, getTelemetryStatusColor } from '../lib/colorUtils';
+import { isTelemetryData, isTelemetryDataArray, isTelemetryHistoryArray } from '../types/typeGuards';
 
 interface TelemetryData {
   device_id: string;
@@ -59,14 +60,17 @@ export default function TelemetryPage() {
   useWebSocket({
     onMessage: (message) => {
       if (message.type === 'telemetry') {
-        const payload = message.payload as TelemetryData;
-        setLatestTelemetry(prev => {
-          const exists = prev.find(t => t.device_id === payload.device_id);
-          if (exists) {
-            return prev.map(d => d.device_id === payload.device_id ? payload : d);
-          }
-          return [...prev, payload];
-        });
+        // FE-P1-02: 使用类型守卫替代 as Type 断言
+        if (isTelemetryData(message.payload)) {
+          const payload = message.payload;
+          setLatestTelemetry(prev => {
+            const exists = prev.find(t => t.device_id === payload.device_id);
+            if (exists) {
+              return prev.map(d => d.device_id === payload.device_id ? payload : d);
+            }
+            return [...prev, payload];
+          });
+        }
       }
     },
   });
@@ -74,7 +78,8 @@ export default function TelemetryPage() {
   const loadLatestTelemetry = async () => {
     try {
       const res = await api.getLatestTelemetry();
-      const data = res.data as TelemetryData[];
+      // FE-P1-02: 使用类型守卫替代 as Type 断言
+      const data = isTelemetryDataArray(res.data) ? res.data : [];
       setLatestTelemetry(data);
       if (!selectedDevice && data.length > 0) {
         setSelectedDevice(data[0].device_id);
@@ -90,7 +95,9 @@ export default function TelemetryPage() {
     setHistoryLoading(true);
     try {
       const res = await api.getDeviceTelemetry(deviceId, range, 100);
-      setHistory(res.data as TelemetryHistory[]);
+      // FE-P1-02: 使用类型守卫替代 as Type 断言
+      const data = isTelemetryHistoryArray(res.data) ? res.data : [];
+      setHistory(data);
     } catch {
       showToast({ type: 'error', message: t('errors.unknown') });
     } finally {

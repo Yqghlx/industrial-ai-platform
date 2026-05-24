@@ -50,6 +50,15 @@ type AuthServiceInterface interface {
 
 	// GetUserByID 根据 ID 获取用户
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
+
+	// RefreshToken 刷新令牌
+	RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error)
+
+	// ChangePassword 修改密码
+	ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error
+
+	// ValidateToken 验证令牌
+	ValidateToken(ctx context.Context, token string) (*Claims, error)
 }
 
 // UserServiceInterface 用户服务接口

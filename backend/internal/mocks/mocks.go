@@ -101,6 +101,28 @@ func (m *MockAuthService) GetUserByID(ctx context.Context, id int) (*model.User,
 	return args.Get(0).(*model.User), args.Error(1)
 }
 
+// FIX-016/017: 新增 AuthServiceInterface 方法
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*service.TokenPair, error) {
+	args := m.Called(ctx, refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.TokenPair), args.Error(1)
+}
+
+func (m *MockAuthService) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	args := m.Called(ctx, userID, oldPassword, newPassword)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (*service.Claims, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.Claims), args.Error(1)
+}
+
 // ============================================
 // Mock AlertService
 // ============================================

@@ -32,13 +32,37 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 		return nil, "", errors.NewAuthFailedError()
 	}
 
+	// Get token version for the user
+	tokenVersion := 0
+	if tv, err := s.userRepo.GetTokenVersion(ctx, user.ID); err == nil {
+		tokenVersion = tv
+	}
+
 	// Generate JWT token
 	token, err := GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return nil, "", errors.NewInternalError(err.Error())
 	}
 
+	// Set user token version for verification
+	if tokenVersion > 0 {
+		// Use new token generation with version if available
+		token, err = GenerateTokenWithVersion(user.ID, user.Username, user.Role, "", tokenVersion)
+		if err != nil {
+			return nil, "", errors.NewInternalError(err.Error())
+		}
+	}
+
 	return user, token, nil
+}
+
+// GenerateTokenWithVersion generates token with version support
+func GenerateTokenWithVersion(userID int, username, role, tenantID string, tokenVersion int) (string, error) {
+	if !IsJWTInitialized() {
+		return "", fmt.Errorf("JWT not initialized")
+	}
+	token, _, err := GenerateAccessToken(userID, username, role, tenantID, tokenVersion)
+	return token, err
 }
 
 // Register creates a new user
@@ -93,4 +117,74 @@ func (s *AuthService) GetUserByID(ctx context.Context, id int) (*model.User, err
 		return nil, errors.NewUserNotFoundError(fmt.Sprintf("%d", id))
 	}
 	return user, nil
+}
+
+// RefreshToken refreshes an access token using a refresh token
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
+	if !IsJWTInitialized() {
+		return nil, errors.NewInternalError("JWT not initialized")
+	}
+
+	tokenPair, err := RefreshAccessToken(refreshToken)
+	if err != nil {
+		return nil, errors.NewAuthFailedError()
+	}
+
+	return tokenPair, nil
+}
+
+// ChangePassword changes a user's password
+func (s *AuthService) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	// Get user by ID
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return errors.NewUserNotFoundError(fmt.Sprintf("%d", userID))
+	}
+
+	// Verify old password
+	hash := user.PasswordHash
+	if hash == "" {
+		hash = user.Password
+	}
+	if !VerifyPassword(oldPassword, hash) {
+		return errors.NewAuthFailedError()
+	}
+
+	// Validate new password
+	if err := model.ValidatePassword(newPassword); err != nil {
+		return errors.NewValidationError(err.Error())
+	}
+
+	// Hash new password
+	newHash, err := HashPassword(newPassword)
+	if err != nil {
+		return errors.NewInternalError(err.Error())
+	}
+
+	// Update password in database
+	if err := s.userRepo.UpdatePassword(ctx, userID, newHash); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+
+	// Revoke all user tokens to force re-login
+	if err := s.userRepo.UpdateTokenVersion(ctx, userID); err != nil {
+		// Log warning but don't fail the password change
+		fmt.Printf("Warning: failed to update token version: %v\n", err)
+	}
+
+	return nil
+}
+
+// ValidateToken validates a token and returns the claims
+func (s *AuthService) ValidateToken(ctx context.Context, token string) (*Claims, error) {
+	if !IsJWTInitialized() {
+		return nil, errors.NewInternalError("JWT not initialized")
+	}
+
+	claims, err := ParseToken(token)
+	if err != nil {
+		return nil, errors.NewAuthFailedError()
+	}
+
+	return claims, nil
 }

@@ -75,8 +75,9 @@ export default function AITeamDashboard() {
           )}
 
           {/* Messages */}
-          {responses.map((r) => (
-            <div key={r.session_id || r.response.slice(0, 20)} className="space-y-3">
+          {responses.map((r, index) => (
+            // FE-P1-04: 使用 session_id 作为稳定 key，避免使用 slice 内容
+            <div key={r.session_id || `response-${index}`} className="space-y-3">
               {/* User query */}
               <div className="flex items-start gap-3 justify-end">
                 <div className="bg-primary-600 rounded-lg px-4 py-2 max-w-[70%]">

@@ -97,15 +97,24 @@ func (h *AuthHandlerNew) Register(c *gin.Context) {
 
 // ChangePassword 修改密码
 func (h *AuthHandlerNew) ChangePassword(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	userID, exists := c.Get("user_id")
 	if !exists {
 		response.Unauthorized(c, "Unauthorized")
 		return
 	}
 
+	// Convert userID to int
+	uid, ok := userID.(int)
+	if !ok {
+		response.Unauthorized(c, "Invalid user ID")
+		return
+	}
+
 	var req struct {
 		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=12,max=100"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -113,12 +122,25 @@ func (h *AuthHandlerNew) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	_ = userID
+	// Validate new password complexity
+	if err := model.ValidatePassword(req.NewPassword); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// Call service to change password
+	if err := h.authSvc.ChangePassword(ctx, uid, req.OldPassword, req.NewPassword); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
-// RefreshToken 刷新Token（占位实现）
+// RefreshToken 刷新Token
 func (h *AuthHandlerNew) RefreshToken(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var req struct {
 		Token string `json:"token" binding:"required"`
 	}
@@ -128,15 +150,25 @@ func (h *AuthHandlerNew) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// 占位实现 - 实际需要扩展 AuthServiceInterface
+	// Call service to refresh token
+	tokenPair, err := h.authSvc.RefreshToken(ctx, req.Token)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"token":   "new_placeholder_token",
-		"message": "RefreshToken requires AuthServiceInterface extension",
+		"access_token":  tokenPair.AccessToken,
+		"refresh_token": tokenPair.RefreshToken,
+		"expires_in":    tokenPair.ExpiresIn,
+		"token_type":    tokenPair.TokenType,
 	})
 }
 
-// ValidateToken 验证Token（占位实现）
+// ValidateToken 验证Token
 func (h *AuthHandlerNew) ValidateToken(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var req struct {
 		Token string `json:"token" binding:"required"`
 	}
@@ -146,9 +178,17 @@ func (h *AuthHandlerNew) ValidateToken(c *gin.Context) {
 		return
 	}
 
-	// 占位实现 - 实际需要扩展 AuthServiceInterface
+	// Call service to validate token
+	claims, err := h.authSvc.ValidateToken(ctx, req.Token)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"valid":   true,
-		"message": "ValidateToken requires AuthServiceInterface extension",
+		"valid":    true,
+		"user_id":  claims.UserID,
+		"username": claims.Username,
+		"role":     claims.Role,
 	})
 }

@@ -807,17 +807,21 @@ func (m *MockAuthService) Register(ctx context.Context, req *model.RegisterReque
 	return args.Get(0).(*model.User), args.String(1), args.Error(2)
 }
 
-func (m *MockAuthService) ValidateToken(tokenString string) (*model.User, error) {
-	args := m.Called(tokenString)
+// FIX-016/017: 更新 ValidateToken 和 RefreshToken 方法签名以匹配 AuthServiceInterface
+func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (*service.Claims, error) {
+	args := m.Called(ctx, token)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.User), args.Error(1)
+	return args.Get(0).(*service.Claims), args.Error(1)
 }
 
-func (m *MockAuthService) RefreshToken(refreshToken string) (string, string, error) {
-	args := m.Called(refreshToken)
-	return args.String(0), args.String(1), args.Error(2)
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*service.TokenPair, error) {
+	args := m.Called(ctx, refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.TokenPair), args.Error(1)
 }
 
 func (m *MockAuthService) Logout(ctx context.Context, tokenString string) error {

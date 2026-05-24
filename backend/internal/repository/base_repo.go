@@ -13,6 +13,62 @@ import (
 )
 
 // ============================================
+// FIX-018: 表名白名单 - 防止 SQL 注入
+// ============================================
+
+// allowedTables 是允许在动态 SQL 中使用的表名白名单
+// 这些表名已经在代码库中预定义，不接受外部输入
+var allowedTables = map[string]bool{
+	"users":             true,
+	"devices":           true,
+	"telemetry_data":    true,
+	"alerts":            true,
+	"alert_rules":       true,
+	"work_orders":       true,
+	"notifications":     true,
+	"blackbox_records":  true,
+	"tenants":           true,
+	"roles":             true,
+	"permissions":       true,
+	"user_roles":        true,
+	"role_permissions":  true,
+	"agent_task_logs":   true,
+	"dashboards":        true,
+	"widgets":           true,
+	"token_blacklist":   true,
+	"user_token_versions": true,
+}
+
+// ValidateTableName 验证表名是否在白名单中
+// 返回验证后的表名，如果不在白名单中则返回错误
+func ValidateTableName(table string) error {
+	if table == "" {
+		return fmt.Errorf("table name cannot be empty")
+	}
+	if !allowedTables[table] {
+		return fmt.Errorf("invalid table name: %s (not in whitelist)", table)
+	}
+	return nil
+}
+
+// validateTableAndColumn 验证表名和列名
+func validateTableAndColumn(table, column string) error {
+	if err := ValidateTableName(table); err != nil {
+		return err
+	}
+	if column == "" {
+		return fmt.Errorf("column name cannot be empty")
+	}
+	// 列名只允许字母数字和下划线
+	for _, c := range column {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+			return fmt.Errorf("invalid column name: %s (contains invalid characters)", column)
+		}
+	}
+	return nil
+}
+
+// ============================================
 // 通用 Repository 接口定义
 // ============================================
 
@@ -91,7 +147,11 @@ func NormalizeLimit(limit int) int {
 // ============================================
 
 // CountQuery 执行通用计数查询
+// FIX-018: 添加表名白名单验证防止SQL注入
 func CountQuery(ctx context.Context, db database.QueryExecutor, table string) (int, error) {
+	if err := ValidateTableName(table); err != nil {
+		return 0, err
+	}
 	var count int
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 	err := db.QueryRow(ctx, query).Scan(&count)
@@ -99,7 +159,11 @@ func CountQuery(ctx context.Context, db database.QueryExecutor, table string) (i
 }
 
 // ExistsQuery 执行通用存在性查询
+// FIX-018: 添加表名和列名白名单验证防止SQL注入
 func ExistsQuery(ctx context.Context, db database.QueryExecutor, table, idColumn string, id interface{}) (bool, error) {
+	if err := validateTableAndColumn(table, idColumn); err != nil {
+		return false, err
+	}
 	var exists bool
 	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE %s = $1)", table, idColumn)
 	err := db.QueryRow(ctx, query, id).Scan(&exists)
@@ -107,7 +171,11 @@ func ExistsQuery(ctx context.Context, db database.QueryExecutor, table, idColumn
 }
 
 // DeleteQuery 执行通用删除查询
+// FIX-018: 添加表名和列名白名单验证防止SQL注入
 func DeleteQuery(ctx context.Context, db database.QueryExecutor, table, idColumn string, id interface{}) error {
+	if err := validateTableAndColumn(table, idColumn); err != nil {
+		return err
+	}
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", table, idColumn)
 	_, err := db.Exec(ctx, query, id)
 	return err

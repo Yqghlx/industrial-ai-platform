@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/internal/service"
 )
 
 // ============================================
@@ -274,6 +275,9 @@ func TestAuthHandlerNew_ChangePassword_Success(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockUserSvc := new(MockUserService)
 
+	// FIX-017: 设置 mock 预期
+	mockAuthSvc.On("ChangePassword", mock.Anything, 1, "OldPass123!@", "NewPass123!@").Return(nil)
+
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
 	router.POST("/change-password", func(c *gin.Context) {
@@ -281,9 +285,10 @@ func TestAuthHandlerNew_ChangePassword_Success(t *testing.T) {
 		handler.ChangePassword(c)
 	})
 
+	// FIX-017: 使用符合密码复杂度要求的密码 (至少12位，包含大小写字母、数字和特殊字符)
 	body := map[string]string{
-		"old_password": "oldpass",
-		"new_password": "newpass",
+		"old_password": "OldPass123!@",
+		"new_password": "NewPass123!@",
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -294,6 +299,7 @@ func TestAuthHandlerNew_ChangePassword_Success(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAuthSvc.AssertExpectations(t)
 
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
@@ -334,6 +340,15 @@ func TestAuthHandlerNew_RefreshToken(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockUserSvc := new(MockUserService)
 
+	// FIX-016: 设置 mock 预期返回值
+	expectedTokenPair := &service.TokenPair{
+		AccessToken:  "new-access-token",
+		RefreshToken: "new-refresh-token",
+		ExpiresIn:    900,
+		TokenType:    "Bearer",
+	}
+	mockAuthSvc.On("RefreshToken", mock.Anything, "old-refresh-token").Return(expectedTokenPair, nil)
+
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 
 	router.POST("/refresh-token", handler.RefreshToken)
@@ -350,6 +365,7 @@ func TestAuthHandlerNew_RefreshToken(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAuthSvc.AssertExpectations(t)
 }
 
 func TestAuthHandlerNew_ValidateToken(t *testing.T) {
@@ -358,6 +374,14 @@ func TestAuthHandlerNew_ValidateToken(t *testing.T) {
 
 	mockAuthSvc := new(MockAuthService)
 	mockUserSvc := new(MockUserService)
+
+	// FIX-017: 设置 mock 预期返回值
+	expectedClaims := &service.Claims{
+		UserID:   1,
+		Username: "testuser",
+		Role:     "admin",
+	}
+	mockAuthSvc.On("ValidateToken", mock.Anything, "jwt-token-to-validate").Return(expectedClaims, nil)
 
 	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
 

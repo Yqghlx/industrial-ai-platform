@@ -433,6 +433,106 @@ export function asAlertStatusSafe(value: unknown): Alert['status'] | null {
   return isAlertStatus(value) ? value : null;
 }
 
+// ============== Alert 状态更新 Payload 类型守卫 ==============
+
+/**
+ * 检查是否为 Alert 状态更新的 payload（用于 alert_resolved, alert_acknowledged 消息）
+ */
+export function isAlertStatusPayload(obj: unknown): obj is { id: number; status: string } {
+  if (!hasProperties(obj, ['id', 'status'])) return false;
+  const record = obj as Record<string, unknown>;
+  return (
+    typeof record.id === 'number' &&
+    typeof record.status === 'string'
+  );
+}
+
+// ============== TelemetryData 类型守卫（用于 WebSocket 消息）==============
+
+/**
+ * 检查是否为 TelemetryData 对象（用于 WebSocket telemetry 消息）
+ */
+export function isTelemetryData(obj: unknown): obj is { device_id: string; timestamp: string; status: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number } {
+  if (!hasProperties(obj, ['device_id', 'timestamp', 'status'])) return false;
+  const record = obj as Record<string, unknown>;
+  return (
+    typeof record.device_id === 'string' &&
+    typeof record.timestamp === 'string' &&
+    typeof record.status === 'string' &&
+    (record.temperature === undefined || typeof record.temperature === 'number') &&
+    (record.pressure === undefined || typeof record.pressure === 'number') &&
+    (record.vibration === undefined || typeof record.vibration === 'number') &&
+    (record.power === undefined || typeof record.power === 'number') &&
+    (record.humidity === undefined || typeof record.humidity === 'number')
+  );
+}
+
+/**
+ * 检查是否为 TelemetryData 数组
+ */
+export function isTelemetryDataArray(arr: unknown): arr is Array<{ device_id: string; timestamp: string; status: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number }> {
+  if (!Array.isArray(arr)) return false;
+  return arr.every(isTelemetryData);
+}
+
+// ============== TelemetryHistory 类型守卫 ==============
+
+/**
+ * 检查是否为 TelemetryHistory 对象
+ */
+export function isTelemetryHistory(obj: unknown): obj is { id: number; device_id: string; timestamp: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number } {
+  if (!hasProperties(obj, ['id', 'device_id', 'timestamp'])) return false;
+  const record = obj as Record<string, unknown>;
+  return (
+    typeof record.id === 'number' &&
+    typeof record.device_id === 'string' &&
+    typeof record.timestamp === 'string' &&
+    (record.temperature === undefined || typeof record.temperature === 'number') &&
+    (record.pressure === undefined || typeof record.pressure === 'number') &&
+    (record.vibration === undefined || typeof record.vibration === 'number') &&
+    (record.power === undefined || typeof record.power === 'number') &&
+    (record.humidity === undefined || typeof record.humidity === 'number')
+  );
+}
+
+/**
+ * 检查是否为 TelemetryHistory 数组
+ */
+export function isTelemetryHistoryArray(arr: unknown): arr is Array<{ id: number; device_id: string; timestamp: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number }> {
+  if (!Array.isArray(arr)) return false;
+  return arr.every(isTelemetryHistory);
+}
+
+// ============== 安全类型转换函数（新增）==============
+
+/**
+ * 安全地转换为 TelemetryData，如果类型不匹配返回 null
+ */
+export function asTelemetryDataSafe(obj: unknown): { device_id: string; timestamp: string; status: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number } | null {
+  return isTelemetryData(obj) ? obj : null;
+}
+
+/**
+ * 安全地转换为 TelemetryData 数组，如果类型不匹配返回空数组
+ */
+export function asTelemetryDataArraySafe(arr: unknown): Array<{ device_id: string; timestamp: string; status: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number }> {
+  return isTelemetryDataArray(arr) ? arr : [];
+}
+
+/**
+ * 安全地转换为 TelemetryHistory 数组，如果类型不匹配返回空数组
+ */
+export function asTelemetryHistoryArraySafe(arr: unknown): Array<{ id: number; device_id: string; timestamp: string; temperature?: number; pressure?: number; vibration?: number; power?: number; humidity?: number }> {
+  return isTelemetryHistoryArray(arr) ? arr : [];
+}
+
+/**
+ * 安全地转换为 AlertStatusPayload，如果类型不匹配返回 null
+ */
+export function asAlertStatusPayloadSafe(obj: unknown): { id: number; status: string } | null {
+  return isAlertStatusPayload(obj) ? obj : null;
+}
+
 export default {
   isDeviceStatus,
   isDevice,
@@ -473,4 +573,13 @@ export default {
   asDeviceGraphSafe,
   asAgentResponseSafe,
   asAlertStatusSafe,
+  isAlertStatusPayload,
+  isTelemetryData,
+  isTelemetryDataArray,
+  isTelemetryHistory,
+  isTelemetryHistoryArray,
+  asTelemetryDataSafe,
+  asTelemetryDataArraySafe,
+  asTelemetryHistoryArraySafe,
+  asAlertStatusPayloadSafe,
 };

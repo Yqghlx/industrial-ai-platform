@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
@@ -599,6 +600,35 @@ func (c *compatAuthSvc) Register(ctx context.Context, req *model.RegisterRequest
 
 func (c *compatAuthSvc) GetUserByID(ctx context.Context, id int) (*model.User, error) {
 	return c.userSvc.GetByID(id)
+}
+
+// FIX-016/017: 实现新增的 AuthServiceInterface 方法
+func (c *compatAuthSvc) RefreshToken(ctx context.Context, refreshToken string) (*service.TokenPair, error) {
+	// compatAuthSvc 不支持完整的 JWT 功能，返回错误
+	return nil, fmt.Errorf("refresh token not supported in compat mode")
+}
+
+func (c *compatAuthSvc) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	// 验证旧密码
+	user, err := c.userSvc.Authenticate("", oldPassword)
+	if err != nil {
+		return err
+	}
+	_ = user // 验证通过，忽略用户信息
+
+	// Hash new password
+	newHash, err := service.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	// Update password
+	return c.userSvc.UpdatePassword(userID, newHash)
+}
+
+func (c *compatAuthSvc) ValidateToken(ctx context.Context, token string) (*service.Claims, error) {
+	// compatAuthSvc 不支持完整的 JWT 功能，返回错误
+	return nil, fmt.Errorf("validate token not supported in compat mode")
 }
 
 // getCacheStatus wrapper for backward compat

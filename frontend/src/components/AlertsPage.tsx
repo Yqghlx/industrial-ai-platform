@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Alert as AlertType } from '../types/api';
-import { isAlert, asAlertStatusSafe } from '../types/typeGuards';
+import { isAlert, asAlertStatusSafe, isAlertStatusPayload } from '../types/typeGuards';
 
 interface AlertStats {
   active_count: number;
@@ -77,11 +77,10 @@ export default function AlertsPage() {
           });
         }
       } else if (message.type === 'alert_resolved' || message.type === 'alert_acknowledged') {
-        // FE-P1-01: 使用类型守卫安全转换
-        if (hasProperty(message.payload, 'id') && hasProperty(message.payload, 'status')) {
-          const payload = message.payload as { id: number; status: string };
-          const alertId = payload.id;
-          const newStatus = asAlertStatusSafe(payload.status);
+        // FE-P1-01: 使用类型守卫替代 as Type 断言
+        if (isAlertStatusPayload(message.payload)) {
+          const alertId = message.payload.id;
+          const newStatus = asAlertStatusSafe(message.payload.status);
           if (newStatus) {
             setAlerts(prev => prev.map(a => 
               a.id === alertId ? { ...a, status: newStatus } : a
@@ -92,11 +91,6 @@ export default function AlertsPage() {
       }
     },
   });
-
-// Helper function for type checking
-function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
-  return typeof obj === 'object' && obj !== null && key in obj;
-}
 
   // Fetch alerts
   const fetchAlerts = useCallback(async () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
@@ -73,7 +73,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [isMobile, onClose]);
 
-  const menuItems = [
+  // FE-P1-03: 使用 useMemo 防止每次渲染重建菜单数组
+  const menuItems = useMemo(() => [
     { path: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
     { path: '/digital-twin', icon: Activity, label: t('nav.digitalTwin') },
     { path: '/devices', icon: Settings, label: t('nav.devices') },
@@ -87,12 +88,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: '/alerts', icon: AlertTriangle, label: t('nav.alerts') },
     { path: '/blackbox', icon: Box, label: t('nav.blackbox') },
     { path: '/roi', icon: BarChart3, label: t('nav.roi') },
-  ];
+  ], [t]);
 
-  const adminItems = [
+  const adminItems = useMemo(() => [
     { path: '/users', icon: Users, label: t('nav.users') },
     { path: '/system', icon: Database, label: t('nav.system') },
-  ];
+  ], [t]);
 
   const isActive = (path: string) => location.pathname === path;
 
