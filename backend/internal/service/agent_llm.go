@@ -59,13 +59,14 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 	}
 
 	// Build request body (OpenAI-compatible format)
+	// OPT-001: Reduce max_tokens from 2048 to 512 for faster response
 	reqBody := map[string]interface{}{
 		"model": s.model,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userMessage},
 		},
-		"max_tokens":  2048,
+		"max_tokens":  512,  // Reduced for faster response
 		"temperature": 0.7,
 	}
 
