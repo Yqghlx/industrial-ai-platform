@@ -69,17 +69,20 @@ export function LazyWrapper({
  * @param importFn 动态导入函数
  * @param variant 加载状态类型
  */
+// 扩展的懒加载组件类型，包含 preload 方法
+type LazyComponentWithPreload<T extends ComponentType<Record<string, unknown>>> = 
+  LazyExoticComponent<T> & { preload: () => Promise<{ default: T }> };
+
 export function createLazyComponent<T extends ComponentType<Record<string, unknown>>>(
   importFn: () => Promise<{ default: T }>,
   _variant: LoadingVariant = 'spinner'
-): LazyExoticComponent<T> & { preload: () => Promise<void> } {
-  const LazyComponent = React.lazy(importFn) as LazyExoticComponent<T>;
+): LazyComponentWithPreload<T> {
+  const LazyComponent = React.lazy(importFn) as LazyComponentWithPreload<T>;
   
   // 添加预加载方法
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (LazyComponent as any).preload = importFn;
+  LazyComponent.preload = importFn;
   
-  return LazyComponent as LazyExoticComponent<T> & { preload: () => Promise<void> };
+  return LazyComponent;
 }
 
 /**

@@ -87,6 +87,7 @@ export default function RuleManager() {
         <button 
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary flex items-center gap-2"
+          aria-label={t('alert.createRule')}
         >
           <Plus className="w-5 h-5" />
           <span>{t('alert.createRule')}</span>
@@ -136,6 +137,7 @@ export default function RuleManager() {
                         <button
                           onClick={() => handleToggle(rule.id, !rule.enabled)}
                           className="p-1 hover:bg-slate-700 rounded"
+                          aria-label={rule.enabled ? t('common.disable') : t('common.enable')}
                         >
                           {rule.enabled ? (
                             <ToggleRight className="w-6 h-6 text-green-400" />
@@ -149,6 +151,7 @@ export default function RuleManager() {
                           <button
                             onClick={() => setEditingRule(rule)}
                             className="p-1 text-slate-400 hover:text-primary-400"
+                            aria-label={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </button>

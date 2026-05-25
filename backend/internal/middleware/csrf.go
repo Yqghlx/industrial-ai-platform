@@ -171,7 +171,7 @@ func CSRFWithConfig(config *CSRFConfig) gin.HandlerFunc {
 
 // setCSRFToken generates and sets a new CSRF token cookie
 func setCSRFToken(c *gin.Context, config *CSRFConfig) string {
-	token := generateCSRFToken(config.TokenLength)
+	token := GenerateCSRFToken(config.TokenLength)
 
 	// Build cookie with SameSite attribute
 	// Using SetCookie with proper SameSite support
@@ -189,8 +189,9 @@ func setCSRFToken(c *gin.Context, config *CSRFConfig) string {
 	return token
 }
 
-// generateCSRFToken generates a cryptographically secure random token
-func generateCSRFToken(length int) string {
+// GenerateCSRFToken generates a cryptographically secure random token
+// SEC-HIGH-02: Exported for use in auth handlers
+func GenerateCSRFToken(length int) string {
 	if length <= 0 {
 		length = 32
 	}

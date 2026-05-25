@@ -381,22 +381,22 @@ export default function AlertsPage() {
                   <div className="flex gap-2">
                     {alert.status === 'active' && (
                       <>
-<button
-                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
-                        onClick={() => handleAcknowledge(alert.id)}
-                        aria-label={t('alert.acknowledgedLabel')}
-                      >
-                        <Clock className="h-4 w-4" />
-                        {t('alert.acknowledge')}
-                      </button>
-                      <button
-                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
-                        onClick={() => handleResolve(alert.id)}
-                        aria-label={t('alert.resolvedLabel')}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        {t('alert.resolve')}
-                      </button>
+                        <button
+                          className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
+                          onClick={() => handleAcknowledge(alert.id)}
+                          aria-label={t('alert.acknowledgedLabel')}
+                        >
+                          <Clock className="h-4 w-4" />
+                          {t('alert.acknowledge')}
+                        </button>
+                        <button
+                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+                          onClick={() => handleResolve(alert.id)}
+                          aria-label={t('alert.resolvedLabel')}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          {t('alert.resolve')}
+                        </button>
                       </>
                     )}
                     {alert.status === 'acknowledged' && (

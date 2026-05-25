@@ -67,12 +67,14 @@ export default class ErrorBoundary extends Component<Props, State> {
                       <button
                         onClick={() => window.location.reload()}
                         className="btn btn-primary"
+                        aria-label={messages.refreshPage}
                       >
                         {messages.refreshPage}
                       </button>
                       <button
                         onClick={this.handleGoBack}
                         className="btn btn-secondary"
+                        aria-label={messages.goBack}
                       >
                         {messages.goBack}
                       </button>

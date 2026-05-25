@@ -451,7 +451,7 @@ func TestCSRFWithConfig_MultipleRequests(t *testing.T) {
 	})
 
 	// Manually set a token - simulate getting token from GET and using it in POST
-	token := generateCSRFToken(32)
+	token := GenerateCSRFToken(32)
 
 	// POST with the token in both cookie and header
 	req := httptest.NewRequest("POST", "/test", strings.NewReader("{}"))
@@ -697,18 +697,18 @@ func TestIsSafeMethod_UnknownMethod(t *testing.T) {
 }
 
 // ============================================
-// generateCSRFToken Edge Cases
+// GenerateCSRFToken Edge Cases
 // ============================================
 
 func TestGenerateCSRFToken_NegativeLength(t *testing.T) {
-	token := generateCSRFToken(-1)
+	token := GenerateCSRFToken(-1)
 	assert.NotEmpty(t, token)
 	// Should default to 32
 	assert.True(t, len(token) > 32)
 }
 
 func TestGenerateCSRFToken_LargeLength(t *testing.T) {
-	token := generateCSRFToken(64)
+	token := GenerateCSRFToken(64)
 	assert.NotEmpty(t, token)
 	// Base64 encoding will make it longer
 	assert.True(t, len(token) >= 64)

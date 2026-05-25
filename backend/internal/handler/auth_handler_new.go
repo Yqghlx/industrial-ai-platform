@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/industrial-ai/platform/internal/middleware"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
 	"github.com/industrial-ai/platform/pkg/response"
@@ -30,6 +31,36 @@ func NewAuthHandlerNew(
 	}
 }
 
+// GetCSRFToken SEC-HIGH-02: 获取 CSRF Token 端点
+// 用于前端获取 CSRF Token 以进行额外的安全保护
+// 注意：JWT via Authorization header 已经提供 CSRF 保护，此端点是可选的额外保护层
+func (h *AuthHandlerNew) GetCSRFToken(c *gin.Context) {
+	// 使用 CSRF 中间件的配置
+	config := middleware.DefaultCSRFConfig()
+
+	// 从 cookie 获取现有 token，或生成新的
+	token, err := c.Cookie(config.CookieName)
+	if err != nil || token == "" {
+		// 生成新的 CSRF token
+		token = middleware.GenerateCSRFToken(config.TokenLength)
+		c.SetSameSite(config.CookieSameSite)
+		c.SetCookie(
+			config.CookieName,
+			token,
+			config.CookieMaxAge,
+			config.CookiePath,
+			config.CookieDomain,
+			config.CookieSecure,
+			config.CookieHTTPOnly,
+		)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"csrf_token": token,
+		"message":    "CSRF token for optional additional protection (JWT header already provides CSRF-safe auth)",
+	})
+}
+
 // Login 用户登录
 func (h *AuthHandlerNew) Login(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -50,8 +81,13 @@ func (h *AuthHandlerNew) Login(c *gin.Context) {
 		return
 	}
 
+	// SEC-HIGH-03: 只返回必要的用户信息，避免过度暴露
 	c.JSON(http.StatusOK, gin.H{
-		"user":  user,
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"role":     user.Role,
+		},
 		"token": token,
 	})
 }
@@ -89,8 +125,13 @@ func (h *AuthHandlerNew) Register(c *gin.Context) {
 		return
 	}
 
+	// SEC-HIGH-03: 只返回必要的用户信息，避免过度暴露
 	c.JSON(http.StatusOK, gin.H{
-		"user":  user,
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"role":     user.Role,
+		},
 		"token": token,
 	})
 }

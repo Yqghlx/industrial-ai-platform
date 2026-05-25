@@ -111,6 +111,7 @@ export default function KnowledgeGraph() {
         <button 
           onClick={loadGraph}
           className="btn btn-secondary flex items-center gap-2"
+          aria-label={t('common.refresh')}
         >
           <RefreshCw className="w-5 h-5" />
           <span>{t('common.refresh')}</span>

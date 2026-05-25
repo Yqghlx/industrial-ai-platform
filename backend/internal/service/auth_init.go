@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -50,12 +51,18 @@ func IsJWTInitialized() bool {
 }
 
 // SetJWTSecret 设置 JWT 密钥 (向后兼容)
-func SetJWTSecret(secret string) {
-	if secret != "" {
-		// SEC-LOW-02: 不打印密钥长度信息
-		// 密钥长度验证应在配置层面处理
-		globalJWTService = &JWTService{secret: []byte(secret)}
+func SetJWTSecret(secret string) error {
+	if secret == "" {
+		return &JWTInitError{Message: "JWT_SECRET is required"}
 	}
+	// SEC-HIGH-01: 密钥长度验证
+	if len(secret) < MinSecretLength {
+		return &JWTInitError{
+			Message: fmt.Sprintf("JWT_SECRET must be at least %d characters, got %d", MinSecretLength, len(secret)),
+		}
+	}
+	globalJWTService = &JWTService{secret: []byte(secret)}
+	return nil
 }
 
 // SetRedisClient 设置 Redis 客户端 (向后兼容)

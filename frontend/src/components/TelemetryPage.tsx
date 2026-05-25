@@ -173,6 +173,7 @@ export default function TelemetryPage() {
                   ? 'bg-primary-600 text-white'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
+              aria-label={`${t('device.id')}: ${d.device_id}`}
             >
               {d.device_id}
               <span className={`ml-2 w-2 h-2 rounded-full inline-block ${getTelemetryStatusColor(d.status)}`} />

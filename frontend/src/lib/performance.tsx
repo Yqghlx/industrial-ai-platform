@@ -17,6 +17,18 @@ function isLayoutShiftEntry(entry: PerformanceEntry): entry is LayoutShiftEntry 
     'hadRecentInput' in entry;
 }
 
+// Memory Info 类型扩展 (Chrome 特有的 performance.memory API)
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+// 扩展 Performance 接口以包含 Chrome 特有的 memory 属性
+interface PerformanceWithMemory extends Performance {
+  memory?: MemoryInfo;
+}
+
 // 性能指标类型
 export interface PerformanceMetrics {
   // 首次内容绘制
@@ -168,9 +180,11 @@ class PerformanceMonitor {
 
         // 内存使用情况
         if ('memory' in performance) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const memory = (performance as any).memory;
-          this.metrics.jsHeapSize = memory.usedJSHeapSize;
+          const perfWithMemory = performance as PerformanceWithMemory;
+          const memory = perfWithMemory.memory;
+          if (memory) {
+            this.metrics.jsHeapSize = memory.usedJSHeapSize;
+          }
         }
 
         this.notifyCallbacks();

@@ -57,12 +57,14 @@ export function PerformancePanel({ isOpen, onClose }: PerformancePanelProps) {
             <button
               onClick={refresh}
               className="px-3 py-1 text-sm bg-slate-700 rounded hover:bg-slate-600 text-slate-300"
+              aria-label={t('performance.refresh')}
             >
               {t('performance.refresh')}
             </button>
             <button
               onClick={onClose}
               className="p-1 text-slate-400 hover:text-slate-200"
+              aria-label={t('common.close')}
             >
               ✕
             </button>

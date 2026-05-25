@@ -57,10 +57,10 @@ export default function WorkOrderBoard() {
         <button 
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary flex items-center gap-2"
-          aria-label={t('workOrder.createOrder')}
+          aria-label={t('workOrder.create')}
         >
           <Plus className="w-5 h-5" />
-          <span>{t('workOrder.createOrder')}</span>
+          <span>{t('workOrder.create')}</span>
         </button>
       </div>
 

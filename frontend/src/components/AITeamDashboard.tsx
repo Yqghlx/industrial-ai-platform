@@ -121,6 +121,7 @@ export default function AITeamDashboard() {
               type="submit"
               disabled={loading || !query.trim()}
               className="btn btn-primary flex items-center gap-2"
+              aria-label={t('ai.askQuestion')}
             >
               {loading ? (
                 <Loader className="w-5 h-5 animate-spin" />
@@ -152,6 +153,7 @@ export default function AITeamDashboard() {
                 key={prompt}
                 onClick={() => setQuery(prompt)}
                 className="px-3 py-1 bg-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-600 transition-colors"
+                aria-label={prompt}
               >
                 {prompt}
               </button>

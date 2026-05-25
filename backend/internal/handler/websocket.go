@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -145,10 +144,8 @@ func (s *Server) handleWebSocket(c *gin.Context) {
 		// Process the message (currently just reading, no specific handling)
 		// If needed, parse and handle client messages
 		if messageType == websocket.TextMessage && len(data) > 0 {
-			var msg map[string]interface{}
-			if err := json.Unmarshal(data, &msg); err == nil {
-				log.Printf("[WebSocket] Received message from client: %v", msg)
-			}
+			// 仅记录消息类型和大小，不记录内容（避免敏感信息泄露）
+			log.Printf("[WebSocket] Received message from client: type=%d, size=%d bytes", messageType, len(data))
 		}
 	}
 }

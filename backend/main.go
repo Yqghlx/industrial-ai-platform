@@ -27,12 +27,15 @@ func main() {
 	if appCfg.JWTSecret == "" {
 		log.Fatal("JWT_SECRET is required. Please set the JWT_SECRET environment variable with at least 32 characters.")
 	}
+	// SEC-HIGH-01: 密钥长度验证
 	if len(appCfg.JWTSecret) < 32 {
 		log.Fatalf("JWT_SECRET must be at least 32 characters for security. Current length: %d", len(appCfg.JWTSecret))
 	}
 	// 设置 JWT 密钥到 middleware 和 service
 	middleware.SetJWTSecret(appCfg.JWTSecret)
-	service.SetJWTSecret(appCfg.JWTSecret)
+	if err := service.SetJWTSecret(appCfg.JWTSecret); err != nil {
+		log.Fatalf("Failed to initialize JWT service: %v", err)
+	}
 
 	// Create server configuration
 	serverCfg := handler.ServerConfig{

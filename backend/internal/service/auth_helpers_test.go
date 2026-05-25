@@ -488,13 +488,14 @@ func TestSetJWTSecret(t *testing.T) {
 	orig := globalJWTService
 	defer func() { globalJWTService = orig }()
 
-	// Empty secret should not change existing service
-	SetJWTSecret("")
-	// globalJWTService should still be set from TestMain
-	assert.NotNil(t, globalJWTService)
+	// SEC-HIGH-01: Empty secret should return error
+	err := SetJWTSecret("")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "JWT_SECRET is required")
 
 	// Valid secret should set the service
-	SetJWTSecret("this-is-a-very-long-secret-key-for-testing-123456")
+	err = SetJWTSecret("this-is-a-very-long-secret-key-for-testing-123456")
+	assert.NoError(t, err)
 	assert.NotNil(t, globalJWTService)
 }
 
@@ -502,9 +503,10 @@ func TestSetJWTSecret_ShortSecret(t *testing.T) {
 	orig := globalJWTService
 	defer func() { globalJWTService = orig }()
 
-	// Short secret should still set the service (with warning)
-	SetJWTSecret("short")
-	assert.NotNil(t, globalJWTService)
+	// SEC-HIGH-01: Short secret should return error (not set service)
+	err := SetJWTSecret("short")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must be at least 32 characters")
 }
 
 func TestSetRedisClient_NilGlobal(t *testing.T) {

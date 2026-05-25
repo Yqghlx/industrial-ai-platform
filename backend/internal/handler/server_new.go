@@ -117,10 +117,12 @@ type HTTPServerNew struct {
 // NewHTTPServerNew creates a new HTTP server (new architecture)
 // 使用 ServerConfig 定义从 server.go
 func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
-	// Set JWT secret
+	// SEC-HIGH-01: 设置 JWT 密钥到 middleware 和 service
 	if cfg.JWTSecret != "" {
 		middleware.SetJWTSecret(cfg.JWTSecret)
-		service.SetJWTSecret(cfg.JWTSecret)
+		if err := service.SetJWTSecret(cfg.JWTSecret); err != nil {
+			return nil, fmt.Errorf("failed to initialize JWT: %w", err)
+		}
 	}
 
 	// Connect to database
@@ -325,6 +327,9 @@ func (s *HTTPServerNew) setupHandlers() {
 	authPublic.POST("/auth/login", middleware.LoginRateLimit(), s.authHandler.Login)
 	authPublic.POST("/auth/register", middleware.RegisterRateLimit(), s.authHandler.Register)
 	authPublic.POST("/auth/refresh", s.authHandler.RefreshToken)
+	// SEC-HIGH-02: CSRF Token endpoint for optional additional protection
+	// Note: JWT via Authorization header already provides CSRF-safe authentication
+	authPublic.GET("/auth/csrf-token", s.authHandler.GetCSRFToken)
 	
 	// SEC-MED-02: Telemetry endpoint with rate limiting and input validation
 	// Device authentication is optional - see DeviceAuthRequired middleware
@@ -582,6 +587,12 @@ func NewAuthHandler(userSvc service.UserServiceInterface, jwtSecret string) *Aut
 }
 
 // compatAuthSvc wraps UserServiceInterface to implement AuthServiceInterface
+// 用于向后兼容旧的 API 签名
+//
+// 注意：这是一个部分实现，仅用于兼容性目的：
+// - Register: 返回 nil（不支持直接注册）
+// - RefreshToken/ValidateToken: 返回错误（不支持 JWT 功能）
+// - 这些方法不应在生产环境中使用，仅用于过渡期兼容
 type compatAuthSvc struct {
 	userSvc service.UserServiceInterface
 }
@@ -603,8 +614,9 @@ func (c *compatAuthSvc) GetUserByID(ctx context.Context, id int) (*model.User, e
 }
 
 // FIX-016/017: 实现新增的 AuthServiceInterface 方法
+// compatAuthSvc 不支持完整的 JWT 功能
+// 注意：调用此方法将返回错误，生产环境应使用完整的 AuthService 实现
 func (c *compatAuthSvc) RefreshToken(ctx context.Context, refreshToken string) (*service.TokenPair, error) {
-	// compatAuthSvc 不支持完整的 JWT 功能，返回错误
 	return nil, fmt.Errorf("refresh token not supported in compat mode")
 }
 
@@ -627,7 +639,8 @@ func (c *compatAuthSvc) ChangePassword(ctx context.Context, userID int, oldPassw
 }
 
 func (c *compatAuthSvc) ValidateToken(ctx context.Context, token string) (*service.Claims, error) {
-	// compatAuthSvc 不支持完整的 JWT 功能，返回错误
+	// 注意：compatAuthSvc 不支持完整的 JWT 功能
+	// 生产环境应使用完整的 AuthService 实现
 	return nil, fmt.Errorf("validate token not supported in compat mode")
 }
 

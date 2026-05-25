@@ -117,6 +117,7 @@ export default function DeviceManager() {
               data-testid="add-device-btn"
               onClick={() => setShowCreateModal(true)}
               className="btn btn-primary flex items-center gap-2"
+              aria-label={t('common.create')}
             >
               <Plus className="w-5 h-5" />
               <span>{t('common.create')}</span>
@@ -190,6 +191,7 @@ export default function DeviceManager() {
                             data-testid="edit-btn"
                             onClick={() => setEditingDevice(device)}
                             className="p-1 text-slate-400 hover:text-primary-400"
+                            aria-label={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -198,6 +200,7 @@ export default function DeviceManager() {
                               data-testid="delete-btn"
                               onClick={() => handleDelete(device.id)}
                               className="p-1 text-slate-400 hover:text-red-400"
+                              aria-label={t('common.delete')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -222,6 +225,7 @@ export default function DeviceManager() {
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
                 className="btn btn-secondary disabled:opacity-50 flex items-center gap-1"
+                aria-label={t('common.prev')}
               >
                 <ChevronLeft className="w-4 h-4" />
                 {t('common.prev')}
@@ -234,6 +238,7 @@ export default function DeviceManager() {
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
                 className="btn btn-secondary disabled:opacity-50 flex items-center gap-1"
+                aria-label={t('common.next')}
               >
                 {t('common.next')}
                 <ChevronRight className="w-4 h-4" />

@@ -30,15 +30,26 @@ type ServiceFactory struct {
 
 // NewServiceFactory 创建 Service 工厂（空工厂）
 // 用于测试场景，通过 Set 方法注入 Mock
+//
+// 注意：此工厂返回空实例，所有 Service 字段为 nil。
+// 调用方需要通过 Set* 方法手动注入 Service 实现，
+// 或使用 NewServiceFactoryFromRepo 创建完整工厂。
 func NewServiceFactory() *ServiceFactory {
 	return &ServiceFactory{}
 }
 
 // NewServiceFactoryFromRepo 创建 Service 工厂（从 Repository 创建）
-// 用于生产场景
+//
+// DESIGN DECISION: 当前返回空工厂，原因如下：
+// 1. 服务依赖复杂，需要逐步完善初始化逻辑
+// 2. 避免循环依赖，某些服务需要其他服务作为依赖
+// 3. 生产环境应使用完整的依赖注入框架（如 wire、dig）
+//
+// TODO: 实现完整的 Service 初始化
+// - 实例化基础服务（无依赖）
+// - 按依赖顺序初始化其他服务
+// - 或引入 DI 框架自动管理依赖
 func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *ServiceFactory {
-	// TODO: 实现从 Repository 创建 Service
-	// 当前返回空工厂，需要逐步完善
 	return &ServiceFactory{}
 }
 

@@ -300,11 +300,11 @@ func TestIsSafeMethod(t *testing.T) {
 }
 
 func TestGenerateCSRFToken(t *testing.T) {
-	token := generateCSRFToken(32)
+	token := GenerateCSRFToken(32)
 	assert.NotEmpty(t, token)
 	assert.True(t, len(token) > 0)
 
-	token2 := generateCSRFToken(32)
+	token2 := GenerateCSRFToken(32)
 	assert.NotEqual(t, token, token2, "Tokens should be unique")
 }
 
