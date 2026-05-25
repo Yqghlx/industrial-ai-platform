@@ -126,7 +126,7 @@ export interface Alert {
   rule_id: number;
   rule_name?: string;
   device_id: string;
-  metric: string;
+  metric?: string;  // Optional - backend may not return this field
   value: number;
   threshold: number;
   message?: string;
@@ -134,6 +134,7 @@ export interface Alert {
   status: 'active' | 'acknowledged' | 'resolved';
   triggered_at: string;
   resolved_at?: string;
+  tenant_id?: string;
 }
 
 // ============== Work Order Types ==============

@@ -111,13 +111,14 @@ export function isAlertSeverity(value: unknown): value is AlertSeverity {
 }
 
 export function isAlert(obj: unknown): obj is Alert {
-  if (!hasProperties(obj, ['id', 'rule_id', 'device_id', 'metric', 'value', 'threshold', 'severity', 'status', 'triggered_at'])) return false;
+  // metric field is optional in backend response
+  if (!hasProperties(obj, ['id', 'rule_id', 'device_id', 'value', 'threshold', 'severity', 'status', 'triggered_at'])) return false;
   const record = obj as Record<string, unknown>;
   return (
     typeof record.id === 'number' &&
     typeof record.rule_id === 'number' &&
     typeof record.device_id === 'string' &&
-    typeof record.metric === 'string' &&
+    (record.metric === undefined || typeof record.metric === 'string') &&
     typeof record.value === 'number' &&
     typeof record.threshold === 'number' &&
     isAlertSeverity(record.severity) &&

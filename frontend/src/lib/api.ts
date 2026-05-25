@@ -235,12 +235,19 @@ class ApiClient {
 
   // Devices
   async getDevices(page = 1, pageSize = 20): Promise<PaginatedResponse<Device>> {
-    return this.request<PaginatedResponse<Device>>(
+    const response = await this.request<{ devices: Device[]; total: number; page: number; page_size: number }>(
       'GET',
       '/devices',
       undefined,
       { page: String(page), page_size: String(pageSize) }
     );
+    // Adapt backend response format (devices -> data)
+    return {
+      data: response.devices,
+      total: response.total,
+      page: response.page,
+      page_size: response.page_size,
+    };
   }
 
   async getDevice(id: string): Promise<Device> {
@@ -287,7 +294,9 @@ class ApiClient {
 
   // Rules
   async getRules(): Promise<{ data: AlertRule[] }> {
-    return this.request<{ data: AlertRule[] }>('GET', '/rules');
+    const response = await this.request<{ rules: AlertRule[]; total?: number; page?: number; page_size?: number }>('GET', '/alert-rules');
+    // Adapt backend response format (rules -> data)
+    return { data: response.rules };
   }
 
   async getRule(id: number): Promise<AlertRule> {

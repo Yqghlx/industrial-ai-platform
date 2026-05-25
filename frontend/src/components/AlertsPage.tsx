@@ -63,7 +63,8 @@ export default function AlertsPage() {
       if (!response.ok) throw new Error('Failed to fetch alerts');
 
       const data = await response.json();
-      setAlerts(data.data || []);
+      // Adapt backend response format (alerts -> data)
+      setAlerts(data.alerts || data.data || []);
     } catch {
       showToast({ type: 'error', message: t('errors.unknown') });
     }
@@ -86,49 +87,49 @@ export default function AlertsPage() {
     }
   }, [showToast, t]);
 
-  // WebSocket for real-time alerts (defined after fetchStats to avoid reference error)
-  useWebSocket({
-    onMessage: (message) => {
-      if (message.type === 'alert') {
-        // FE-P1-01: 使用类型守卫替代 as Type 断言
-        if (isAlert(message.payload)) {
-          const newAlert = message.payload;
-          setAlerts(prev => [newAlert, ...prev]);
-          setStats(prev => prev ? {
-            ...prev,
-            active_count: prev.active_count + 1,
-            total_count: prev.total_count + 1,
-            by_severity: {
-              ...prev.by_severity,
-              [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
-            },
-            by_status: {
-              ...prev.by_status,
-              active: (prev.by_status.active || 0) + 1,
-            },
-          } : null);
+  // WebSocket disabled temporarily - connection issues
+  // useWebSocket({
+  //   onMessage: (message) => {
+  //     if (message.type === 'alert') {
+  //       // FE-P1-01: 使用类型守卫替代 as Type 断言
+  //       if (isAlert(message.payload)) {
+  //         const newAlert = message.payload;
+  //         setAlerts(prev => [newAlert, ...prev]);
+  //         setStats(prev => prev ? {
+  //           ...prev,
+  //           active_count: prev.active_count + 1,
+  //           total_count: prev.total_count + 1,
+  //           by_severity: {
+  //             ...prev.by_severity,
+  //             [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
+  //           },
+  //           by_status: {
+  //             ...prev.by_status,
+  //             active: (prev.by_status.active || 0) + 1,
+  //           },
+  //         } : null);
 
-          const severityInfo = severityConfig[newAlert.severity as keyof typeof severityConfig];
-          showToast({
-            type: newAlert.severity === 'critical' ? 'error' : 'info',
-            message: `${severityInfo?.label || newAlert.severity}: ${newAlert.message || ''}`,
-          });
-        }
-      } else if (message.type === 'alert_resolved' || message.type === 'alert_acknowledged') {
-        // FE-P1-01: 使用类型守卫替代 as Type 断言
-        if (isAlertStatusPayload(message.payload)) {
-          const alertId = message.payload.id;
-          const newStatus = asAlertStatusSafe(message.payload.status);
-          if (newStatus) {
-            setAlerts(prev => prev.map(a => 
-              a.id === alertId ? { ...a, status: newStatus } : a
-            ));
-          }
-        }
-        fetchStats();
-      }
-    },
-  });
+  //         const severityInfo = severityConfig[newAlert.severity as keyof typeof severityConfig];
+  //         showToast({
+  //           type: newAlert.severity === 'critical' ? 'error' : 'info',
+  //           message: `${severityInfo?.label || newAlert.severity}: ${newAlert.message || ''}`,
+  //         });
+  //       }
+  //     } else if (message.type === 'alert_resolved' || message.type === 'alert_acknowledged') {
+  //       // FE-P1-01: 使用类型守卫替代 as Type 断言
+  //       if (isAlertStatusPayload(message.payload)) {
+  //         const alertId = message.payload.id;
+  //         const newStatus = asAlertStatusSafe(message.payload.status);
+  //         if (newStatus) {
+  //           setAlerts(prev => prev.map(a => 
+  //             a.id === alertId ? { ...a, status: newStatus } : a
+  //           ));
+  //         }
+  //       }
+  //       fetchStats();
+  //     }
+  //   },
+  // });
 
   // Initial load
   useEffect(() => {
