@@ -100,7 +100,15 @@ export default function AlertReportPage() {
     if (trendData.length === 0) return;
 
     // Create CSV content
-    const headers = ['日期', '总数', '紧急', '高', '中', '低', '已解决'];
+    const headers = [
+      t('alertReport.date'),
+      t('alertReport.total'),
+      t('alertReport.critical'),
+      t('alertReport.high'),
+      t('alertReport.medium'),
+      t('alertReport.low'),
+      t('alertReport.resolved'),
+    ];
     const rows = trendData.map(d => [
       d.date,
       d.total,
@@ -124,7 +132,7 @@ export default function AlertReportPage() {
     link.click();
     URL.revokeObjectURL(link.href);
 
-    showToast({ type: 'success', message: '报表已导出' });
+    showToast({ type: 'success', message: t('alertReport.exportSuccess') });
   };
 
   // Simple bar chart component
@@ -171,7 +179,7 @@ export default function AlertReportPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-6 w-6 text-blue-400" />
-          <h1 className="text-2xl font-bold text-slate-100">告警报表</h1>
+          <h1 className="text-2xl font-bold text-slate-100">{t('alertReport.title')}</h1>
         </div>
         <div className="flex gap-2">
           <select
@@ -179,9 +187,9 @@ export default function AlertReportPage() {
             value={trendDays}
             onChange={(e) => setTrendDays(Number(e.target.value))}
           >
-            <option value="7">近 7 天</option>
-            <option value="14">近 14 天</option>
-            <option value="30">近 30 天</option>
+            <option value="7">{t('alertReport.recent7Days')}</option>
+            <option value="14">{t('alertReport.recent14Days')}</option>
+            <option value="30">{t('alertReport.recent30Days')}</option>
           </select>
           <button
             className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition-colors"
@@ -189,14 +197,14 @@ export default function AlertReportPage() {
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            刷新
+            {t('alertReport.refresh')}
           </button>
           <button
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
             onClick={handleExport}
           >
             <Download className="h-4 w-4" />
-            导出 CSV
+            {t('alertReport.exportCsv')}
           </button>
         </div>
       </div>
@@ -206,51 +214,51 @@ export default function AlertReportPage() {
         <div className="grid gap-4 md:grid-cols-4">
           <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-400">告警总数</span>
+              <span className="text-sm text-slate-400">{t('alertReport.totalAlerts')}</span>
               <AlertTriangle className="h-4 w-4 text-orange-400" />
             </div>
             <div className="text-2xl font-bold text-slate-100">{efficiencyData.total_alerts}</div>
             <div className="text-xs text-slate-400 mt-1">
-              活跃: {efficiencyData.active_count} | 已确认: {efficiencyData.acknowledged_count}
+              {t('alertReport.active')}: {efficiencyData.active_count} | {t('alertReport.acknowledged')}: {efficiencyData.acknowledged_count}
             </div>
           </div>
 
           <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-400">解决率</span>
+              <span className="text-sm text-slate-400">{t('alertReport.resolutionRate')}</span>
               <CheckCircle className="h-4 w-4 text-green-400" />
             </div>
             <div className="text-2xl font-bold text-green-400">
               {efficiencyData.resolution_rate.toFixed(1)}%
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              已解决: {efficiencyData.resolved_count}
+              {t('alertReport.resolved')}: {efficiencyData.resolved_count}
             </div>
           </div>
 
           <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-400">平均响应时间</span>
+              <span className="text-sm text-slate-400">{t('alertReport.avgResponseTime')}</span>
               <Clock className="h-4 w-4 text-yellow-400" />
             </div>
             <div className="text-2xl font-bold text-slate-100">
               {efficiencyData.avg_response_str}
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              {efficiencyData.avg_response_min.toFixed(1)} 分钟
+              {efficiencyData.avg_response_min.toFixed(1)} {t('alertReport.minutes')}
             </div>
           </div>
 
           <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-400">平均解决时间</span>
+              <span className="text-sm text-slate-400">{t('alertReport.avgResolutionTime')}</span>
               <TrendingUp className="h-4 w-4 text-blue-400" />
             </div>
             <div className="text-2xl font-bold text-slate-100">
               {efficiencyData.avg_resolution_str}
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              {efficiencyData.avg_resolution_min.toFixed(1)} 分钟
+              {efficiencyData.avg_resolution_min.toFixed(1)} {t('alertReport.minutes')}
             </div>
           </div>
         </div>
@@ -260,27 +268,27 @@ export default function AlertReportPage() {
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
         <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-400" />
-          告警趋势（近 {trendDays} 天）
+          {t('alertReport.alertTrend')}（{t('alertReport.recentDays', { days: trendDays })}）
         </h2>
 
         {loading ? (
           <Skeleton className="h-40 w-full" />
         ) : trendData.length > 0 ? (
           <>
-            <SimpleBarChart data={trendData} label="告警数量" />
+            <SimpleBarChart data={trendData} label={t('alertReport.alertCount')} />
 
             {/* Trend table */}
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-slate-400 border-b border-slate-600">
-                    <th className="px-3 py-2 text-left">日期</th>
-                    <th className="px-3 py-2">总数</th>
-                    <th className="px-3 py-2 text-red-400">紧急</th>
-                    <th className="px-3 py-2 text-orange-400">高</th>
-                    <th className="px-3 py-2 text-yellow-400">中</th>
-                    <th className="px-3 py-2 text-green-400">低</th>
-                    <th className="px-3 py-2 text-blue-400">已解决</th>
+                    <th className="px-3 py-2 text-left">{t('alertReport.date')}</th>
+                    <th className="px-3 py-2">{t('alertReport.total')}</th>
+                    <th className="px-3 py-2 text-red-400">{t('alertReport.critical')}</th>
+                    <th className="px-3 py-2 text-orange-400">{t('alertReport.high')}</th>
+                    <th className="px-3 py-2 text-yellow-400">{t('alertReport.medium')}</th>
+                    <th className="px-3 py-2 text-green-400">{t('alertReport.low')}</th>
+                    <th className="px-3 py-2 text-blue-400">{t('alertReport.resolved')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -300,7 +308,7 @@ export default function AlertReportPage() {
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-slate-400">暂无数据</div>
+          <div className="text-center py-8 text-slate-400">{t('alertReport.noData')}</div>
         )}
       </div>
 
@@ -308,7 +316,7 @@ export default function AlertReportPage() {
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
         <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-orange-400" />
-          设备告警排行（TOP 10）
+          {t('alertReport.deviceRanking')}（{t('alertReport.top10')}）
         </h2>
 
         {loading ? (
@@ -338,13 +346,13 @@ export default function AlertReportPage() {
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-slate-200">
-                    <span className="text-slate-400">总数:</span> {r.total}
+                    <span className="text-slate-400">{t('alertReport.totalLabel')}</span> {r.total}
                   </span>
                   <span className="text-red-400">
-                    <span className="text-slate-400">紧急:</span> {r.critical}
+                    <span className="text-slate-400">{t('alertReport.criticalLabel')}</span> {r.critical}
                   </span>
                   <span className="text-orange-400">
-                    <span className="text-slate-400">活跃:</span> {r.active}
+                    <span className="text-slate-400">{t('alertReport.activeLabel')}</span> {r.active}
                   </span>
                 </div>
 
@@ -359,7 +367,7 @@ export default function AlertReportPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-slate-400">暂无数据</div>
+          <div className="text-center py-8 text-slate-400">{t('alertReport.noData')}</div>
         )}
       </div>
     </div>

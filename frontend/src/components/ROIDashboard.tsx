@@ -140,7 +140,7 @@ export default function ROIDashboard() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
                   <span className="text-slate-300">{t('roi.investmentCycle')}</span>
-                  <span className="text-2xl font-bold text-orange-400">3个月</span>
+                  <span className="text-2xl font-bold text-orange-400">{t('roiMonths')}</span>
                 </div>
               </div>
             </div>
