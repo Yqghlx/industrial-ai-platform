@@ -34,14 +34,7 @@ export default function UserManager() {
   });
 
   const { items: users, loading } = state;
-  const { refresh, create, delete: deleteItem } = actions;
-
-  // FE-P2-09: 初始加载由 useCRUD 处理，但需要 isAdmin 检查
-  const loadUsers = useCallback(async () => {
-    if (isAdmin) {
-      await actions.fetchAll(1, 50);
-    }
-  }, [isAdmin, actions]);
+  const { create, delete: deleteItem } = actions;
 
   const handleDelete = useCallback(async (id: number) => {
     // FE-P2-11: 使用自定义确认框替代原生 confirm()

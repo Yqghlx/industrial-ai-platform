@@ -6,7 +6,7 @@ import { useToast } from './Toast';
 import { Activity, Thermometer, Waves, Zap, Settings } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getGaugeColor, getGaugeStrokeColor, getGaugePercentage, getTelemetryStatusColor } from '../lib/colorUtils';
-import { isTelemetry, isTelemetryArray, asTelemetryArraySafe } from '../types/typeGuards';
+import { isTelemetry, asTelemetryArraySafe } from '../types/typeGuards';
 import { Telemetry } from '../types/api';
 
 export default function DigitalTwinPanel() {

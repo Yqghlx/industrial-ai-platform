@@ -27,7 +27,7 @@ import {
 /**
  * 检查对象是否具有指定的属性
  */
-function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
+export function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
   return typeof obj === 'object' && obj !== null && key in obj;
 }
 

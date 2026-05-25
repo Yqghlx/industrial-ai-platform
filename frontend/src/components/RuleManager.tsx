@@ -6,7 +6,6 @@ import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Bell, Plus, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
 import { AlertRule, AlertSeverity, DeviceType, AlertOperator, AlertRuleCreateInput, AlertRuleUpdateInput } from '../types/api';
-import { isAlertOperator, isAlertSeverity } from '../types/typeGuards';
 import { useConfirmDialog } from './UI/ConfirmDialog';
 import { useCRUD } from '../hooks/useCRUD';
 

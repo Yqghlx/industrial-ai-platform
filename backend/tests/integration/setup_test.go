@@ -41,7 +41,9 @@ func setupTestEnvironment() {
 	testDBURL = os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
 		// Use local PostgreSQL (skip if no database available)
+		// BE-P2-04: 使用环境变量而非硬编码
 		testDBURL = "postgres://postgres@localhost:5432/test_platform?sslmode=disable"
+		fmt.Println("⚠️  Using default test database URL. Set TEST_DATABASE_URL for custom configuration.")
 	}
 
 	// Get Redis URL from environment or use default

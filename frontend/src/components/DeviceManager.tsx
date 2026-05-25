@@ -32,12 +32,12 @@ export default function DeviceManager() {
     apiDelete: (id) => api.deleteDevice(id),
     entityName: 'Device',
     initialPageSize: PAGE_SIZE,
-    onError: (error) => showToast({ type: 'error', message: t('device.loadFailed') }),
+    onError: (_error) => showToast({ type: 'error', message: t('device.loadFailed') }),
     onSuccess: (_action) => {}, // 组件自行处理成功提示
   });
 
   const { items: devices, loading, total, page } = state;
-  const { refresh, setPage, create, update, delete: deleteItem } = actions;
+  const { setPage, create, update, delete: deleteItem } = actions;
 
   // FE-P1-01: 使用 useMemo 包裹设备类型数组，避免每次渲染创建新对象
   const DEVICE_TYPES = useMemo(() => [

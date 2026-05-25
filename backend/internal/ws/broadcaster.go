@@ -2,11 +2,12 @@ package ws
 
 import (
 	"encoding/json"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // FIX-020: 统一 WebSocket 广播器 - 单例模式
@@ -56,7 +57,7 @@ func (b *Broadcaster) run() {
 			b.mu.Lock()
 			b.connections[conn] = true
 			b.mu.Unlock()
-			log.Printf("[Broadcaster] Client connected. Total: %d", len(b.connections))
+			logger.L().Info("Client connected", zap.Int("total", len(b.connections)))
 
 		case conn := <-b.unregister:
 			b.mu.Lock()
@@ -65,20 +66,20 @@ func (b *Broadcaster) run() {
 				conn.Close()
 			}
 			b.mu.Unlock()
-			log.Printf("[Broadcaster] Client disconnected. Total: %d", len(b.connections))
+			logger.L().Info("Client disconnected", zap.Int("total", len(b.connections)))
 
 		case msg := <-b.broadcast:
 			b.mu.RLock()
 			data, err := json.Marshal(msg)
 			if err != nil {
-				log.Printf("[Broadcaster] JSON marshal error: %v", err)
+				logger.L().Error("JSON marshal error", zap.Error(err))
 				b.mu.RUnlock()
 				continue
 			}
 
 			for conn := range b.connections {
 				if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-					log.Printf("[Broadcaster] Write error: %v", err)
+					logger.L().Error("Write error", zap.Error(err))
 					conn.Close()
 					b.mu.RUnlock()
 					b.mu.Lock()
@@ -90,7 +91,7 @@ func (b *Broadcaster) run() {
 			b.mu.RUnlock()
 
 		case <-b.stopChan:
-			log.Println("[Broadcaster] Stopping broadcast loop")
+			logger.L().Info("Stopping broadcast loop")
 			b.mu.Lock()
 			for conn := range b.connections {
 				conn.Close()

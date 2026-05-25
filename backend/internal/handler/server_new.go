@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"github.com/industrial-ai/platform/internal/service"
 	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/pkg/cache_service"
+	"github.com/industrial-ai/platform/pkg/logger"
 	dbpkg "github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/wscompression"
 
@@ -288,6 +288,8 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 }
 
 // setupMiddleware sets up middleware
+// SEC-MEDIUM-02: 中间件顺序已正确配置
+// SEC-MEDIUM-04: 添加全局速率限制
 func (s *HTTPServerNew) setupMiddleware(corsOrigins []string) {
 	middleware.InitPrometheus()
 	s.router.Use(middleware.Logger())
@@ -296,6 +298,8 @@ func (s *HTTPServerNew) setupMiddleware(corsOrigins []string) {
 	s.router.Use(middleware.SecurityHeaders())
 	s.router.Use(middleware.PrometheusMiddleware())
 	s.router.Use(middleware.CORS(corsOrigins))
+	// SEC-MEDIUM-04: 全局速率限制 - 作为最后一层，避免影响其他中间件
+	s.router.Use(middleware.DefaultRateLimit())
 }
 
 // setupHandlers sets up all handlers
@@ -484,7 +488,7 @@ func (s *HTTPServerNew) createDefaultAdmin(ctx context.Context) {
 
 	passwordHash, err := service.HashPassword(password)
 	if err != nil {
-		log.Printf("Error: Failed to hash admin password: %v", err)
+		logger.L().Error("Failed to hash admin password", "error", err)
 		return
 	}
 
@@ -496,11 +500,11 @@ func (s *HTTPServerNew) createDefaultAdmin(ctx context.Context) {
 	}
 
 	if err := s.userRepo.Create(ctx, admin); err != nil {
-		log.Printf("Error: Failed to create default admin: %v", err)
+		logger.L().Error("Failed to create default admin", "error", err)
 		return
 	}
 
-	log.Println("Created default admin user")
+	logger.L().Info("Created default admin user")
 }
 
 // healthCheck handles health check

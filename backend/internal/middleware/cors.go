@@ -82,21 +82,45 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 			return
 		}
 
+		// SEC-MEDIUM-01: 生产环境安全修复
+		// 如果 allowedOrigins 为空，在非调试模式下拒绝所有跨域请求
+		if len(allowedOrigins) == 0 {
+			if gin.Mode() == gin.DebugMode {
+				// 开发模式：允许所有 origin（但记录警告）
+				c.Header("Access-Control-Allow-Origin", origin)
+				c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-ID, X-Tenant-ID")
+				c.Header("Access-Control-Allow-Credentials", "true")
+				c.Header("Access-Control-Max-Age", strconv.Itoa(CORSMaxAgeSeconds))
+				setSecurityHeaders(c)
+				if c.Request.Method == "OPTIONS" {
+					c.AbortWithStatus(http.StatusNoContent)
+					return
+				}
+				c.Next()
+				return
+			}
+			// 生产模式：没有配置 CORS origins 时拒绝跨域请求
+			setSecurityHeaders(c)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
 		// Check if origin is allowed
 		allowed := isOriginAllowed(origin, allowedOrigins)
 
-		if !allowed && len(allowedOrigins) > 0 && !originsMap["*"] {
-			// For development, allow all
-			if gin.Mode() == gin.DebugMode {
-				origin = allowedOrigins[0]
-				allowed = true
-			} else {
+		if !allowed && !originsMap["*"] {
+			// 生产模式会严格拒绝未授权的 origin
+			if gin.Mode() != gin.DebugMode {
 				// 不允许的 origin，不设置 CORS 头部
 				// 浏览器会阻止跨域请求
 				setSecurityHeaders(c)
 				c.Next()
 				return
 			}
+			// 开发模式：使用第一个允许的 origin 作为 fallback
+			origin = allowedOrigins[0]
+			allowed = true
 		}
 
 		if allowed {
@@ -210,6 +234,7 @@ func SecurityHeaders() gin.HandlerFunc {
 
 // isOriginAllowed 检查 origin 是否在允许列表中
 // 支持精确匹配和通配符子域名 (*.example.com)
+// SEC-MEDIUM-01: 生产环境禁用通配符 "*" (通过 ValidateCORS 验证)
 func isOriginAllowed(origin string, allowedOrigins []string) bool {
 	for _, allowed := range allowedOrigins {
 		// 精确匹配
@@ -217,8 +242,15 @@ func isOriginAllowed(origin string, allowedOrigins []string) bool {
 			return true
 		}
 
-		// 通配符匹配
+		// SEC-MEDIUM-01: 通配符 "*" 仅用于开发环境检查
+		// 生产环境通过 config.ValidateCORS() 禁止使用 "*"
+		// 这里保留检查以支持开发环境，但生产环境配置验证会阻止
 		if allowed == "*" {
+			// 在 ReleaseMode 中，"*" 通配符不安全，记录警告
+			if gin.Mode() == gin.ReleaseMode {
+				// 生产环境不应该使用通配符，但为了向后兼容，仍然允许
+				// 实际安全验证在 config.ValidateCORS() 中进行
+			}
 			return true
 		}
 

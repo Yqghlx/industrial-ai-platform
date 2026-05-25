@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"database/sql"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // GracefulShutdownManager 优雅关闭管理器
@@ -78,7 +79,7 @@ func (m *GracefulShutdownManager) SetupSignalHandler() {
 	// 启动监听 Goroutine
 	go func() {
 		sig := <-quit
-		log.Printf("Received shutdown signal: %v", sig)
+		logger.L().Info("Received shutdown signal", zap.String("signal", sig.String()))
 		m.GracefulShutdown()
 	}()
 }
@@ -87,7 +88,7 @@ func (m *GracefulShutdownManager) SetupSignalHandler() {
 
 // GracefulShutdown 执行优雅关闭
 func (m *GracefulShutdownManager) GracefulShutdown() {
-	log.Println("Starting graceful shutdown...")
+	logger.L().Info("Starting graceful shutdown...")
 
 	// 1. 设置关闭标志
 	m.SetShuttingDown(true)
@@ -99,7 +100,7 @@ func (m *GracefulShutdownManager) GracefulShutdown() {
 	// 3. 执行关闭钩子
 	for _, hook := range m.onShutdownHooks {
 		if err := hook(ctx); err != nil {
-			log.Printf("Shutdown hook error: %v", err)
+			logger.L().Error("Shutdown hook error", zap.Error(err))
 		}
 	}
 
@@ -108,7 +109,7 @@ func (m *GracefulShutdownManager) GracefulShutdown() {
 
 	// 5. 关闭 HTTP 服务器
 	if err := m.shutdownHTTPServer(ctx); err != nil {
-		log.Printf("HTTP server shutdown error: %v", err)
+		logger.L().Error("HTTP server shutdown error", zap.Error(err))
 	}
 
 	// 6. 关闭数据库连接
@@ -121,7 +122,7 @@ func (m *GracefulShutdownManager) GracefulShutdown() {
 	m.saveApplicationState(ctx)
 
 	// 9. 记录关闭完成
-	log.Println("Graceful shutdown completed")
+	logger.L().Info("Graceful shutdown completed")
 
 	// 10. 退出应用
 	os.Exit(0)
@@ -145,7 +146,7 @@ func (m *GracefulShutdownManager) IsShuttingDown() bool {
 
 // shutdownHTTPServer 关闭 HTTP 服务器
 func (m *GracefulShutdownManager) shutdownHTTPServer(ctx context.Context) error {
-	log.Println("Shutting down HTTP server...")
+	logger.L().Info("Shutting down HTTP server...")
 
 	// 禁止新请求 (Gin 中可以检查 IsShuttingDown 标志)
 	// 实际实现需要在 Gin 中间件中检查
@@ -153,12 +154,12 @@ func (m *GracefulShutdownManager) shutdownHTTPServer(ctx context.Context) error 
 	// 关闭服务器 (等待现有请求完成)
 	err := m.server.Shutdown(ctx)
 	if err != nil {
-		log.Printf("HTTP server shutdown error: %v, forcing closure", err)
+		logger.L().Error("HTTP server shutdown error, forcing closure", zap.Error(err))
 		m.server.Close()
 		return err
 	}
 
-	log.Println("HTTP server shutdown completed")
+	logger.L().Info("HTTP server shutdown completed")
 	return nil
 }
 
@@ -177,7 +178,7 @@ func (m *GracefulShutdownManager) RegisterBackgroundTask(taskID, taskName string
 		CancelFn: cancelFn,
 	}
 
-	log.Printf("Background task registered: %s (%s)", taskName, taskID)
+	logger.L().Info("Background task registered", zap.String("task_name", taskName), zap.String("task_id", taskID))
 }
 
 // UnregisterBackgroundTask 取消注册后台任务
@@ -190,7 +191,7 @@ func (m *GracefulShutdownManager) UnregisterBackgroundTask(taskID string) {
 
 // waitForBackgroundTasks 等待后台任务完成
 func (m *GracefulShutdownManager) waitForBackgroundTasks(ctx context.Context) {
-	log.Println("Waiting for background tasks to complete...")
+	logger.L().Info("Waiting for background tasks to complete...")
 
 	m.taskMutex.Lock()
 	tasks := make([]*BackgroundTask, 0, len(m.backgroundTasks))
@@ -200,15 +201,15 @@ func (m *GracefulShutdownManager) waitForBackgroundTasks(ctx context.Context) {
 	m.taskMutex.Unlock()
 
 	if len(tasks) == 0 {
-		log.Println("No background tasks running")
+		logger.L().Info("No background tasks running")
 		return
 	}
 
-	log.Printf("Waiting for %d background tasks", len(tasks))
+	logger.L().Info("Waiting for background tasks", zap.Int("count", len(tasks)))
 
 	// 取消所有任务
 	for _, task := range tasks {
-		log.Printf("Canceling task: %s (%s)", task.Name, task.ID)
+		logger.L().Info("Canceling task", zap.String("task_name", task.Name), zap.String("task_id", task.ID))
 		task.CancelFn()
 	}
 
@@ -235,9 +236,9 @@ func (m *GracefulShutdownManager) waitForBackgroundTasks(ctx context.Context) {
 
 	select {
 	case <-done:
-		log.Println("All background tasks completed")
+		logger.L().Info("All background tasks completed")
 	case <-waitCtx.Done():
-		log.Printf("Background tasks wait timeout, %d tasks may not complete", len(tasks))
+		logger.L().Warn("Background tasks wait timeout", zap.Int("incomplete_count", len(tasks)))
 	}
 }
 
@@ -245,7 +246,7 @@ func (m *GracefulShutdownManager) waitForBackgroundTasks(ctx context.Context) {
 
 // closeDatabase 关闭数据库连接
 func (m *GracefulShutdownManager) closeDatabase() {
-	log.Println("Closing database connection...")
+	logger.L().Info("Closing database connection...")
 
 	if m.db != nil {
 		// 等待现有查询完成 (最多 5 秒)
@@ -253,23 +254,23 @@ func (m *GracefulShutdownManager) closeDatabase() {
 
 		err := m.db.Close()
 		if err != nil {
-			log.Printf("Database close error: %v", err)
+			logger.L().Error("Database close error", zap.Error(err))
 		} else {
-			log.Println("Database connection closed")
+			logger.L().Info("Database connection closed")
 		}
 	}
 }
 
 // closeRedis 关闭 Redis 连接
 func (m *GracefulShutdownManager) closeRedis() {
-	log.Println("Closing Redis connection...")
+	logger.L().Info("Closing Redis connection...")
 
 	if m.redis != nil {
 		err := m.redis.Close()
 		if err != nil {
-			log.Printf("Redis close error: %v", err)
+			logger.L().Error("Redis close error", zap.Error(err))
 		} else {
-			log.Println("Redis connection closed")
+			logger.L().Info("Redis connection closed")
 		}
 	}
 }
@@ -278,10 +279,10 @@ func (m *GracefulShutdownManager) closeRedis() {
 
 // saveApplicationState 保存应用状态
 func (m *GracefulShutdownManager) saveApplicationState(ctx context.Context) {
-	log.Println("Saving application state...")
+	logger.L().Info("Saving application state...")
 
 	if m.stateSaver == nil {
-		log.Println("State saver not configured, skipping state save")
+		logger.L().Info("State saver not configured, skipping state save")
 		return
 	}
 
@@ -294,7 +295,7 @@ func (m *GracefulShutdownManager) saveApplicationState(ctx context.Context) {
 	}
 	m.taskMutex.Unlock()
 
-	log.Printf("Saved %d unfinished tasks", len(unfinishedTasks))
+	logger.L().Info("Saved unfinished tasks", zap.Int("count", len(unfinishedTasks)))
 
 	// 2. 保存关闭状态
 	shutdownState := ShutdownState{
@@ -309,7 +310,7 @@ func (m *GracefulShutdownManager) saveApplicationState(ctx context.Context) {
 		m.redis.Set(ctx, "shutdown_state", stateJSON, 24*time.Hour)
 	}
 
-	log.Println("Application state saved")
+	logger.L().Info("Application state saved")
 }
 
 // marshalShutdownState 序列化关闭状态
@@ -339,19 +340,19 @@ func StartupRecovery(redis *redis.Client) ShutdownState {
 	// 检查上次关闭状态
 	stateJSON, err := redis.Get(ctx, "shutdown_state").Result()
 	if err != nil {
-		log.Println("No previous shutdown state found")
+		logger.L().Info("No previous shutdown state found")
 		return ShutdownState{Status: "normal"}
 	}
 
 	// 解析关闭状态
 	state := parseShutdownState(stateJSON)
-	log.Printf("Last shutdown state: %s at %v", state.Status, state.Timestamp)
+	logger.L().Info("Last shutdown state recovered", zap.String("status", state.Status), zap.String("timestamp", state.Timestamp.Format(time.RFC3339)))
 
 	// 清理关闭状态
 	redis.Del(ctx, "shutdown_state")
 
 	if len(state.UnfinishedTasks) > 0 {
-		log.Printf("Found %d unfinished tasks to recover", len(state.UnfinishedTasks))
+		logger.L().Info("Found unfinished tasks to recover", zap.Int("count", len(state.UnfinishedTasks)))
 	}
 
 	return state

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -10,7 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/industrial-ai/platform/internal/model"
+	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/industrial-ai/platform/pkg/wscompression"
+	"go.uber.org/zap"
 )
 
 // FIX-058: Server 结构体拆分
@@ -69,7 +70,7 @@ func (m *WebSocketManager) Start() {
 					// Use compression for broadcasting messages
 					err := m.compressor.WriteCompressed(conn, msg)
 					if err != nil {
-						log.Printf("WebSocket write error: %v", err)
+						logger.L().Error("WebSocket write error", zap.Error(err))
 						conn.Close()
 						m.clientsMu.RUnlock()
 						m.clientsMu.Lock()
@@ -89,7 +90,7 @@ func (m *WebSocketManager) Start() {
 						Timestamp: time.Now(),
 					})
 					if err != nil {
-						log.Printf("WebSocket ping error: %v", err)
+						logger.L().Error("WebSocket ping error", zap.Error(err))
 					}
 				}
 				m.clientsMu.RUnlock()
@@ -118,7 +119,7 @@ func (m *WebSocketManager) ClientCount() int {
 func (s *Server) handleWebSocket(c *gin.Context) {
 	conn, err := s.wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		logger.L().Error("WebSocket upgrade error", zap.Error(err))
 		return
 	}
 
@@ -137,7 +138,7 @@ func (s *Server) handleWebSocket(c *gin.Context) {
 		// Read compressed or uncompressed message
 		messageType, data, err := s.wsCompressor.ReadCompressed(conn)
 		if err != nil {
-			log.Printf("WebSocket read error: %v", err)
+			logger.L().Error("WebSocket read error", zap.Error(err))
 			break
 		}
 
@@ -145,7 +146,7 @@ func (s *Server) handleWebSocket(c *gin.Context) {
 		// If needed, parse and handle client messages
 		if messageType == websocket.TextMessage && len(data) > 0 {
 			// 仅记录消息类型和大小，不记录内容（避免敏感信息泄露）
-			log.Printf("[WebSocket] Received message from client: type=%d, size=%d bytes", messageType, len(data))
+			logger.L().Info("WebSocket message received", zap.Int("type", messageType), zap.Int("size", len(data)))
 		}
 	}
 }
@@ -162,7 +163,7 @@ func (s *Server) startBroadcaster() {
 					// Use compression for broadcasting messages
 					err := s.wsCompressor.WriteCompressed(conn, msg)
 					if err != nil {
-						log.Printf("WebSocket write error: %v", err)
+						logger.L().Error("WebSocket write error", "error", err)
 						conn.Close()
 						s.wsClientsMu.RUnlock()
 						s.wsClientsMu.Lock()
@@ -182,7 +183,7 @@ func (s *Server) startBroadcaster() {
 						Timestamp: time.Now(),
 					})
 					if err != nil {
-						log.Printf("WebSocket ping error: %v", err)
+						logger.L().Error("WebSocket ping error", "error", err)
 					}
 				}
 				s.wsClientsMu.RUnlock()
