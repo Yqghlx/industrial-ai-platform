@@ -104,7 +104,7 @@ export function isDeviceStats(obj: unknown): obj is DeviceStats {
 // ============== Alert 类型守卫 ==============
 
 const ALERT_SEVERITY_VALUES: AlertSeverity[] = ['low', 'medium', 'high', 'critical'];
-const ALERT_STATUS_VALUES = ['active', 'resolved'];
+const ALERT_STATUS_VALUES = ['active', 'acknowledged', 'resolved'];
 
 export function isAlertSeverity(value: unknown): value is AlertSeverity {
   return typeof value === 'string' && ALERT_SEVERITY_VALUES.includes(value as AlertSeverity);

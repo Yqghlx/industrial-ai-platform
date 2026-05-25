@@ -87,49 +87,54 @@ export default function AlertsPage() {
     }
   }, [showToast, t]);
 
-  // WebSocket disabled temporarily - connection issues
-  // useWebSocket({
-  //   onMessage: (message) => {
-  //     if (message.type === 'alert') {
-  //       // FE-P1-01: 使用类型守卫替代 as Type 断言
-  //       if (isAlert(message.payload)) {
-  //         const newAlert = message.payload;
-  //         setAlerts(prev => [newAlert, ...prev]);
-  //         setStats(prev => prev ? {
-  //           ...prev,
-  //           active_count: prev.active_count + 1,
-  //           total_count: prev.total_count + 1,
-  //           by_severity: {
-  //             ...prev.by_severity,
-  //             [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
-  //           },
-  //           by_status: {
-  //             ...prev.by_status,
-  //             active: (prev.by_status.active || 0) + 1,
-  //           },
-  //         } : null);
+  // WebSocket for real-time alerts (with error handling)
+  useWebSocket({
+    onMessage: (message) => {
+      try {
+        if (message.type === 'alert' && message.payload) {
+          if (isAlert(message.payload)) {
+            const newAlert = message.payload;
+            setAlerts(prev => [newAlert, ...prev]);
+            setStats(prev => prev ? {
+              ...prev,
+              active_count: prev.active_count + 1,
+              total_count: prev.total_count + 1,
+              by_severity: {
+                ...prev.by_severity,
+                [newAlert.severity]: (prev.by_severity[newAlert.severity] || 0) + 1,
+              },
+              by_status: {
+                ...prev.by_status,
+                active: (prev.by_status.active || 0) + 1,
+              },
+            } : null);
 
-  //         const severityInfo = severityConfig[newAlert.severity as keyof typeof severityConfig];
-  //         showToast({
-  //           type: newAlert.severity === 'critical' ? 'error' : 'info',
-  //           message: `${severityInfo?.label || newAlert.severity}: ${newAlert.message || ''}`,
-  //         });
-  //       }
-  //     } else if (message.type === 'alert_resolved' || message.type === 'alert_acknowledged') {
-  //       // FE-P1-01: 使用类型守卫替代 as Type 断言
-  //       if (isAlertStatusPayload(message.payload)) {
-  //         const alertId = message.payload.id;
-  //         const newStatus = asAlertStatusSafe(message.payload.status);
-  //         if (newStatus) {
-  //           setAlerts(prev => prev.map(a => 
-  //             a.id === alertId ? { ...a, status: newStatus } : a
-  //           ));
-  //         }
-  //       }
-  //       fetchStats();
-  //     }
-  //   },
-  // });
+            const severityInfo = severityConfig[newAlert.severity as keyof typeof severityConfig];
+            showToast({
+              type: newAlert.severity === 'critical' ? 'error' : 'info',
+              message: `${severityInfo?.label || newAlert.severity}: ${newAlert.message || ''}`,
+            });
+          }
+        } else if ((message.type === 'alert_resolved' || message.type === 'alert_acknowledged') && message.payload) {
+          if (isAlertStatusPayload(message.payload)) {
+            const alertId = message.payload.id;
+            const newStatus = asAlertStatusSafe(message.payload.status);
+            if (newStatus) {
+              setAlerts(prev => prev.map(a => 
+                a.id === alertId ? { ...a, status: newStatus } : a
+              ));
+            }
+          }
+          fetchStats();
+        }
+      } catch (error) {
+        console.error('WebSocket message processing error:', error);
+      }
+    },
+    onError: (error) => {
+      console.error('[AlertsPage] WebSocket error:', error);
+    },
+  });
 
   // Initial load
   useEffect(() => {
@@ -328,8 +333,15 @@ export default function AlertsPage() {
         ) : (
           <div className="space-y-4">
             {alerts.map(alert => {
-              const severity = severityConfig[alert.severity];
-              const status = statusConfig[alert.status];
+              const severity = severityConfig[alert.severity as keyof typeof severityConfig];
+              const status = statusConfig[alert.status as keyof typeof statusConfig];
+              
+              // Skip alerts with invalid severity/status
+              if (!severity || !status) {
+                console.warn('Alert has invalid severity/status:', alert);
+                return null;
+              }
+              
               const SeverityIcon = severity.icon;
 
               return (
