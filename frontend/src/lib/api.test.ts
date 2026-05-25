@@ -76,7 +76,7 @@ describe('ApiClient', () => {
 
   describe('login', () => {
     it('should call login endpoint and set token', async () => {
-      const mockResponse = { token: 'login-token', user: { id: 1, username: 'testuser' } };
+      const mockResponse = { access_token: 'login-token', refresh_token: 'refresh', expires_in: 3600, token_type: 'Bearer', user: { id: 1, username: 'testuser', role: 'user' } };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -146,7 +146,7 @@ describe('ApiClient', () => {
 
   describe('getDevices', () => {
     it('should fetch devices with default pagination', async () => {
-      const mockResponse = { data: [{ id: '1', name: 'Device 1' }], total: 1 };
+      const mockResponse = { devices: [{ id: '1', name: 'Device 1' }], total: 1, page: 1, page_size: 20 };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -158,11 +158,16 @@ describe('ApiClient', () => {
         expect.stringContaining('/api/v1/devices?page=1&page_size=20'),
         expect.any(Object)
       );
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        data: [{ id: '1', name: 'Device 1' }],
+        total: 1,
+        page: 1,
+        page_size: 20,
+      });
     });
 
     it('should fetch devices with custom pagination', async () => {
-      const mockResponse = { data: [], total: 0 };
+      const mockResponse = { devices: [], total: 0, page: 2, page_size: 50 };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
