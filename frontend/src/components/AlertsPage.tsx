@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
@@ -17,6 +17,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Alert as AlertType } from '../types/api';
 import { isAlert, asAlertStatusSafe, isAlertStatusPayload } from '../types/typeGuards';
+
+// FE-P1: 状态数组上限常量
+const MAX_ALERTS_ENTRIES = 500;
+// FE-P1: 防抖延迟（毫秒）
+const DEBOUNCE_DELAY = 300;
 
 interface AlertStats {
   active_count: number;
@@ -63,8 +68,9 @@ export default function AlertsPage() {
       if (!response.ok) throw new Error('Failed to fetch alerts');
 
       const data = await response.json();
-      // Adapt backend response format (alerts -> data)
-      setAlerts(data.alerts || data.data || []);
+      // FE-P1: 限制数组大小，防止内存泄漏
+      const alertsData = (data.alerts || data.data || []).slice(0, MAX_ALERTS_ENTRIES);
+      setAlerts(alertsData);
     } catch {
       showToast({ type: 'error', message: t('errors.unknown') });
     }
@@ -94,7 +100,8 @@ export default function AlertsPage() {
         if (message.type === 'alert' && message.payload) {
           if (isAlert(message.payload)) {
             const newAlert = message.payload;
-            setAlerts(prev => [newAlert, ...prev]);
+            // FE-P1: 限制数组大小，防止内存泄漏
+            setAlerts(prev => [newAlert, ...prev].slice(0, MAX_ALERTS_ENTRIES));
             setStats(prev => prev ? {
               ...prev,
               active_count: prev.active_count + 1,
@@ -136,6 +143,9 @@ export default function AlertsPage() {
     },
   });
 
+  // FE-P1: 防抖 ref，用于 filter 变化时的 API 调用防抖
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Initial load
   useEffect(() => {
     const load = async () => {
@@ -147,13 +157,25 @@ export default function AlertsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload on filter change
+  // FE-P1: 使用防抖处理 filter 变化，避免频繁 API 调用
   useEffect(() => {
     if (!loading) {
-      fetchAlerts();
+      // 清理之前的定时器
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      // 设置新的防抖定时器
+      debounceTimeoutRef.current = setTimeout(() => {
+        fetchAlerts();
+      }, DEBOUNCE_DELAY);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, severityFilter]);
+    // 清理函数
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [statusFilter, severityFilter, loading, fetchAlerts]);
 
   // Refresh
   const handleRefresh = async () => {

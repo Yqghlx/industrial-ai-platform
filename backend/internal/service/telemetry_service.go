@@ -77,14 +77,29 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 	})
 
 	// Trigger alert evaluation asynchronously
+	// BE-P1-FIX: 使用 context.WithTimeout 替代 context.Background()，防止 goroutine 无限等待
 	go func() {
 		// Check if alertSvc is available before calling
 		if s.alertSvc != nil {
-			if err := s.alertSvc.EvaluateRules(context.Background(), data); err != nil {
-				logger.L().Error("Alert evaluation error",
-					zap.String("device_id", data.DeviceID),
-					zap.Error(err),
-				)
+			// 创建带超时的 context，防止异步调用无限等待
+			ctx, cancel := context.WithTimeout(context.Background(), 
+				time.Duration(constants.AlertEvaluationTimeoutSec)*time.Second)
+			defer cancel()
+
+			if err := s.alertSvc.EvaluateRules(ctx, data); err != nil {
+				// 区分超时错误和其他错误，记录更详细的日志
+				if ctx.Err() == context.DeadlineExceeded {
+					logger.L().Error("Alert evaluation timeout",
+						zap.String("device_id", data.DeviceID),
+						zap.Int("timeout_sec", constants.AlertEvaluationTimeoutSec),
+						zap.Error(err),
+					)
+				} else {
+					logger.L().Error("Alert evaluation error",
+						zap.String("device_id", data.DeviceID),
+						zap.Error(err),
+					)
+				}
 			}
 		}
 	}()

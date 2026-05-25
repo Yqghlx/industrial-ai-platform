@@ -48,6 +48,10 @@ const (
 
 	// WebSocket 广播通道容量
 	WSBroadcastChannelSize = 100
+
+	// 异步告警评估超时时间（秒）
+	// 用于异步 goroutine 中的告警规则评估，防止无限等待
+	AlertEvaluationTimeoutSec = 30
 )
 
 // ============================================

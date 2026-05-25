@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Bell, Check, Filter } from 'lucide-react';
 import { Notification } from '../types/api';
+
+// FE-P1: 状态数组上限常量
+const MAX_NOTIFICATIONS_ENTRIES = 500;
 
 export default function NotificationCenter() {
   const { t } = useI18n();
@@ -13,23 +16,25 @@ export default function NotificationCenter() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ type: '', unread: false });
 
-  useEffect(() => {
-    loadNotifications();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
-
-  const loadNotifications = async () => {
+  // FE-P1: 使用 useCallback 包装 loadNotifications，修复依赖问题
+  const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getNotifications(filter);
-      setNotifications(res.data as Notification[]);
+      // FE-P1: 限制数组大小，防止内存泄漏
+      const data = (res.data as Notification[]).slice(0, MAX_NOTIFICATIONS_ENTRIES);
+      setNotifications(data);
     } catch (error) {
       console.error('Failed to load notifications:', error);
       showToast({ type: 'error', message: t('errors.loadFailedNotifications') });
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, showToast, t]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const handleMarkRead = async (id: number) => {
     try {

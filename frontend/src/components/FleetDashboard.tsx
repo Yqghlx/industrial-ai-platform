@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
@@ -9,6 +9,9 @@ import { getDeviceStatusColor, getDeviceStatusBadgeClass } from '../lib/colorUti
 import { Device, LatestTelemetry } from '../types/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { isTelemetryData } from '../types/typeGuards';
+
+// FE-P1: 状态数组上限常量
+const MAX_TELEMETRY_ENTRIES = 500;
 
 export default function FleetDashboard() {
   const { t } = useI18n();
@@ -33,10 +36,14 @@ export default function FleetDashboard() {
           const payload = message.payload as LatestTelemetry;
           setTelemetry(prev => {
             const exists = prev.find(t => t.device_id === payload.device_id);
+            let updated: LatestTelemetry[];
             if (exists) {
-              return prev.map(t => t.device_id === payload.device_id ? payload : t);
+              updated = prev.map(t => t.device_id === payload.device_id ? payload : t);
+            } else {
+              updated = [...prev, payload];
             }
-            return [...prev, payload];
+            // FE-P1: 限制数组大小，防止内存泄漏
+            return updated.slice(-MAX_TELEMETRY_ENTRIES);
           });
         }
       }
@@ -55,7 +62,8 @@ export default function FleetDashboard() {
       const telemetryData = telemetryRes.data ?? [];
       
       setDevices(devicesData);
-      setTelemetry(telemetryData);
+      // FE-P1: 限制数组大小，防止内存泄漏
+      setTelemetry(telemetryData.slice(-MAX_TELEMETRY_ENTRIES));
       
       // Calculate stats (safe with empty arrays)
       const total = devicesData.length;
@@ -71,10 +79,18 @@ export default function FleetDashboard() {
     }
   }, [showToast, t]);
 
-  // Initial load
+  // FE-P1: 使用 ref 跟踪是否已初始化，避免重复加载
+  const isInitialMountRef = useRef(true);
+
+  // FIX-006: 合并初始加载和路由变化监听，避免重复 useEffect 触发 loadData
   useEffect(() => {
+    // 始终在挂载时加载数据
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+    }
     loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   // Fallback polling when WebSocket is disconnected
   useEffect(() => {
@@ -86,11 +102,6 @@ export default function FleetDashboard() {
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, [isConnected, loadData]);
-
-  // FIX-006: 监听路由变化刷新数据
-  useEffect(() => {
-    loadData();
-  }, [location.pathname, loadData]);
 
   // FE-P2-05: 使用 useMemo 优化 devicesWithTelemetry 计算，避免每次渲染重新计算
   const devicesWithTelemetry = useMemo(() => 

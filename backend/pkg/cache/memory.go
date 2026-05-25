@@ -9,10 +9,12 @@ import (
 
 // MemoryCache 内存缓存实现
 type MemoryCache struct {
-	data  map[string]*memoryItem
-	mu    sync.RWMutex
-	ttl   time.Duration
-	stats Stats
+	data        map[string]*memoryItem
+	mu          sync.RWMutex
+	ttl         time.Duration
+	stats       Stats
+	cleanupOnce sync.Once
+	stopCleanup chan struct{}
 }
 
 type memoryItem struct {
@@ -31,14 +33,48 @@ func NewMemoryCache(cfgOrTtl interface{}) *MemoryCache {
 		ttl = 5 * time.Minute
 	}
 
-	return &MemoryCache{
-		data: make(map[string]*memoryItem),
-		ttl:  ttl,
+	c := &MemoryCache{
+		data:        make(map[string]*memoryItem),
+		ttl:         ttl,
+		stopCleanup: make(chan struct{}),
 		stats: Stats{
 			Available:   true,
 			BackendType: "memory",
 		},
 	}
+
+	// 启动后台清理goroutine
+	c.startCleanupRoutine()
+
+	return c
+}
+
+// startCleanupRoutine 启动后台清理goroutine
+func (c *MemoryCache) startCleanupRoutine() {
+	c.cleanupOnce.Do(func() {
+		// 清理间隔默认为5分钟，或使用TTL的一半（取较小值）
+		cleanupInterval := 5 * time.Minute
+		if c.ttl > 0 && c.ttl/2 < cleanupInterval {
+			cleanupInterval = c.ttl / 2
+		}
+		if cleanupInterval < time.Minute {
+			cleanupInterval = time.Minute
+		}
+
+		go func() {
+			ticker := time.NewTicker(cleanupInterval)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					c.Cleanup()
+				case <-c.stopCleanup:
+					return
+				}
+			}
+		}()
+	})
 }
 
 // Get 获取缓存值
@@ -133,8 +169,14 @@ func (c *MemoryCache) GetStats() Stats {
 	return c.stats
 }
 
-// Close 关闭缓存 (内存缓存无需操作)
+// Close 关闭缓存并停止清理goroutine
 func (c *MemoryCache) Close() error {
+	select {
+	case <-c.stopCleanup:
+		// 已经关闭
+	default:
+		close(c.stopCleanup)
+	}
 	return nil
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -7,6 +7,10 @@ import { Activity, Thermometer, Waves, Gauge, Zap, Clock, TrendingUp, AlertCircl
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getGaugeColor, getTelemetryStatusColor } from '../lib/colorUtils';
 import { isTelemetryData, isTelemetryDataArray, isTelemetryHistoryArray } from '../types/typeGuards';
+
+// FE-P1: 状态数组上限常量
+const MAX_HISTORY_ENTRIES = 500;
+const MAX_TELEMETRY_ENTRIES = 500;
 
 interface TelemetryData {
   device_id: string;
@@ -49,29 +53,69 @@ export default function TelemetryPage() {
           const payload = message.payload;
           setLatestTelemetry(prev => {
             const exists = prev.find(t => t.device_id === payload.device_id);
+            let updated: TelemetryData[];
             if (exists) {
-              return prev.map(d => d.device_id === payload.device_id ? payload : d);
+              updated = prev.map(d => d.device_id === payload.device_id ? payload : d);
+            } else {
+              updated = [...prev, payload];
             }
-            return [...prev, payload];
+            // FE-P1: 限制数组大小，防止内存泄漏
+            return updated.slice(-MAX_TELEMETRY_ENTRIES);
           });
         }
       }
     },
   });
 
+  // FE-P1: 使用 useCallback 包装 loadLatestTelemetry，修复依赖问题
+  const loadLatestTelemetry = useCallback(async () => {
+    try {
+      const res = await api.getLatestTelemetry();
+      // FE-P1-02: 使用类型守卫替代 as Type 断言
+      const data = isTelemetryDataArray(res.data) ? res.data : [];
+      // FE-P1: 限制数组大小，防止内存泄漏
+      setLatestTelemetry(data.slice(-MAX_TELEMETRY_ENTRIES));
+      // FE-P1: 使用函数式更新避免 selectedDevice 依赖
+      setSelectedDevice(prev => {
+        if (!prev && data.length > 0) {
+          return data[0].device_id;
+        }
+        return prev;
+      });
+    } catch {
+      showToast({ type: 'error', message: t('errors.unknown') });
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast, t]);
+
+  // FE-P1: 使用 useCallback 包装 loadHistory，修复依赖问题
+  const loadHistory = useCallback(async (deviceId: string, range: string) => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.getDeviceTelemetry(deviceId, range, 100);
+      // FE-P1-02: 使用类型守卫替代 as Type 断言
+      const data = isTelemetryHistoryArray(res.data) ? res.data : [];
+      // FE-P1: 限制数组大小，防止内存泄漏
+      setHistory(data.slice(-MAX_HISTORY_ENTRIES));
+    } catch {
+      showToast({ type: 'error', message: t('errors.unknown') });
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [showToast, t]);
+
   // Load history when device or time range changes
   useEffect(() => {
     if (selectedDevice) {
       loadHistory(selectedDevice, timeRange);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDevice, timeRange]);
+  }, [selectedDevice, timeRange, loadHistory]);
 
   // Initial load
   useEffect(() => {
     loadLatestTelemetry();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadLatestTelemetry]);
 
   // Fallback polling when WebSocket is disconnected
   useEffect(() => {
@@ -82,38 +126,7 @@ export default function TelemetryPage() {
     // WebSocket disconnected - use polling fallback
     const interval = setInterval(loadLatestTelemetry, 10000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected]);
-
-  const loadLatestTelemetry = async () => {
-    try {
-      const res = await api.getLatestTelemetry();
-      // FE-P1-02: 使用类型守卫替代 as Type 断言
-      const data = isTelemetryDataArray(res.data) ? res.data : [];
-      setLatestTelemetry(data);
-      if (!selectedDevice && data.length > 0) {
-        setSelectedDevice(data[0].device_id);
-      }
-    } catch {
-      showToast({ type: 'error', message: t('errors.unknown') });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadHistory = async (deviceId: string, range: string) => {
-    setHistoryLoading(true);
-    try {
-      const res = await api.getDeviceTelemetry(deviceId, range, 100);
-      // FE-P1-02: 使用类型守卫替代 as Type 断言
-      const data = isTelemetryHistoryArray(res.data) ? res.data : [];
-      setHistory(data);
-    } catch {
-      showToast({ type: 'error', message: t('errors.unknown') });
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  }, [isConnected, loadLatestTelemetry]);
 
   const formatTimestamp = (ts: string) => {
     const date = new Date(ts);
