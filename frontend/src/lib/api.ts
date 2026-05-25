@@ -399,12 +399,19 @@ class ApiClient {
 
   // Admin
   async getUsers(page = 1, pageSize = 20): Promise<PaginatedResponse<User>> {
-    return this.request<PaginatedResponse<User>>(
+    const response = await this.request<{ users: User[]; total: number; page: number; page_size: number }>(
       'GET',
-      '/admin/users',
+      '/users',
       undefined,
       { page: String(page), page_size: String(pageSize) }
     );
+    // Adapt backend response format (users -> data)
+    return {
+      data: response.users,
+      total: response.total,
+      page: response.page,
+      page_size: response.page_size,
+    };
   }
 
   async createUser(data: UserCreateInput): Promise<User> {
