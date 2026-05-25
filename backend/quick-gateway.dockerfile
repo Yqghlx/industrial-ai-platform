@@ -1,0 +1,6 @@
+FROM alpine:3.18
+RUN apk add --no-cache ca-certificates tzdata
+COPY bin/server /app/server
+ENV TZ=Asia/Shanghai
+EXPOSE 80
+ENTRYPOINT ["/app/server"]

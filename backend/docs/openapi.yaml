@@ -41,6 +41,8 @@ tags:
     description: 设备管理接口
   - name: Telemetry
     description: 遥测数据接口
+  - name: Alerts
+    description: 告警管理接口
   - name: Rules
     description: 告警规则接口
   - name: Agent
@@ -57,6 +59,14 @@ tags:
     description: ROI统计接口
   - name: Admin
     description: 管理员接口
+  - name: Tenants
+    description: 租户管理接口
+  - name: RBAC
+    description: 角色权限管理接口
+  - name: Export
+    description: 数据导出接口
+  - name: Monitoring
+    description: 系统监控接口
 
 paths:
   # ===== Auth =====
@@ -251,6 +261,399 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新Token
+      description: 使用现有Token刷新获取新的Token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: 现有的JWT Token
+      responses:
+        '200':
+          description: Token刷新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                  token_type:
+                    type: string
+        '400':
+          description: 请求参数无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: 用户登出
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /api/v1/auth/password:
+    put:
+      tags: [Auth]
+      summary: 修改密码
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [old_password, new_password]
+              properties:
+                old_password:
+                  type: string
+                  description: 当前密码
+                new_password:
+                  type: string
+                  description: 新密码（至少12位）
+                  minLength: 12
+      responses:
+        '200':
+          description: 密码修改成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully"
+        '400':
+          description: 请求参数无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 当前密码验证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/validate:
+    post:
+      tags: [Auth]
+      summary: 验证Token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: 要验证的JWT Token
+      responses:
+        '200':
+          description: Token验证成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  user_id:
+                    type: integer
+                  username:
+                    type: string
+                  role:
+                    type: string
+
+  # ===== Alerts =====
+  /api/v1/alerts:
+    get:
+      tags: [Alerts]
+      summary: 告警列表
+      description: 获取系统中的告警列表，支持按状态和严重程度筛选
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: 告警状态筛选
+          schema:
+            type: string
+            enum: [active, acknowledged, resolved, all]
+        - name: severity
+          in: query
+          description: 严重程度筛选
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: device_id
+          in: query
+          description: 设备ID筛选
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功获取告警列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/alerts/{id}:
+    get:
+      tags: [Alerts]
+      summary: 获取告警详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          description: 告警不存在
+
+  /api/v1/alerts/{id}/resolve:
+    put:
+      tags: [Alerts]
+      summary: 解决告警
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 告警已解决
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    example: resolved
+
+  /api/v1/alerts/{id}/acknowledge:
+    put:
+      tags: [Alerts]
+      summary: 确认告警
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 告警已确认
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    example: acknowledged
+
+  /api/v1/alerts/stats:
+    get:
+      tags: [Alerts]
+      summary: 告警统计
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active_count:
+                    type: integer
+                  by_severity:
+                    type: object
+                    properties:
+                      critical:
+                        type: integer
+                      high:
+                        type: integer
+                      medium:
+                        type: integer
+                      low:
+                        type: integer
+                  by_status:
+                    type: object
+                    properties:
+                      active:
+                        type: integer
+                      resolved:
+                        type: integer
+                      acknowledged:
+                        type: integer
+                  total_count:
+                    type: integer
+
+  /api/v1/alerts/report/trend:
+    get:
+      tags: [Alerts]
+      summary: 告警趋势报告
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            default: 7d
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                  trend:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/alerts/report/ranking:
+    get:
+      tags: [Alerts]
+      summary: 告警设备排名
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        device_id:
+                          type: string
+                        alert_count:
+                          type: integer
+
+  /api/v1/alerts/report/efficiency:
+    get:
+      tags: [Alerts]
+      summary: 告警处理效率
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  efficiency:
+                    type: object
+                    properties:
+                      avg_resolve_time:
+                        type: number
+                      ack_rate:
+                        type: number
 
   # ===== Devices =====
   /api/v1/devices:
@@ -984,7 +1387,7 @@ paths:
           description: 成功
 
   # ===== Work Orders =====
-  /api/v1/work-orders:
+  /api/v1/workorders:
     get:
       tags: [WorkOrders]
       summary: 工单列表
@@ -1025,7 +1428,27 @@ paths:
         '200':
           description: 创建成功
 
-  /api/v1/work-orders/{id}/status:
+  /api/v1/workorders/{id}:
+    get:
+      tags: [WorkOrders]
+      summary: 获取工单详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+
+  /api/v1/workorders/{id}/status:
     put:
       tags: [WorkOrders]
       summary: 更新工单状态
@@ -1329,6 +1752,507 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemStatus'
+
+  # ===== Tenants =====
+  /api/v1/tenants:
+    get:
+      tags: [Tenants]
+      summary: 租户列表
+      description: 获取所有租户列表（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+                  total:
+                    type: integer
+    post:
+      tags: [Tenants]
+      summary: 创建租户
+      description: 创建新租户（管理员权限）
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /api/v1/tenants/{id}:
+    get:
+      tags: [Tenants]
+      summary: 获取租户详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+    put:
+      tags: [Tenants]
+      summary: 更新租户
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantUpdate'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Tenants]
+      summary: 删除租户
+      description: 删除租户（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  # ===== RBAC =====
+  /api/v1/roles:
+    get:
+      tags: [RBAC]
+      summary: 角色列表
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+    post:
+      tags: [RBAC]
+      summary: 创建角色
+      description: 创建新角色（管理员权限）
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreate'
+      responses:
+        '200':
+          description: 创建成功
+
+  /api/v1/roles/{id}:
+    get:
+      tags: [RBAC]
+      summary: 获取角色详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    put:
+      tags: [RBAC]
+      summary: 更新角色
+      description: 更新角色（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [RBAC]
+      summary: 删除角色
+      description: 删除角色（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+
+  /api/v1/roles/{id}/permissions:
+    post:
+      tags: [RBAC]
+      summary: 分配权限给角色
+      description: 为角色分配权限（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permission_id]
+              properties:
+                permission_id:
+                  type: integer
+      responses:
+        '200':
+          description: 分配成功
+
+  /api/v1/permissions:
+    get:
+      tags: [RBAC]
+      summary: 权限列表
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+
+  /api/v1/users/{id}/roles:
+    get:
+      tags: [RBAC]
+      summary: 获取用户角色
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+    post:
+      tags: [RBAC]
+      summary: 为用户分配角色
+      description: 为用户分配角色（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role_id]
+              properties:
+                role_id:
+                  type: integer
+      responses:
+        '200':
+          description: 分配成功
+
+  # ===== Telemetry =====
+  /api/v1/telemetry/latest:
+    get:
+      tags: [Telemetry]
+      summary: 最新遥测数据
+      description: 获取所有设备的最新遥测数据
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetryData'
+
+  /api/v1/telemetry/device/{id}:
+    get:
+      tags: [Telemetry]
+      summary: 设备遥测数据
+      description: 获取指定设备的遥测数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetryData'
+                  device_id:
+                    type: string
+
+  /api/v1/telemetry/status:
+    get:
+      tags: [Telemetry]
+      summary: 遥测系统状态
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  # ===== Export =====
+  /api/v1/reports/devices/export:
+    get:
+      tags: [Export]
+      summary: 导出设备数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json, xlsx]
+            default: csv
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+
+  /api/v1/reports/alerts/export:
+    get:
+      tags: [Export]
+      summary: 导出告警数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json, xlsx]
+            default: csv
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+
+  /api/v1/reports/roi/export:
+    get:
+      tags: [Export]
+      summary: 导出ROI数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json, xlsx]
+            default: csv
+        - name: period
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ROIStats'
+
+  # ===== Monitoring =====
+  /cache/status:
+    get:
+      tags: [Monitoring]
+      summary: 缓存状态
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  backend_type:
+                    type: string
+                  available:
+                    type: boolean
+                  stats:
+                    type: object
+
+  /ws/stats:
+    get:
+      tags: [Monitoring]
+      summary: WebSocket统计
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections:
+                    type: integer
+                  messages_sent:
+                    type: integer
+                  messages_received:
+                    type: integer
 
   # ===== Health =====
   /health:
@@ -1926,3 +2850,200 @@ components:
           type: integer
           description: 用户总数
           example: 25
+
+    Alert:
+      type: object
+      description: 告警信息
+      properties:
+        id:
+          type: integer
+          description: 告警ID
+          example: 1
+        device_id:
+          type: string
+          description: 设备ID
+          example: DEV001
+        type:
+          type: string
+          description: 告警类型
+          example: temperature_high
+        severity:
+          type: string
+          description: 严重程度
+          enum: [low, medium, high, critical]
+          example: high
+        message:
+          type: string
+          description: 告警消息
+          example: "温度超过阈值85℃"
+        status:
+          type: string
+          description: 告警状态
+          enum: [active, acknowledged, resolved]
+          example: active
+        triggered_at:
+          type: string
+          format: date-time
+          description: 触发时间
+          example: "2024-01-15T10:30:00Z"
+        resolved_at:
+          type: string
+          format: date-time
+          description: 解决时间
+        acknowledged_by:
+          type: integer
+          description: 确认人ID
+        acknowledged_at:
+          type: string
+          format: date-time
+          description: 确认时间
+        rule_id:
+          type: integer
+          description: 触发规则ID
+
+    Tenant:
+      type: object
+      description: 租户信息
+      properties:
+        id:
+          type: string
+          description: 租户ID
+          example: tenant_001
+        name:
+          type: string
+          description: 租户名称
+          example: 工厂A
+        description:
+          type: string
+          description: 租户描述
+        status:
+          type: string
+          description: 租户状态
+          enum: [active, inactive, suspended]
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        device_count:
+          type: integer
+          description: 设备数量
+          example: 50
+        user_count:
+          type: integer
+          description: 用户数量
+          example: 10
+
+    TenantCreate:
+      type: object
+      description: 创建租户请求
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: 租户名称
+          example: 工厂A
+        description:
+          type: string
+          description: 租户描述
+
+    TenantUpdate:
+      type: object
+      description: 更新租户请求
+      properties:
+        name:
+          type: string
+          description: 租户名称
+        description:
+          type: string
+          description: 租户描述
+        status:
+          type: string
+          description: 租户状态
+          enum: [active, inactive, suspended]
+
+    Role:
+      type: object
+      description: 角色信息
+      properties:
+        id:
+          type: integer
+          description: 角色ID
+          example: 1
+        name:
+          type: string
+          description: 角色名称
+          example: admin
+        description:
+          type: string
+          description: 角色描述
+          example: 系统管理员
+        permissions:
+          type: array
+          description: 权限列表
+          items:
+            $ref: '#/components/schemas/Permission'
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    RoleCreate:
+      type: object
+      description: 创建角色请求
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: 角色名称
+          example: operator
+        description:
+          type: string
+          description: 角色描述
+        permissions:
+          type: array
+          description: 权限ID列表
+          items:
+            type: integer
+
+    RoleUpdate:
+      type: object
+      description: 更新角色请求
+      properties:
+        name:
+          type: string
+          description: 角色名称
+        description:
+          type: string
+          description: 角色描述
+        permissions:
+          type: array
+          description: 权限ID列表
+          items:
+            type: integer
+
+    Permission:
+      type: object
+      description: 权限信息
+      properties:
+        id:
+          type: integer
+          description: 权限ID
+          example: 1
+        name:
+          type: string
+          description: 权限名称
+          example: device_read
+        description:
+          type: string
+          description: 权限描述
+          example: 查看设备信息
+        resource:
+          type: string
+          description: 资源类型
+          example: device
+        action:
+          type: string
+          description: 操作类型
+          enum: [read, write, delete, admin]
+          example: read
