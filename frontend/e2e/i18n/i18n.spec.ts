@@ -66,7 +66,7 @@ test.describe('多语言切换', () => {
     // 登录
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/dashboard|\/devices/);
     
@@ -92,7 +92,7 @@ test.describe('多语言切换', () => {
     // 登录并导航到告警页
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.goto('/alerts');
     
@@ -115,7 +115,7 @@ test.describe('多语言切换', () => {
     // 登录并导航到 AI 页
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.goto('/agent');
     
@@ -141,7 +141,7 @@ test.describe('多语言切换', () => {
     // 登录并导航到报告页
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.goto('/reports');
     
@@ -213,7 +213,7 @@ test.describe('日期/时间本地化', () => {
     // 登录
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/dashboard|\/devices/);
   });
@@ -288,7 +288,7 @@ test.describe('数字本地化', () => {
     // 登录并导航到报告页
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.goto('/reports');
     
@@ -305,7 +305,7 @@ test.describe('数字本地化', () => {
   test('货币符号', async ({ page }) => {
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
-    await page.fill('[name="password"]', 'admin123');
+    await page.fill('[name="password"]', 'Admin@123456');
     await page.click('button[type="submit"]');
     await page.goto('/reports');
     
