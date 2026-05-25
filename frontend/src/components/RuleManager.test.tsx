@@ -266,7 +266,6 @@ describe('RuleManager', () => {
 
   describe('delete rule', () => {
     it('should show confirmation dialog for admin users', async () => {
-it('should show confirmation dialog for admin users', async () => {
       renderRuleManager();
 
       await waitFor(() => {
