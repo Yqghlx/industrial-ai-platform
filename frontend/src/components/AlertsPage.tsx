@@ -225,9 +225,9 @@ export default function AlertsPage() {
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {t('common.refresh')}
-        </button>
+</button>
         <button
-          className=\"flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
           onClick={() => navigate('/alerts/report')}
           aria-label={t('report.generate')}
         >

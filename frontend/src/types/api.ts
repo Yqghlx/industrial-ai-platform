@@ -129,8 +129,9 @@ export interface Alert {
   metric: string;
   value: number;
   threshold: number;
+  message?: string;
   severity: AlertSeverity;
-  status: 'active' | 'resolved';
+  status: 'active' | 'acknowledged' | 'resolved';
   triggered_at: string;
   resolved_at?: string;
 }
