@@ -133,6 +133,10 @@ func (r *RoleRepo) ListByTenant(tenantID string) ([]model.Role, error) {
 		}
 		roles = append(roles, role)
 	}
+	// Check for errors during rows iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
 	return roles, nil
 }
 
@@ -275,6 +279,10 @@ func (r *RoleRepo) GetUserRoles(userID int) ([]model.Role, error) {
 		}
 		roles = append(roles, role)
 	}
+	// Check for errors during rows iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
 	return roles, nil
 }
 
@@ -308,6 +316,10 @@ func (r *RoleRepo) GetRolePermissions(roleID int) ([]model.Permission, error) {
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 	return permissions, nil
 }
@@ -373,6 +385,10 @@ func (r *RoleRepo) GetUserPermissions(userID int) ([]model.Permission, error) {
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 	return permissions, nil
 }

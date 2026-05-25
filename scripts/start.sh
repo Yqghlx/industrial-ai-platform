@@ -20,9 +20,27 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
-# 设置环境变量
-echo "📋 配置环境变量..."
-export JWT_SECRET="industrial-ai-platform-dev-secret"
+# 检查必要的环境变量
+echo "📋 检查环境变量..."
+
+# JWT_SECRET 检查 - 必须设置，不允许使用默认值
+if [ -z "$JWT_SECRET" ]; then
+    echo "❌ JWT_SECRET 未设置！请设置安全的密钥后重试："
+    echo "   export JWT_SECRET='your-secure-secret-key'"
+    echo ""
+    echo "💡 提示：可使用以下命令生成安全密钥："
+    echo "   openssl rand -base64 32"
+    exit 1
+fi
+echo "✅ JWT_SECRET 已设置"
+
+# ADMIN_PASSWORD 检查
+if [ -z "$ADMIN_PASSWORD" ]; then
+    echo "⚠️  ADMIN_PASSWORD 未设置，请设置管理员密码："
+    echo "   export ADMIN_PASSWORD='your-admin-password'"
+    exit 1
+fi
+echo "✅ ADMIN_PASSWORD 已设置"
 
 # 检查是否有百炼 API Key
 if [ -z "$LLM_API_KEY" ]; then

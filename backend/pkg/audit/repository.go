@@ -322,6 +322,10 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		eventTypeRows.Scan(&eventType, &count)
 		stats.EventTypes[eventType] = count
 	}
+	// Check for errors during rows iteration
+	if err = eventTypeRows.Err(); err != nil {
+		return nil, err
+	}
 
 	// 分类统计
 	categoryQuery := `
@@ -342,6 +346,10 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		var count int64
 		categoryRows.Scan(&category, &count)
 		stats.Categories[category] = count
+	}
+	// Check for errors during rows iteration
+	if err = categoryRows.Err(); err != nil {
+		return nil, err
 	}
 
 	// Top 用户

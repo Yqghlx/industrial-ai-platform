@@ -167,9 +167,10 @@ func (b *MemoryTokenBlacklist) cleanupExpiredEntries() {
 type HybridTokenBlacklist struct {
 	redisBlacklist  *RedisTokenBlacklist
 	memoryBlacklist *MemoryTokenBlacklist
-	useRedis        bool
+	useRedis        bool          // protected by mu
 	checkInterval   time.Duration
 	shutdown        chan struct{}
+	mu              sync.RWMutex // protects useRedis field
 }
 
 func NewHybridTokenBlacklist(redisClient *redis.Client) *HybridTokenBlacklist {
@@ -188,18 +189,26 @@ func NewHybridTokenBlacklist(redisClient *redis.Client) *HybridTokenBlacklist {
 
 func (b *HybridTokenBlacklist) Add(ctx context.Context, tokenID string, duration time.Duration) error {
 	b.memoryBlacklist.Add(ctx, tokenID, duration)
-	if b.useRedis && b.redisBlacklist != nil {
+	b.mu.RLock()
+	useRedis := b.useRedis
+	b.mu.RUnlock()
+	if useRedis && b.redisBlacklist != nil {
 		err := b.redisBlacklist.Add(ctx, tokenID, duration)
 		if err != nil {
 			fmt.Printf("Warning: Redis blacklist write failed: %v\n", err)
+			b.mu.Lock()
 			b.useRedis = false
+			b.mu.Unlock()
 		}
 	}
 	return nil
 }
 
 func (b *HybridTokenBlacklist) Exists(ctx context.Context, tokenID string) bool {
-	if b.useRedis && b.redisBlacklist != nil && b.redisBlacklist.Exists(ctx, tokenID) {
+	b.mu.RLock()
+	useRedis := b.useRedis
+	b.mu.RUnlock()
+	if useRedis && b.redisBlacklist != nil && b.redisBlacklist.Exists(ctx, tokenID) {
 		return true
 	}
 	return b.memoryBlacklist.Exists(ctx, tokenID)
@@ -207,14 +216,20 @@ func (b *HybridTokenBlacklist) Exists(ctx context.Context, tokenID string) bool 
 
 func (b *HybridTokenBlacklist) AddUserRevocation(ctx context.Context, userID int, revokedAt time.Time, duration time.Duration) error {
 	b.memoryBlacklist.AddUserRevocation(ctx, userID, revokedAt, duration)
-	if b.useRedis && b.redisBlacklist != nil {
+	b.mu.RLock()
+	useRedis := b.useRedis
+	b.mu.RUnlock()
+	if useRedis && b.redisBlacklist != nil {
 		b.redisBlacklist.AddUserRevocation(ctx, userID, revokedAt, duration)
 	}
 	return nil
 }
 
 func (b *HybridTokenBlacklist) GetUserRevocation(ctx context.Context, userID int) (time.Time, error) {
-	if b.useRedis && b.redisBlacklist != nil {
+	b.mu.RLock()
+	useRedis := b.useRedis
+	b.mu.RUnlock()
+	if useRedis && b.redisBlacklist != nil {
 		revokedAt, err := b.redisBlacklist.GetUserRevocation(ctx, userID)
 		if err == nil && !revokedAt.IsZero() {
 			return revokedAt, nil
@@ -231,6 +246,8 @@ func (b *HybridTokenBlacklist) Stop() {
 }
 
 func (b *HybridTokenBlacklist) IsUsingRedis() bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	return b.useRedis
 }
 
@@ -242,12 +259,19 @@ func (b *HybridTokenBlacklist) checkRedisHealth(client *redis.Client) {
 		select {
 		case <-ticker.C:
 			err := client.Ping(ctx).Err()
-			if err != nil && b.useRedis {
+			b.mu.RLock()
+			currentUseRedis := b.useRedis
+			b.mu.RUnlock()
+			if err != nil && currentUseRedis {
 				fmt.Printf("Warning: Redis unavailable: %v\n", err)
+				b.mu.Lock()
 				b.useRedis = false
-			} else if err == nil && !b.useRedis {
+				b.mu.Unlock()
+			} else if err == nil && !currentUseRedis {
 				fmt.Printf("Info: Redis recovered\n")
+				b.mu.Lock()
 				b.useRedis = true
+				b.mu.Unlock()
 			}
 		case <-b.shutdown:
 			return
