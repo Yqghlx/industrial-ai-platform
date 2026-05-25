@@ -180,7 +180,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
 	
 	// Initialize AgentService for AI features
-	taskLogRepo := repository.NewMockAgentTaskLogRepository()
+	taskLogRepo := repository.NewAgentTaskLogRepository(dbpkg.NewDBWrapper(db))
 	agentSvc := service.NewAgentService(
 		taskLogRepo,
 		deviceRepo,
