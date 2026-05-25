@@ -162,15 +162,13 @@ class ApiClient {
 
   // Auth
   async login(username: string, password: string): Promise<LoginResponse> {
-    // 后端返回格式: { access_token, refresh_token, expires_in, token_type, user }
+    // 后端返回格式: { token, user }
     const response = await this.request<{
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-      token_type: string;
+      token: string;
       user: {
         id: number;
         username: string;
+        email?: string;
         role: string;
         tenant_id?: string;
       };
@@ -180,8 +178,8 @@ class ApiClient {
       { username, password }
     );
     
-    // 后端返回 access_token 字段
-    const token = response.access_token;
+    // 后端返回 token 字段
+    const token = response.token;
     if (!token) {
       throw new Error('Login failed: no token in response');
     }
