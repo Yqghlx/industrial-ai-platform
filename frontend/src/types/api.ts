@@ -1,13 +1,31 @@
 /**
  * API Types for Industrial AI Platform
- * Complete interface definitions for all API responses and requests
+ * 
+ * FE-P3-01: Enhanced type definitions with clear required/optional field markers
+ * FE-P3-04: Added comprehensive documentation for all type interfaces
+ * 
+ * @description Complete interface definitions for all API responses and requests.
+ * All required fields are explicitly marked without '?' suffix.
+ * Optional fields use '?' for clarity.
  */
 
 // ============== Device Types ==============
 
+/** Device operational status enum */
 export type DeviceStatus = 'online' | 'warning' | 'fault' | 'offline';
+
+/** Device type classification enum */
 export type DeviceType = 'pump' | 'motor' | 'compressor' | 'conveyor' | 'valve' | 'sensor' | 'other';
 
+/**
+ * Device entity representing a monitored industrial device
+ * @property id - Unique device identifier (required)
+ * @property name - Display name (required)
+ * @property type - Device type classification (required)
+ * @property status - Current operational status (required)
+ * @property location - Physical location (required)
+ * @property description - Optional description text
+ */
 export interface Device {
   id: string;
   name: string;
@@ -17,6 +35,15 @@ export interface Device {
   description?: string;
 }
 
+/**
+ * Input for creating a new device
+ * @property id - Unique identifier must be provided (required)
+ * @property name - Display name (required)
+ * @property type - Device type classification (required)
+ * @property status - Initial status (required)
+ * @property location - Physical location (required)
+ * @property description - Optional description
+ */
 export interface DeviceCreateInput {
   id: string;
   name: string;
@@ -26,6 +53,10 @@ export interface DeviceCreateInput {
   description?: string;
 }
 
+/**
+ * Input for updating an existing device
+ * @description All fields optional - only provided fields will be updated
+ */
 export interface DeviceUpdateInput {
   name?: string;
   type?: string;

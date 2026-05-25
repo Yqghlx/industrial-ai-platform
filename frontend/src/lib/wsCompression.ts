@@ -271,12 +271,13 @@ export class CompressedWebSocket {
 
 /**
  * Utility function to create WebSocket URL from current location
+ * SEC-LOW-02: Use sessionStorage for token storage
  */
 export function createWebSocketURL(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
-  // Get token from localStorage (set by API class on login)
-  const token = localStorage.getItem('token');
+  // Get token from sessionStorage (set by API class on login)
+  const token = sessionStorage.getItem('token');
   if (token) {
     return `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
   }

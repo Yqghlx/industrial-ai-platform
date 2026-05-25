@@ -1,3 +1,17 @@
+/**
+ * API Client for Industrial AI Platform
+ * 
+ * FE-P3-04: Added comprehensive documentation for API client
+ * FE-P3-03: Token storage uses localStorage with 'token' key consistently
+ * SEC-LOW-02: Use sessionStorage instead of localStorage for better security
+ * 
+ * @description Handles all API requests with authentication, timeout support,
+ * and request cancellation capabilities.
+ * 
+ * Security Note: Token is stored in sessionStorage to reduce XSS attack window.
+ * SessionStorage is cleared when the browser tab is closed, limiting exposure time.
+ */
+
 import {
   Device,
   DeviceCreateInput,
@@ -30,13 +44,17 @@ import {
   ApiError,
 } from '../types/api';
 
+/** Base API path for all endpoints */
 const API_BASE = '/api/v1';
 
-// Timeout constants (in milliseconds)
-const DEFAULT_TIMEOUT = 30000; // 30 seconds
-const AGENT_TIMEOUT = 60000;   // 60 seconds for AI Agent queries
+/** Timeout constants (in milliseconds) */
+const DEFAULT_TIMEOUT = 30000; // 30 seconds for regular requests
+const AGENT_TIMEOUT = 60000;   // 60 seconds for AI Agent queries (longer response time)
 
-// Custom error class for timeout
+/**
+ * Custom error class for timeout errors
+ * @extends Error
+ */
 class TimeoutError extends Error {
   constructor(message: string = '请求超时，请稍后重试') {
     super(message);
@@ -44,9 +62,21 @@ class TimeoutError extends Error {
   }
 }
 
+/**
+ * API Client class
+ * 
+ * @description Main API client with authentication token management,
+ * request cancellation, and timeout handling.
+ * 
+ * Token Storage: Uses localStorage with key 'token' for consistency.
+ * (FE-P3-03: Unified token storage)
+ */
 class ApiClient {
+  /** API base URL */
   private baseUrl: string;
+  /** Current authentication token */
   private token: string | null = null;
+  /** Map of active requests for cancellation support */
   private activeControllers: Map<string, AbortController> = new Map();
 
   constructor(baseUrl: string = API_BASE) {
@@ -54,19 +84,27 @@ class ApiClient {
     this.loadToken();
   }
 
+  /** Load token from sessionStorage on initialization */
   private loadToken() {
-    this.token = localStorage.getItem('token');
+    this.token = sessionStorage.getItem('token');
   }
 
+  /** 
+   * Set authentication token
+   * @param token - JWT token string or null to clear
+   * 
+   * Security: Token stored in sessionStorage (cleared on tab close)
+   */
   setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('token', token);
+      sessionStorage.setItem('token', token);
     } else {
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
     }
   }
 
+  /** Get current authentication token */
   getToken(): string | null {
     return this.token;
   }

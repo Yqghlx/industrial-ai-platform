@@ -1,7 +1,13 @@
-// 确认对话框组件
-// FIX-040: 自定义确认框替换原生confirm
+/**
+ * 确认对话框组件
+ * FIX-040: 自定义确认框替换原生confirm
+ * FE-P3-02: Added focus trap for keyboard accessibility
+ * 
+ * @description A modal confirmation dialog with focus trap implementation
+ * for accessibility compliance. Supports danger/warning/info variants.
+ */
 
-import React, { useState, useCallback, createContext, useContext } from 'react';
+import React, { useState, useCallback, createContext, useContext, useEffect, useRef } from 'react';
 
 // Simple translation fallback if i18next not available
 const t = (key: string): string => {
@@ -45,7 +51,7 @@ export function useConfirmDialog() {
   return useContext(ConfirmDialogContext);
 }
 
-// Confirm Dialog Component
+// Confirm Dialog Component with Focus Trap
 export function ConfirmDialog({
   title,
   message,
@@ -56,6 +62,67 @@ export function ConfirmDialog({
   onCancel,
   isOpen,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  // FE-P3-02: Focus trap implementation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Focus the cancel button when dialog opens
+    const timer = setTimeout(() => {
+      cancelButtonRef.current?.focus();
+    }, 0);
+
+    // Get all focusable elements within the dialog
+    const getFocusableElements = () => {
+      if (!dialogRef.current) return [];
+      return Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+    };
+
+    // Handle Tab key to trap focus within dialog
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        // Shift+Tab: if on first element, move to last
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab: if on last element, move to first
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onCancel]);
+
   if (!isOpen) return null;
 
   const variantColors = {
@@ -80,7 +147,10 @@ export function ConfirmDialog({
       />
 
       {/* Dialog */}
-      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div
+        ref={dialogRef}
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+      >
         {/* Title */}
         <h2
           id="confirm-dialog-title"
@@ -100,6 +170,7 @@ export function ConfirmDialog({
         {/* Actions */}
         <div className="flex gap-3 justify-end">
           <button
+            ref={cancelButtonRef}
             type="button"
             onClick={onCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 

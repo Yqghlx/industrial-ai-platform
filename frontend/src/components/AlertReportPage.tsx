@@ -52,10 +52,12 @@ export default function AlertReportPage() {
   const [trendDays, setTrendDays] = useState(7);
 
   // Fetch all report data
+  // FE-P3-03: Fixed token storage inconsistency - use 'token' key consistently
+  // SEC-LOW-02: Use sessionStorage for better security
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('.access_token');
+      const token = sessionStorage.getItem('token');
       if (!token) return;
 
       // Fetch trend data

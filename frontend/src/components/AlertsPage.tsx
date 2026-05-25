@@ -57,7 +57,7 @@ export default function AlertsPage() {
       if (severityFilter !== 'all') params.append('severity', severityFilter);
 
       const response = await fetch(`/api/v1/alerts?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       });
 
       if (!response.ok) throw new Error('Failed to fetch alerts');
@@ -74,7 +74,7 @@ export default function AlertsPage() {
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/alerts/stats', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       });
 
       if (!response.ok) throw new Error('Failed to fetch stats');
@@ -167,7 +167,7 @@ export default function AlertsPage() {
     try {
       const response = await fetch(`/api/v1/alerts/${alertId}/resolve`, {
         method: 'PUT',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       });
 
       if (!response.ok) throw new Error('Failed to resolve alert');
@@ -188,7 +188,7 @@ export default function AlertsPage() {
     try {
       const response = await fetch(`/api/v1/alerts/${alertId}/acknowledge`, {
         method: 'PUT',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       });
 
       if (!response.ok) throw new Error('Failed to acknowledge alert');
