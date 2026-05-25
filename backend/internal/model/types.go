@@ -113,15 +113,19 @@ type AlertRuleUpdateRequest struct {
 // Alert represents a triggered alert
 // BE-P2-03: 添加 Gin binding 验证标签
 type Alert struct {
-	ID          int        `json:"id" db:"id"`
-	RuleID      int        `json:"rule_id" db:"rule_id" binding:"required"`
-	DeviceID    string     `json:"device_id" db:"device_id" binding:"required,max=100"`
-	TenantID    string     `json:"tenant_id" db:"tenant_id" binding:"max=100"`
-	Message     string     `json:"message" db:"message" binding:"max=500"`
-	Severity    string     `json:"severity" db:"severity" binding:"oneof=low medium high critical"`
-	Status      string     `json:"status" db:"status" binding:"oneof=active acknowledged resolved"`
-	TriggeredAt time.Time  `json:"triggered_at" db:"triggered_at"`
-	ResolvedAt  *time.Time `json:"resolved_at,omitempty" db:"resolved_at"`
+	ID             int        `json:"id" db:"id"`
+	RuleID         int        `json:"rule_id" db:"rule_id" binding:"required"`
+	DeviceID       string     `json:"device_id" db:"device_id" binding:"required,max=100"`
+	TenantID       string     `json:"tenant_id" db:"tenant_id" binding:"max=100"`
+	Message        string     `json:"message" db:"message" binding:"max=500"`
+	Severity       string     `json:"severity" db:"severity" binding:"oneof=low medium high critical"`
+	Status         string     `json:"status" db:"status" binding:"oneof=active acknowledged resolved"`
+	Value          *float64   `json:"value,omitempty" db:"value"`
+	Threshold      *float64   `json:"threshold,omitempty" db:"threshold"`
+	TriggeredAt    time.Time  `json:"triggered_at" db:"triggered_at"`
+	AcknowledgedAt *time.Time `json:"acknowledged_at,omitempty" db:"acknowledged_at"`
+	ResolvedAt     *time.Time `json:"resolved_at,omitempty" db:"resolved_at"`
+	AcknowledgedBy *string    `json:"acknowledged_by,omitempty" db:"acknowledged_by"`
 }
 
 // WorkOrder represents a maintenance work order
