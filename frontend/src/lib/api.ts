@@ -399,7 +399,7 @@ class ApiClient {
   async getUsers(page = 1, pageSize = 20): Promise<PaginatedResponse<User>> {
     const response = await this.request<{ users: User[]; total: number; page: number; page_size: number }>(
       'GET',
-      '/users',
+      '/admin/users',
       undefined,
       { page: String(page), page_size: String(pageSize) }
     );
