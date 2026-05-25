@@ -25,6 +25,7 @@ import (
 	"github.com/industrial-ai/platform/pkg/logger"
 	dbpkg "github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/wscompression"
+	"go.uber.org/zap"
 
 	_ "github.com/lib/pq" // PostgreSQL driver registration
 	
@@ -131,7 +132,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		dbURL = os.Getenv("DATABASE_URL")
 	}
 	if dbURL == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
+		logger.L().Fatal("DATABASE_URL environment variable is required")
 	}
 
 	db, err := sql.Open("postgres", dbURL)
@@ -155,7 +156,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		cacheConfig.Prefix = "iai:"
 	}
 	cacheSvc := cache_service.NewCacheServiceIntegration(cacheConfig)
-	log.Printf("[Cache] Initialized with backend: %s", cacheSvc.GetCache().GetStats().BackendType)
+	logger.L().Info("[Cache] Initialized", zap.String("backend", cacheSvc.GetCache().GetStats().BackendType))
 
 	// Initialize repositories
 	deviceRepo := repository.NewDeviceRepository(dbpkg.NewDBWrapper(db))
@@ -235,7 +236,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 
 	// Broadcast function placeholder
 	broadcastFn := func(msg model.WSMessage) {
-		log.Printf("[WS] Broadcast: %s", msg.Type)
+		logger.L().Info("[WS] Broadcast", zap.String("type", msg.Type))
 	}
 
 	s := &HTTPServerNew{
@@ -462,7 +463,7 @@ func (s *HTTPServerNew) initDatabase() {
 	// Run migrations
 	migrator := database.NewMigrator(s.db)
 	if err := migrator.Up(ctx); err != nil {
-		log.Printf("Warning: Database migration failed: %v", err)
+		logger.L().Error("Database migration failed", zap.Error(err))
 	}
 
 	// Initialize default rules
@@ -488,7 +489,7 @@ func (s *HTTPServerNew) createDefaultAdmin(ctx context.Context) {
 
 	passwordHash, err := service.HashPassword(password)
 	if err != nil {
-		logger.L().Error("Failed to hash admin password", "error", err)
+		logger.L().Error("Failed to hash admin password", zap.Error(err))
 		return
 	}
 
@@ -500,7 +501,7 @@ func (s *HTTPServerNew) createDefaultAdmin(ctx context.Context) {
 	}
 
 	if err := s.userRepo.Create(ctx, admin); err != nil {
-		logger.L().Error("Failed to create default admin", "error", err)
+		logger.L().Error("Failed to create default admin", zap.Error(err))
 		return
 	}
 
@@ -560,7 +561,7 @@ func getRequestContext(c *gin.Context) (context.Context, context.CancelFunc) {
 func generateRandomPassword(length int) string {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
-		log.Printf("Warning: failed to generate password: %v", err)
+		logger.L().Error("Failed to generate password", zap.Error(err))
 		return generateFallbackPassword(length)
 	}
 	return hex.EncodeToString(bytes)[:length]

@@ -163,7 +163,7 @@ func (s *Server) startBroadcaster() {
 					// Use compression for broadcasting messages
 					err := s.wsCompressor.WriteCompressed(conn, msg)
 					if err != nil {
-						logger.L().Error("WebSocket write error", "error", err)
+						logger.L().Error("WebSocket write error", zap.Error(err))
 						conn.Close()
 						s.wsClientsMu.RUnlock()
 						s.wsClientsMu.Lock()
@@ -183,7 +183,7 @@ func (s *Server) startBroadcaster() {
 						Timestamp: time.Now(),
 					})
 					if err != nil {
-						logger.L().Error("WebSocket ping error", "error", err)
+						logger.L().Error("WebSocket ping error", zap.Error(err))
 					}
 				}
 				s.wsClientsMu.RUnlock()
