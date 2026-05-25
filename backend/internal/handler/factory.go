@@ -97,13 +97,16 @@ func (f *HandlerFactory) CreateBusinessHandler() *BusinessHandlerNew {
 }
 
 // CreateRBACHandler 创建 RBAC Handler
-// FIX-005: 接口不兼容问题 - handler.RBACServiceInterface 与 service.RBACServiceInterface 方法签名不同
-// 暂时返回 nil，等待统一接口定义。使用时应检查返回值是否为 nil
+// FIX-005: 使用适配器解决接口不兼容问题
+// adapter 模式将 service.RBACServiceInterface 转换为 handler.RBACServiceInterface
 func (f *HandlerFactory) CreateRBACHandler() *RBACHandler {
-	// 注意: service.RBACServiceInterface 方法签名与 handler.RBACServiceInterface 不一致
-	// 例如: service.AssignRoleToUser(userID, roleID) vs handler.AssignRole(userID, roleID, tenantID)
-	// 需要创建适配器或统一接口定义后方可启用
-	return nil
+	rbacSvc := f.serviceFactory.GetRBACService()
+	if rbacSvc == nil {
+		return nil
+	}
+	// 使用适配器包装 service 层接口
+	adapter := NewRBACServiceAdapter(rbacSvc)
+	return NewRBACHandler(adapter)
 }
 
 // CreateTenantHandler 创建租户 Handler

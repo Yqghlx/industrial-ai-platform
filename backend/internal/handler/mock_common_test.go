@@ -406,6 +406,13 @@ func (m *MockAlertService) GetAlerts(ctx context.Context, status string, page, p
 	return alerts, args.Get(1).(int), args.Error(2)
 }
 
+// P0-03: Mock method for GetAlertsWithFilter
+func (m *MockAlertService) GetAlertsWithFilter(ctx context.Context, status, severity, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
+	args := m.Called(ctx, status, severity, deviceID, page, pageSize)
+	alerts, _ := args.Get(0).([]model.Alert)
+	return alerts, args.Get(1).(int), args.Error(2)
+}
+
 func (m *MockAlertService) InitializeDefaultRules(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)
@@ -472,6 +479,13 @@ func (m *MockAlertRepository) Create(ctx context.Context, alert *model.Alert) er
 
 func (m *MockAlertRepository) List(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error) {
 	args := m.Called(ctx, status, page, pageSize)
+	alerts, _ := args.Get(0).([]model.Alert)
+	return alerts, args.Get(1).(int), args.Error(2)
+}
+
+// P0-03: Mock method for ListWithFilter
+func (m *MockAlertRepository) ListWithFilter(ctx context.Context, filter repository.AlertFilter, page, pageSize int) ([]model.Alert, int, error) {
+	args := m.Called(ctx, filter, page, pageSize)
 	alerts, _ := args.Get(0).([]model.Alert)
 	return alerts, args.Get(1).(int), args.Error(2)
 }

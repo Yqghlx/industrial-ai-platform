@@ -6,10 +6,20 @@ import (
 	"github.com/industrial-ai/platform/internal/model"
 )
 
+// AlertFilter 告警过滤条件
+// P0-03: 将过滤条件传递到数据库层，避免内存过滤
+type AlertFilter struct {
+	Status   string
+	Severity string
+	DeviceID string
+}
+
 // AlertRepositoryInterface defines the interface for alert repository
 type AlertRepositoryInterface interface {
 	Create(ctx context.Context, alert *model.Alert) error
 	List(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error)
+	// ListWithFilter 支持更多过滤条件的列表查询
+	ListWithFilter(ctx context.Context, filter AlertFilter, page, pageSize int) ([]model.Alert, int, error)
 	CountActive(ctx context.Context) (int, error)
 	Resolve(ctx context.Context, id int) error
 	UpdateStatus(ctx context.Context, id int, status string) error

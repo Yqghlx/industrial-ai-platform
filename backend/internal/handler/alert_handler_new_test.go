@@ -37,7 +37,8 @@ func TestNewAlertHandler_ListAlerts_Success(t *testing.T) {
 		{ID: 2, DeviceID: "device-2", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
 	}
 
-	mockAlertSvc.On("GetAlerts", mock.Anything, "active", 1, 20).Return(alerts, 2, nil)
+	// P0-03: Use GetAlertsWithFilter instead of GetAlerts
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "active", "", "", 1, 20).Return(alerts, 2, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 
@@ -260,7 +261,8 @@ func TestAlertHandler_ListAlerts_ServiceError(t *testing.T) {
 
 	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
 
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(nil, 0, assert.AnError)
+	// P0-03: Use GetAlertsWithFilter instead of GetAlerts
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "", "", 1, 20).Return(nil, 0, assert.AnError)
 
 	router.GET("/alerts", handler.ListAlerts)
 
@@ -364,13 +366,12 @@ func TestAlertHandler_ListAlerts_WithSeverityFilter(t *testing.T) {
 
 	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
 
-	alerts := []model.Alert{
+	// P0-03: Use GetAlertsWithFilter - severity filter is passed to service
+	filteredAlerts := []model.Alert{
 		{ID: 1, DeviceID: "device-1", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
-		{ID: 2, DeviceID: "device-2", Severity: "high", Status: "active", TriggeredAt: time.Now()},
 		{ID: 3, DeviceID: "device-3", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
 	}
-
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 3, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "critical", "", 1, 20).Return(filteredAlerts, 2, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 
@@ -386,7 +387,7 @@ func TestAlertHandler_ListAlerts_WithSeverityFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].([]interface{})
-	// Should filter to 2 critical alerts
+	// Should return 2 critical alerts (filtered at database level)
 	assert.Len(t, data, 2)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -404,12 +405,11 @@ func TestAlertHandler_ListAlerts_WithDeviceIDFilter(t *testing.T) {
 
 	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
 
-	alerts := []model.Alert{
+	// P0-03: Use GetAlertsWithFilter - deviceID filter is passed to service
+	filteredAlerts := []model.Alert{
 		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
-		{ID: 2, DeviceID: "device-2", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
 	}
-
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 2, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "", "device-1", 1, 20).Return(filteredAlerts, 1, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 
@@ -425,6 +425,7 @@ func TestAlertHandler_ListAlerts_WithDeviceIDFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].([]interface{})
+	// Should return 1 alert (filtered at database level)
 	assert.Len(t, data, 1)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -442,13 +443,11 @@ func TestAlertHandler_ListAlerts_WithBothFilters(t *testing.T) {
 
 	handler := NewAlertHandler(mockAlertSvc, broadcastFunc)
 
-	alerts := []model.Alert{
+	// P0-03: Use GetAlertsWithFilter - both filters passed to service
+	filteredAlerts := []model.Alert{
 		{ID: 1, DeviceID: "device-1", Severity: "critical", Status: "active", TriggeredAt: time.Now()},
-		{ID: 2, DeviceID: "device-2", Severity: "high", Status: "active", TriggeredAt: time.Now()},
-		{ID: 3, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
 	}
-
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 3, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "critical", "device-1", 1, 20).Return(filteredAlerts, 1, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 
@@ -464,7 +463,7 @@ func TestAlertHandler_ListAlerts_WithBothFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].([]interface{})
-	// Should filter to 1 alert (critical + device-1)
+	// Should return 1 alert (critical + device-1, filtered at database level)
 	assert.Len(t, data, 1)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -486,8 +485,8 @@ func TestAlertHandler_ListAlerts_DefaultStatus(t *testing.T) {
 		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
 	}
 
-	// Default status should be "all"
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 20).Return(alerts, 1, nil)
+	// P0-03: Default status should be "all", use GetAlertsWithFilter
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "", "", 1, 20).Return(alerts, 1, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 

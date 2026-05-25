@@ -1,80 +1,86 @@
-# 工业AI平台修复计划 - 已完成 ✅
+# Industrial AI Platform - 修复计划
+
+**创建日期**: 2026-05-25
+**基于审计**: docs/CODE_AUDIT_REPORT.md
 
 ---
 
-## 修复完成总结
+## Phase 1: P0/CRITICAL 修复（预计12h）
 
-| Phase | 问题数 | 状态 | 提交 |
-|---|---|---|---|
-| **Phase 1** | 13项 | ✅ 完成 | `30e64e7` |
-| **Phase 2** | 16项 | ✅ 完成 | `2508821` |
-| **Phase 3** | 12项 | ✅ 完成 | `ab5f6d0` |
+### Loop 1.1: Security CRITICAL (6h)
+| ID | 问题 | 工时 | 状态 |
+|----|------|------|------|
+| SEC-CRITICAL-01 | Kubernetes硬编码密钥 | 4h | pending |
+| SEC-CRITICAL-02 | Docker Compose硬编码密码 | 2h | pending |
 
-**总计**：41项修复全部完成 ✅
+### Loop 1.2: Backend P0 (11.5h)
+| ID | 问题 | 工时 | 状态 |
+|----|------|------|------|
+| BE-P0-01 | Handler Factory返回nil | 4h | pending |
+| BE-P0-02 | ID解析忽略错误 | 2h | pending |
+| BE-P0-03 | 内存过滤性能问题 | 4h | pending |
+| BE-P0-04 | CSRF panic | 1h | pending |
+| BE-P0-05 | 示例代码panic | 0.5h | pending |
 
----
-
-## Phase 1 完成详情
-
-### 后端 P0 (5项) ✅
-- FIX-001: factory.go nil返回 → 返回error
-- FIX-003: 硬编码连接字符串 → 环境变量
-- FIX-005: handler nil → 完整实现
-
-### 前端 P0 (6项) ✅
-- FIX-006: localStorage key统一为token
-- FIX-007/008/010/011: 硬编码中文 → i18n
-
-### 安全 HIGH (2项) ✅
-- FIX-012: Docker默认密码 → .env文件
-- FIX-013: Redis无认证 → requirepass
-
----
-
-## Phase 2 完成详情
-
-### 后端 P1 (5项) ✅
-- FIX-016: RefreshToken占位 → 完整实现
-- FIX-017: ChangePassword未实现 → 密码修改流程
-- FIX-018: SQL字符串拼接 → 表名白名单
-
-### 前端 P1 (4项) ✅
-- FIX-019/020: 类型断言 → typeGuards
-- FIX-021: Sidebar菜单 → useMemo
-- FIX-022: React key → session_id
+### Loop 1.3: Frontend P0 (6h)
+| ID | 问题 | 工时 | 状态 |
+|----|------|------|------|
+| FE-P0-01 | AlertReportPage国际化缺失 | 2h | pending |
+| FE-P0-02 | PerformancePanel国际化缺失 | 1h | pending |
+| FE-P0-03 | ROIStatsPage国际化缺失 | 1h | pending |
+| FE-P0-04 | BlackBoxPage国际化缺失 | 1h | pending |
+| FE-P0-05 | SystemStatusPage国际化缺失 | 1h | pending |
 
 ---
 
-## Phase 3 完成详情
+## Phase 2: P1/HIGH 修复（预计15h）
 
-### 前端 P2 (3项) ✅
-- Toast.tsx: ×字符 → SVG图标
-- performance.tsx: any类型 → 类型守卫
-- ErrorBoundary.tsx: 硬编码 → i18n
-
-### 安全 P2 (3项) ✅
-- waf.go: 生产环境强制启用
-- 密码复杂度: 12字符+大小写+数字+特殊字符
-- HSTS preload: 默认启用
+| 维度 | 数量 | 工时 |
+|------|------|------|
+| Backend P1 | 9项 | 8h |
+| Frontend P1 | 8项 | 4h |
+| Security HIGH | 4项 | 3h |
 
 ---
 
-## Git提交记录
+## Phase 3: P2/MEDIUM 修复（预计10h）
 
-```
-ab5f6d0 fix(phase3): P2/MEDIUM修复 - 前端类型安全+安全加固 (12项完成)
-2508821 fix(phase2): P1/HIGH修复 - 后端auth实现+前端类型安全 (16项完成)
-30e64e7 fix(phase1): P0/HIGH修复 - 后端5项+前端6项+安全2项 (13项完成)
-```
-
----
-
-## 验证结果
-
-- 后端编译通过 ✅
-- E2E测试通过 ✅
-- 前端类型安全 ✅
+| 维度 | 数量 | 工时 |
+|------|------|------|
+| Backend P2 | 8项 | 4h |
+| Frontend P2 | 12项 | 4h |
+| Security MEDIUM | 3项 | 2h |
 
 ---
 
-**修复计划已全部完成** 🎉
+## Phase 4: P3/LOW 修复（预计5h）
+
+| 维度 | 数量 | 工时 |
+|------|------|------|
+| Frontend P3 | 15项 | 4h |
+| Security LOW | 5项 | 1h |
+
+---
+
+## 执行策略
+
+1. **并行修复**: 使用 delegate_task 并行执行最多3个修复任务
+2. **按Loop提交**: 每个 Loop 完成后 commit + push
+3. **验证优先**: 修复后立即验证（go build, npm test）
+4. **增量汇报**: 每个 Phase 完成后发送飞书卡片
+
+---
+
+## 优先级矩阵
+
+| 优先级 | 数量 | 总工时 | 建议完成时间 |
+|--------|------|--------|--------------|
+| P0/CRITICAL | 12项 | 23.5h | 本周 |
+| P1/HIGH | 21项 | 15h | 下周 |
+| P2/MEDIUM | 23项 | 10h | 两周内 |
+| P3/LOW | 20项 | 5h | 可选 |
+
+---
+
+**总修复项**: 76项
+**总预估工时**: 53.5h

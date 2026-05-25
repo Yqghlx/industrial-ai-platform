@@ -95,6 +95,9 @@ type AlertServiceInterface interface {
 	GetRuleByID(ctx context.Context, id int) (*model.AlertRule, error)
 	ToggleRule(ctx context.Context, id int) error
 	GetAlerts(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error)
+	// GetAlertsWithFilter 支持更多过滤条件的告警查询
+	// P0-03: 将过滤条件传递到数据库层
+	GetAlertsWithFilter(ctx context.Context, status, severity, deviceID string, page, pageSize int) ([]model.Alert, int, error)
 	GetAlertByID(ctx context.Context, id int) (*model.Alert, error)
 	ResolveAlert(ctx context.Context, id int) error
 	AcknowledgeAlert(ctx context.Context, id int) error

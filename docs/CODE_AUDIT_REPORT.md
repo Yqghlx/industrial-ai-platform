@@ -1,334 +1,175 @@
-# Industrial AI Platform 代码审查报告
+# Industrial AI Platform - 综合审计报告
 
-> **审查日期**: 2026-05-14  
-> **审查范围**: 后端 (Go) + 前端 (React/TS) + 安全 + 测试  
-> **总代码量**: ~48,000 行
-
----
-
-## 📊 审查概览
-
-| 分类 | P0 (必须修复) | P1 (建议修复) | P2 (可选优化) |
-|------|---------------|---------------|---------------|
-| **后端代码质量** | 7 | 11 | 11 |
-| **前端代码质量** | 4 | 10 | 10 |
-| **安全问题** | 3 | 5 | 4 |
-| **测试覆盖** | 2 | - | - |
-| **总计** | **16** | **26** | **25** |
+**审计日期**: 2026-05-25
+**审计范围**: Backend (Go) + Frontend (React/TypeScript) + Security
+**审计版本**: 主分支最新代码
 
 ---
 
-## 🔴 P0 - 必须立即修复 (16项)
+## 执行摘要
 
-### 🔐 安全漏洞 (CRITICAL)
+本次审计对 Industrial AI Platform 项目进行了多维度的全面审查，包括代码质量、安全漏洞、测试覆盖率等。
 
-#### 1. JWT Secret 硬编码
-- **文件**: `backend/internal/service/auth_helpers.go:23`
-- **问题**: 默认密钥 `industrial-ai-platform-secret-key-change-in-production` 硬编码
-- **风险**: 攻击者可伪造任意用户 Token
-- **修复**: 强制要求环境变量 `JWT_SECRET`，移除硬编码默认值
+**总体评估**: 项目整体质量良好，架构清晰，但存在一些需要修复的问题。
 
-#### 2. 密码明文打印日志
-- **文件**: `backend/internal/handler/server.go:513`
-- **问题**: 管理员密码直接打印到日志 `log.Printf("Password: %s\n", password)`
-- **风险**: 密码泄露
-- **修复**: 通过安全渠道传递或环境变量设置
-
-#### 3. JWT 过期时间不一致
-- **文件**: `auth_helpers.go:16` vs `jwt_helpers.go:33`
-- **问题**: AccessToken 15分钟 vs 默认Token 24小时
-- **风险**: 使用旧API获得24小时有效期Token
-- **修复**: 统一使用 15分钟 + RefreshToken
-
-### 🐛 编译/运行错误
-
-#### 4. database 包导入缺失
-- **文件**: `backend/internal/handler/server.go:466`
-- **问题**: 使用 `database.NewMigrator(db)` 但未导入 database 包
-- **风险**: 编译失败
-- **修复**: 添加导入语句
-
-#### 5. context 未正确使用
-- **文件**: `backend/main.go:46`
-- **问题**: `context.WithCancel` 创建后 `_` 被丢弃
-- **风险**: Graceful shutdown 可能失效
-- **修复**: 正确使用 context 控制
-
-#### 6. handler 变量名冲突
-- **文件**: `backend/internal/handler/server.go:331`
-- **问题**: `handler.NewAuthHandler` 与包名冲突
-- **风险**: 编译失败或运行错误
-- **修复**: 使用包内调用 `NewAuthHandler`
-
-#### 7. 随机数生成器不安全
-- **文件**: `backend/internal/service/agent_service.go:323,337`
-- **问题**: 使用 `math/rand` 而非 `crypto/rand`
-- **风险**: Session ID 可预测
-- **修复**: 替换为 `crypto/rand`
-
-### 🔒 功能缺失
-
-#### 8. RevokeAllUserTokens 未实现
-- **文件**: `backend/internal/service/auth_helpers.go:238-243`
-- **问题**: 函数只返回 nil，未撤销 Token
-- **风险**: 修改密码后旧 Token 仍可用
-- **修复**: 维护 Token 版本号或 Redis 黑名单
-
-#### 9. Handler 层测试完全缺失
-- **文件**: `backend/internal/handler/` (9个文件)
-- **问题**: 0 测试覆盖率
-- **风险**: 关键业务逻辑未验证
-- **修复**: 为所有 Handler 添加单元测试
-
-#### 10. Repository 层测试完全缺失
-- **文件**: `backend/internal/repository/` (7个文件)
-- **问题**: 0 测试覆盖率
-- **风险**: SQL 查询逻辑未验证
-- **修复**: 使用 go-sqlmock 添加测试
-
-### 🎯 前端类型错误
-
-#### 11. DeviceStats 类型未定义
-- **文件**: `frontend/src/components/DeviceDetail.tsx`
-- **问题**: 使用 `any` 而非正确类型
-- **修复**: 导入 `DeviceStats` 类型
-
-#### 12. GraphData 类型错误
-- **文件**: `frontend/src/components/KnowledgeGraph.tsx:22`
-- **问题**: 使用 `GraphData` 而非 `DeviceGraph`
-- **修复**: 使用正确类型定义
-
-#### 13. BlackBoxData 类型不一致
-- **文件**: `frontend/src/components/BlackBoxCenter.tsx:33`
-- **问题**: 返回类型与 cast 类型不一致
-- **修复**: 定义统一的数据类型
-
-#### 14. ErrorType 值错误
-- **文件**: `frontend/src/lib/errorHelper.ts:13`
-- **问题**: `UNAUTHORIZED = '***'` 而非 `'UNAUTHORIZED'`
-- **修复**: 修正枚举值
+| 维度 | 发现数量 | 状态 |
+|------|---------|------|
+| Backend 代码质量 | 22项 (P0:5, P1:9, P2:8) | 需修复 |
+| Frontend 代码质量 | 40项 (P0:5, P1:8, P2:12, P3:15) | 需修复 |
+| 安全漏洞 | 14项 (CRITICAL:2, HIGH:4, MEDIUM:3, LOW:5) | 需修复 |
 
 ---
 
-## 🟠 P1 - 建议近期修复 (26项)
+## 🔴 P0/CRITICAL 级别问题（需立即修复）
 
-### 性能问题
+### BE-P0-01: Handler Factory 返回 nil Handler 导致运行时 panic
+**文件**: `backend/internal/handler/factory.go:102-106`
+**问题**: `CreateRBACHandler()` 返回 `nil`，调用方可能未检查返回值
+**影响**: RBAC 相关 API 调用可能导致 nil pointer panic
+**修复方案**: 创建适配器统一接口签名或添加 nil 检查
+**工时**: 4h
 
-| # | 文件 | 问题 | 建议 |
-|---|------|------|------|
-| 1 | `telemetry_service.go` + `handler.go` | WebSocket 广播器重复实现 | 统一为单一实现 |
-| 2 | `agent_service.go:172` | HTTP Client 每次创建新实例 | 在 Service 初始化时创建 |
-| 3 | `ratelimit.go:102-107` | Rate Limiter goroutine 泄漏 | 使用单例模式管理 |
-| 4 | `FleetDashboard.tsx:49-56` | 重复4次类型断言 | 提取变量 |
-| 5 | `AITeamDashboard.tsx` | responses 无数量限制 | 添加最大消息数限制 |
-| 6 | 多个组件 | useEffect 依赖缺失 | 使用 useCallback 包裹 |
+### BE-P0-02: ID 解析忽略错误返回值
+**文件**: `backend/internal/handler/alert_handler_new.go:87-136`
+**问题**: `fmt.Sscanf` 忽略错误返回值，无效 ID 会产生 0 值
+**影响**: 无效 ID 被解析为 0，可能导致查询错误数据
+**修复方案**: 检查错误并返回 BadRequest
+**工时**: 2h
 
-### 安全配置
+### BE-P0-03: 内存过滤导致性能问题
+**文件**: `backend/internal/handler/alert_handler_new.go:56-71`
+**问题**: 从数据库获取全部数据后在内存中二次过滤
+**影响**: 大数据量时性能严重下降
+**修复方案**: 在数据库层面过滤
+**工时**: 4h
 
-| # | 文件 | 问题 | 建议 |
-|---|------|------|------|
-| 7 | `config.go:212` | CORS 默认 `*` | 生产环境强制要求明确配置 |
-| 8 | `handler.go:196-208` | WebSocket CheckOrigin 过宽松 | 严格验证 Origin |
-| 9 | 全局 | 缺少 CSRF 防护 | 添加 CSRF Token |
-| 10 | `device_handler.go` | 输入验证不完善 | 添加边界检查 |
-| 11 | `auth_models.go:6` | 密码复杂度过低 | 提高到12位+大小写+数字+特殊字符 |
+### BE-P0-04: CSRF panic 使用 crypto/rand 失败时
+**文件**: `backend/internal/middleware/csrf.go:199`
+**问题**: `panic` 在生产环境中会导致服务崩溃
+**影响**: 极端情况下服务崩溃
+**修复方案**: 使用 fallback 生成方法
+**工时**: 1h
 
-### 代码质量
+### BE-P0-05: 示例代码 panic
+**文件**: `backend/pkg/circuitbreaker/example_test.go`
+**问题**: 示例代码包含 panic
+**影响**: 不影响生产，但示例代码不规范
+**修复方案**: 移除 panic 或改为 log.Fatal
+**工时**: 0.5h
 
-| # | 文件 | 问题 | 建议 |
-|---|------|------|------|
-| 12 | `auth_helpers.go:22-26` | 全局变量滥用 | 封装到 Service 结构体 |
-| 13 | `cors.go` + `security.go` | CORS 中间件重复定义 | 合并为单一实现 |
-| 14 | `cors.go` + `security.go` | Security 头部重复定义 | 合并为单一实现 |
-| 15 | `cors.go:83-90` | RequestID 生成不安全 | 使用 crypto/rand |
-| 16 | `server.go:506` | 创建 admin 未检查错误 | 添加错误处理 |
-| 17 | `agent_service.go:172` | Timeout 60秒过长 | 根据场景调整 10-30秒 |
+### FE-P0-01: AlertReportPage 国际化完全缺失
+**文件**: `frontend/src/components/AlertReportPage.tsx`
+**问题**: 整个页面 100+ 行硬编码中文，国际化完全失效
+**影响**: 用户无法切换语言
+**修复方案**: 使用 i18n 系统替换硬编码文本
+**工时**: 2h
 
-### 前端最佳实践
+### FE-P0-02: PerformancePanel 国际化完全缺失
+**文件**: `frontend/src/components/PerformancePanel.tsx`
+**问题**: 性能面板全部硬编码中文
+**影响**: 用户无法切换语言
+**修复方案**: 使用 i18n 系统替换硬编码文本
+**工时**: 1h
 
-| # | 文件 | 问题 | 建议 |
-|---|------|------|------|
-| 18 | 多个组件 | 类型断言滥用 | 改进 API 返回类型定义 |
-| 19 | `wsCompression.ts:20` | payload 使用 any | 使用泛型定义 |
-| 20 | `lib/hooks.ts:129` | useVirtualList 性能问题 | 添加 useMemo |
-| 21 | `DeviceManager.tsx` | loadDevices 未添加依赖 | useCallback 包裹 |
-| 22 | `WorkOrderBoard.tsx` | loadOrders 未添加依赖 | useCallback 包裹 |
+### FE-P0-03: ROIStatsPage 国际化缺失
+**文件**: `frontend/src/components/ROIStatsPage.tsx`
+**问题**: ROI 统计页面硬编码中文
+**影响**: 用户无法切换语言
+**修复方案**: 使用 i18n 系统替换硬编码文本
+**工时**: 1h
 
----
+### FE-P0-04: BlackBoxPage 国际化缺失
+**文件**: `frontend/src/components/BlackBoxPage.tsx`
+**问题**: 黑匣子页面硬编码中文
+**影响**: 用户无法切换语言
+**修复方案**: 使用 i18n 系统替换硬编码文本
+**工时**: 1h
 
-## 🟡 P2 - 可选优化 (25项)
+### FE-P0-05: SystemStatusPage 国际化缺失
+**文件**: `frontend/src/components/SystemStatusPage.tsx`
+**问题**: 系统状态页面硬编码中文
+**影响**: 用户无法切换语言
+**修复方案**: 使用 i18n 系统替换硬编码文本
+**工时**: 1h
 
-### 代码风格
+### SEC-CRITICAL-01: Kubernetes Secret 硬编码弱密钥
+**文件**: `kubernetes/backend-deployment.yaml:118-127`
+**问题**: 硬编码的弱密钥和占位符值提交到版本控制
+**影响**: JWT 密钥泄露可导致任意用户身份伪造
+**修复方案**: 使用 Kubernetes external-secrets 或 Vault
+**工时**: 4h
 
-| 问题 | 建议 |
-|------|------|
-| 导入路径不一致 (`backend/pkg/logger` vs `github.com/industrial-ai/platform/pkg/logger`) | 统一使用模块路径 |
-| 日志库未统一 (标准 log vs zap) | 统一使用 zap |
-| 缺少关键业务逻辑注释 | 添加解释性注释 |
-| 硬编码配置 (连接池大小、限流参数) | 移到配置文件 |
-| 缺少 Service 接口定义 | 定义接口便于 Mock |
-| itoa 自实现冗余 | 使用标准库 strconv |
-| TTL 变量使用全局可变变量 | 使用常量或配置 |
-
-### 前端优化
-
-| 问题 | 建议 |
-|------|------|
-| @ts-ignore 处理浏览器兼容性 | 创建类型声明文件 |
-| 颜色映射函数重复定义 | 提取到共享文件 |
-| 错误提示硬编码中文 | 使用 t() 函数 |
-| Tailwind 动态类名 | 使用 safelist 或完整类名 |
-| useDeferred 与 React 18 内置重名 | 重命名或使用内置 |
-| 国际化缺少插值支持 | 添加 {count} 插值 |
-
-### 架构优化
-
-| 问题 | 建议 |
-|------|------|
-| Server 结构体过大 (20+字段) | 拆分为多个小结构体 |
-| init() 函数启动 goroutine | 改为显式初始化 |
-| 缺少清晰的服务层接口 | 定义接口抽象 |
-
----
-
-## 📈 测试覆盖率现状
-
-### 已有测试 (18个文件)
-
-| 类型 | 文件数 | 覆盖范围 |
-|------|--------|----------|
-| Service 测试 | 6 | Auth, Device, Telemetry, Alert, Agent, Health |
-| Config 测试 | 2 | 配置验证 |
-| WebSocket 测试 | 1 | 压缩功能 |
-| E2E 测试 | 9 | 认证、设备、告警、遥测等 |
-
-### 缺失测试
-
-| 层级 | 文件数 | 风险等级 |
-|------|--------|----------|
-| Handler 层 | 9 | 🔴 HIGH |
-| Repository 层 | 7 | 🔴 HIGH |
-| Middleware 层 | 6 | 🟠 MEDIUM |
-| 安全测试 | 0 | 🔴 HIGH |
-| 性能基准 | 部分 | 🟡 LOW |
-
-### 建议新增测试
-
-```
-优先级排序:
-1. auth_handler_test.go - 认证逻辑测试
-2. device_handler_test.go - 设备 CRUD 测试
-3. device_repo_test.go - SQL 查询验证
-4. middleware/auth_test.go - JWT 验证测试
-5. middleware/rbac_test.go - 权限检查测试
-6. SQL 注入测试 - 安全验证
-7. 认证绕过测试 - 安全验证
-```
+### SEC-CRITICAL-02: Docker Compose 硬编码密码
+**文件**: `docker-compose.yml`
+**问题**: 硬编码密码和环境变量
+**影响**: 数据库密码泄露
+**修复方案**: 使用 .env 文件并从 Git 历史删除
+**工时**: 2h
 
 ---
 
-## 🎯 修复优先级建议
+## 🟠 P1/HIGH 级别问题（需优先修复）
 
-### Week 1 (CRITICAL - 4项)
-
-1. ✅ 移除 JWT Secret 硬编码
-2. ✅ 移除密码明文日志
-3. ✅ 修复编译错误 (database 导入、handler 冲突)
-4. ✅ 统一 JWT 过期时间
-
-### Week 2 (HIGH - 6项)
-
-1. 实现 RevokeAllUserTokens
-2. 添加 Handler 层基础测试 (至少 auth, device)
-3. 添加 Repository 层基础测试
-4. 修复 CORS 默认配置
-5. 添加 WebSocket Origin 验证
-6. 修复前端类型错误
-
-### Week 3-4 (MEDIUM)
-
-1. 添加 CSRF 防护
-2. 提高密码复杂度要求
-3. 优化 HTTP Client 复用
-4. 修复 goroutine 泄漏
-5. 统一 WebSocket 实现
-6. 添加输入验证
-
-### Month 2 (LOW)
-
-1. 完善测试覆盖率 (目标 >70%)
-2. 统一日志库
-3. 添加安全审计日志
-4. 优化 CSP 配置
-5. 代码重构 (Server 拆分、接口定义)
+详见子报告：
+- Backend: 9项 (ServiceFactory空实现、context.TODO()、占位API等)
+- Frontend: 8项 (useEffect依赖缺失、as any类型断言、aria-label缺失等)
+- Security: 4项 (.env泄露、JWT密钥验证、CSRF缺失、用户信息过度暴露等)
 
 ---
 
-## 📝 快速修复清单
+## 🟡 P2/MEDIUM 级别问题（建议修复）
 
-```bash
-# 立即可执行的修复
-
-# 1. 移除硬编码 JWT Secret
-grep -r "industrial-ai-platform-secret-key" backend/ --files-with-matches
-
-# 2. 移除密码日志
-grep -r "Password: %s" backend/ --files-with-matches
-
-# 3. 检查编译
-cd backend && go build ./...
-
-# 4. 检查前端类型
-cd frontend && npm run type-check
-```
+详见子报告：
+- Backend: 8项 (TODO注释遗留、硬编码值、日志格式不统一等)
+- Frontend: 12项 (部分文本硬编码、加载状态未禁用按钮等)
+- Security: 3项 (bcrypt成本因子、Token黑名单无限制、SQL注入模式等)
 
 ---
 
-## 🏆 代码质量评分
+## 🟢 P3/LOW 级别问题（建议改进）
 
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| **架构设计** | ⭐⭐⭐⭐ | 分层清晰，职责明确 |
-| **代码规范** | ⭐⭐⭐ | 基本规范，部分不一致 |
-| **安全性** | ⭐⭐ | 存在关键漏洞需修复 |
-| **性能** | ⭐⭐⭐ | 基本优化完成，部分可改进 |
-| **测试覆盖** | ⭐⭐ | Service 层有测试，Handler/Repo 缺失 |
-| **文档完善** | ⭐⭐⭐⭐ | 文档丰富，运行手册完善 |
-| **可维护性** | ⭐⭐⭐ | 代码清晰，部分需重构 |
-|| **总体评分** | **⭐⭐⭐ (3.1/5)** | 生产可用，需修复关键问题 |
+详见子报告：
+- Backend: 无
+- Frontend: 15项 (类型定义宽松、token存储不一致、Modal缺少focus trap等)
+- Security: 5项 (日志敏感信息、Token存储localStorage等)
 
 ---
 
-## ✅ E2E 测试验证 (2026-05-16)
+## 已确认的良好实践
 
-### 完成项
+### Backend
+- ✅ 清晰的三层分层架构
+- ✅ 30+ Interface 定义便于测试和 Mock
+- ✅ 统一的错误处理（AppError）
+- ✅ 完善的中间件（Auth, CORS, WAF, RateLimit 等）
+- ✅ SQL 注入防护和 WAF 安全配置
+- ✅ Graceful Shutdown 正确实现
 
-| ID | 内容 | 状态 | 提交 |
-|----|------|------|------|
-| E2E-01 | PostgreSQL 驱动 + token_version 迁移 | ✅ | `49cdaff` |
-| E2E-02 | 测试密码更新 + Playwright 配置 | ✅ | `b91167f` |
+### Frontend
+- ✅ 类型定义完整 (`types/api.ts`)
+- ✅ 多数 API 调用有 try-catch
+- ✅ 已有完整的 i18n 系统
+- ✅ 多处使用了 useMemo/useCallback 优化
+- ✅ 大部分按钮已有 aria-label
 
-### API 层验证结果
-
-| 测试 | 结果 |
-|------|------|
-| 登录 (admin/operator) | ✅ JWT Token 正常返回 |
-| 创建设备 | ✅ POST `/api/v1/devices` |
-| 获取设备列表 | ✅ GET `/api/v1/devices` |
-| 更新设备 | ✅ PUT `/api/v1/devices/{id}` |
-| 删除设备 | ✅ DELETE `/api/v1/devices/{id}` |
-
-### 环境状态
-
-- **PostgreSQL**: 16.14 @ localhost:5432
-- **Redis**: 8.6.3 @ localhost:6379
-- **后端**: Go @ localhost:8080
-- **前端**: Vite @ localhost:3000
-
-### 遗留项
-
-- Playwright 登录测试超时（需优化等待策略）
+### Security
+- ✅ 参数化SQL查询（无SQL注入风险）
+- ✅ JWT算法验证（防止none算法攻击）
+- ✅ Token黑名单和版本控制
+- ✅ bcrypt密码哈希
+- ✅ WAF中间件（SQL注入、XSS、SSRF检测）
+- ✅ 安全响应头（HSTS、CSP、X-Frame-Options）
+- ✅ Rate Limiting配置
+- ✅ 前端无危险API使用
 
 ---
 
-**审查完成！建议优先修复 P0 安全漏洞和测试覆盖问题。**
+## 子报告位置
+
+- Backend 审计报告: `backend/CODE_QUALITY_AUDIT_UPDATED.md`
+- Frontend 审计报告: `frontend/CODE_QUALITY_AUDIT_REPORT.md`
+- Security 审计报告: `SECURITY_AUDIT_REPORT.md`
+
+---
+
+**审计完成时间**: 2026-05-25 21:30 (东八区)

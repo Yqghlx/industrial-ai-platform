@@ -2,9 +2,12 @@ package middleware
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -194,12 +197,30 @@ func generateCSRFToken(length int) string {
 
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
-		// Fallback to a less secure but functional method
-		// This should rarely happen
-		panic("crypto/rand failed: " + err.Error())
+		// Fallback to a less secure but functional method when crypto/rand fails
+		// This should rarely happen, but we must not panic in production
+		// Use a timestamp-based fallback with additional entropy
+		return generateFallbackToken(length)
 	}
 
 	return base64.URLEncoding.EncodeToString(bytes)
+}
+
+// generateFallbackToken generates a token using a fallback method when crypto/rand fails
+// This is less secure but ensures the service remains operational
+func generateFallbackToken(length int) string {
+	// Use a simple hash-based approach with timestamp
+	// Note: This is a fallback for emergency situations only
+	hasher := sha256.New()
+	hasher.Write([]byte(time.Now().String()))
+	hasher.Write([]byte("csrf-fallback-salt"))
+	hash := hasher.Sum(nil)
+
+	encoded := hex.EncodeToString(hash)
+	if len(encoded) > length {
+		return encoded[:length]
+	}
+	return encoded
 }
 
 // isSafeMethod checks if the HTTP method is considered safe (doesn't modify state)

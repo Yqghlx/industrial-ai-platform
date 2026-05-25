@@ -31,6 +31,7 @@ func NewAlertHandler(alertSvc service.AlertServiceInterface, broadcast func(msg 
 }
 
 // ListAlerts lists alerts with filters
+// P0-03: 将过滤条件传递到数据库层，避免内存过滤
 func (h *AlertHandler) ListAlerts(c *gin.Context) {
 	ctx, cancel := getRequestContext(c)
 	defer cancel()
@@ -46,29 +47,11 @@ func (h *AlertHandler) ListAlerts(c *gin.Context) {
 		filterStatus = "all"
 	}
 
-	alerts, total, err := h.alertSvc.GetAlerts(ctx, filterStatus, pagination.Page, pagination.PageSize)
+	// P0-03: 使用数据库层过滤替代内存过滤
+	alerts, total, err := h.alertSvc.GetAlertsWithFilter(ctx, filterStatus, severity, deviceID, pagination.Page, pagination.PageSize)
 	if err != nil {
 		response.HandleError(c, err)
 		return
-	}
-
-	// Apply additional filters
-	// TODO-P2: 当前在Handler层内存过滤，大数据量时性能可能受影响
-	// 未来优化方案：将severity/deviceID传递到Repository层进行SQL WHERE过滤
-	// 当前实现：对于中等规模数据（<1000条），性能足够
-	if severity != "" || deviceID != "" {
-		filtered := []model.Alert{}
-		for _, a := range alerts {
-			if severity != "" && a.Severity != severity {
-				continue
-			}
-			if deviceID != "" && a.DeviceID != deviceID {
-				continue
-			}
-			filtered = append(filtered, a)
-		}
-		alerts = filtered
-		total = len(filtered)
 	}
 
 	c.JSON(200, gin.H{
@@ -85,7 +68,10 @@ func (h *AlertHandler) GetAlert(c *gin.Context) {
 	alertID := c.Param("id")
 
 	var id int
-	fmt.Sscanf(alertID, "%d", &id)
+	if _, err := fmt.Sscanf(alertID, "%d", &id); err != nil {
+		response.BadRequest(c, "invalid alert ID format")
+		return
+	}
 
 	alert, err := h.alertSvc.GetAlertByID(ctx, id)
 	if err != nil {
@@ -102,7 +88,10 @@ func (h *AlertHandler) ResolveAlert(c *gin.Context) {
 	alertID := c.Param("id")
 
 	var id int
-	fmt.Sscanf(alertID, "%d", &id)
+	if _, err := fmt.Sscanf(alertID, "%d", &id); err != nil {
+		response.BadRequest(c, "invalid alert ID format")
+		return
+	}
 
 	err := h.alertSvc.ResolveAlert(ctx, id)
 	if err != nil {
@@ -133,7 +122,10 @@ func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 	alertID := c.Param("id")
 
 	var id int
-	fmt.Sscanf(alertID, "%d", &id)
+	if _, err := fmt.Sscanf(alertID, "%d", &id); err != nil {
+		response.BadRequest(c, "invalid alert ID format")
+		return
+	}
 
 	err := h.alertSvc.AcknowledgeAlert(ctx, id)
 	if err != nil {

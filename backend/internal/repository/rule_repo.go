@@ -233,6 +233,70 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 	return alerts, total, nil
 }
 
+// ListWithFilter retrieves alerts with filters (severity, deviceID)
+// P0-03: 将过滤条件传递到数据库层，避免内存过滤
+func (r *AlertRepository) ListWithFilter(ctx context.Context, filter AlertFilter, page, pageSize int) ([]model.Alert, int, error) {
+	whereClause := "WHERE 1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if filter.Status != "" && filter.Status != "all" {
+		whereClause += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, filter.Status)
+		argIdx++
+	}
+
+	if filter.Severity != "" {
+		whereClause += fmt.Sprintf(" AND severity = $%d", argIdx)
+		args = append(args, filter.Severity)
+		argIdx++
+	}
+
+	if filter.DeviceID != "" {
+		whereClause += fmt.Sprintf(" AND device_id = $%d", argIdx)
+		args = append(args, filter.DeviceID)
+		argIdx++
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, rule_id, device_id, message, severity, status, triggered_at, resolved_at
+		FROM alerts %s ORDER BY triggered_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.Query(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var alerts []model.Alert
+	for rows.Next() {
+		var a model.Alert
+		var resolvedAt sql.NullTime
+		if err := rows.Scan(
+			&a.ID, &a.RuleID, &a.DeviceID, &a.Message, &a.Severity,
+			&a.Status, &a.TriggeredAt, &resolvedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if resolvedAt.Valid {
+			a.ResolvedAt = &resolvedAt.Time
+		}
+		alerts = append(alerts, a)
+	}
+
+	return alerts, total, nil
+}
+
 // CountActive counts active alerts
 func (r *AlertRepository) CountActive(ctx context.Context) (int, error) {
 	var count int
@@ -324,4 +388,146 @@ func (r *AlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, devi
 	}
 
 	return result, nil
+}
+
+// ArchiveOldAlerts 归档超过指定天数的已解决告警
+// P2-002: 告警历史管理
+func (r *AlertRepository) ArchiveOldAlerts(ctx context.Context, daysOld int) (int, error) {
+	query := `
+		UPDATE alerts SET status = 'archived'
+		WHERE status = 'resolved' AND resolved_at < NOW() - INTERVAL '1 day' * $1
+	`
+	result, err := r.db.Exec(ctx, query, daysOld)
+	if err != nil {
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(rowsAffected), nil
+}
+
+// GetArchivedAlerts 查询已归档告警
+// P2-002: 告警历史管理
+func (r *AlertRepository) GetArchivedAlerts(ctx context.Context, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
+	whereClause := "WHERE status = 'archived'"
+	args := []interface{}{}
+	argIdx := 1
+
+	if deviceID != "" {
+		whereClause += fmt.Sprintf(" AND device_id = $%d", argIdx)
+		args = append(args, deviceID)
+		argIdx++
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	args = append(args, pageSize, offset)
+	listQuery := fmt.Sprintf(`
+		SELECT id, rule_id, device_id, message, severity, status, triggered_at, resolved_at
+		FROM alerts %s ORDER BY resolved_at DESC LIMIT $%d OFFSET $%d
+	`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.db.Query(ctx, listQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var alerts []model.Alert
+	for rows.Next() {
+		var a model.Alert
+		var resolvedAt sql.NullTime
+		if err := rows.Scan(
+			&a.ID, &a.RuleID, &a.DeviceID, &a.Message, &a.Severity,
+			&a.Status, &a.TriggeredAt, &resolvedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if resolvedAt.Valid {
+			a.ResolvedAt = &resolvedAt.Time
+		}
+		alerts = append(alerts, a)
+	}
+
+	return alerts, total, nil
+}
+
+// DeleteArchivedAlerts 删除超过指定天数的归档告警
+// P2-002: 告警历史管理
+func (r *AlertRepository) DeleteArchivedAlerts(ctx context.Context, daysOld int) (int, error) {
+	query := `
+		DELETE FROM alerts
+		WHERE status = 'archived' AND resolved_at < NOW() - INTERVAL '1 day' * $1
+	`
+	result, err := r.db.Exec(ctx, query, daysOld)
+	if err != nil {
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(rowsAffected), nil
+}
+
+// GetAlertStatistics 获取告警统计信息
+// P2-002: 告警历史管理
+func (r *AlertRepository) GetAlertStatistics(ctx context.Context) (*AlertStatistics, error) {
+	stats := &AlertStatistics{}
+
+	// Total counts
+	err := r.db.QueryRow(ctx, `
+		SELECT 
+			COUNT(*) FILTER (WHERE status = 'active') as total_active,
+			COUNT(*) FILTER (WHERE status = 'resolved') as total_resolved,
+			COUNT(*) FILTER (WHERE status = 'archived') as total_archived,
+			COUNT(*) FILTER (WHERE severity = 'critical' AND status = 'active') as critical_count,
+			COUNT(*) FILTER (WHERE severity = 'warning' AND status = 'active') as warning_count
+		FROM alerts
+	`).Scan(&stats.TotalActive, &stats.TotalResolved, &stats.TotalArchived, &stats.CriticalCount, &stats.WarningCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Today counts
+	err = r.db.QueryRow(ctx, `
+		SELECT 
+			COUNT(*) FILTER (WHERE triggered_at >= CURRENT_DATE) as today_triggered,
+			COUNT(*) FILTER (WHERE resolved_at >= CURRENT_DATE) as today_resolved
+		FROM alerts
+	`).Scan(&stats.TodayTriggered, &stats.TodayResolved)
+	if err != nil {
+		return nil, err
+	}
+
+	// Week counts
+	err = r.db.QueryRow(ctx, `
+		SELECT 
+			COUNT(*) FILTER (WHERE triggered_at >= CURRENT_DATE - INTERVAL '7 days') as week_triggered,
+			COUNT(*) FILTER (WHERE resolved_at >= CURRENT_DATE - INTERVAL '7 days') as week_resolved
+		FROM alerts
+	`).Scan(&stats.WeekTriggered, &stats.WeekResolved)
+	if err != nil {
+		return nil, err
+	}
+
+	// Average resolve time (in seconds)
+	err = r.db.QueryRow(ctx, `
+		SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - triggered_at))), 0)::int as avg_resolve_time
+		FROM alerts
+		WHERE status IN ('resolved', 'archived') AND resolved_at IS NOT NULL
+	`).Scan(&stats.AvgResolveTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }

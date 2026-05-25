@@ -145,6 +145,14 @@ func (m *MockAlertRepository) List(ctx context.Context, status string, page, pag
 	return alerts, total, args.Error(2)
 }
 
+// P0-03: Mock method for ListWithFilter
+func (m *MockAlertRepository) ListWithFilter(ctx context.Context, filter AlertFilter, page, pageSize int) ([]model.Alert, int, error) {
+	args := m.Called(ctx, filter, page, pageSize)
+	alerts := args.Get(0).([]model.Alert)
+	total := args.Get(1).(int)
+	return alerts, total, args.Error(2)
+}
+
 func (m *MockAlertRepository) CountActive(ctx context.Context) (int, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(int), args.Error(1)

@@ -150,10 +150,10 @@ func TestE2E_ListAlerts(t *testing.T) {
 
 	alertHandler := handler.NewAlertHandler(mockAlertSvc, broadcast)
 
-	// Setup mock - GetAlerts expects (ctx, status, page, pageSize)
-	// Default status is "all" in handler
+	// P0-03: Use GetAlertsWithFilter instead of GetAlerts
+	// GetAlertsWithFilter expects (ctx, status, severity, deviceID, page, pageSize)
 	alerts := []model.Alert{{ID: 1, DeviceID: "dev-1"}, {ID: 2, DeviceID: "dev-2"}}
-	mockAlertSvc.On("GetAlerts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(alerts, 2, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(alerts, 2, nil)
 
 	router.GET("/api/v1/alerts", alertHandler.ListAlerts)
 
@@ -452,8 +452,9 @@ func TestE2E_DeviceToAlertWorkflow(t *testing.T) {
 	assert.True(t, w1.Code == http.StatusOK || w1.Code == http.StatusBadRequest || w1.Code == http.StatusInternalServerError)
 
 	// Step 2: List alerts for device
+	// P0-03: Use GetAlertsWithFilter instead of GetAlerts
 	alerts := []model.Alert{{ID: 1, DeviceID: "workflow-device"}}
-	mockAlertSvc.On("GetAlerts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(alerts, 1, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(alerts, 1, nil)
 	router.GET("/api/v1/alerts", alertHandler.ListAlerts)
 
 	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/alerts?device_id=workflow-device", nil)

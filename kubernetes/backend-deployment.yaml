@@ -120,10 +120,13 @@ metadata:
   name: industrial-ai-secrets
   namespace: industrial-ai
 type: Opaque
-stringData:
-  database-url: "postgresql://user:password@postgres:5432/industrial_ai"
-  jwt-secret: "change-me-in-production"
-  llm-api-key: "your-llm-api-key"
+# SECURITY: Do NOT store secrets in Git!
+# Use external-secrets or Vault for production
+# Example: kubectl create secret generic industrial-ai-secrets \
+#   --from-literal=database-url='postgresql://...' \
+#   --from-literal=jwt-secret='...' \
+#   --from-literal=llm-api-key='...'
+stringData: {}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -11,12 +11,30 @@ echo "║       Industrial AI Platform - Local Dev                  ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-# 设置环境变量
+# 设置环境变量（从 .env 文件读取，如不存在则使用安全默认值）
 echo "📋 配置环境变量..."
-export DATABASE_URL="postgres://postgres:postgres@localhost:5432/industrial_ai?sslmode=disable"
-export JWT_SECRET="industrial-ai-platform-dev-secret"
-export CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
-export PORT="8080"
+
+# SECURITY: Read from .env file instead of hardcoding
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    echo "   从 .env 文件加载配置..."
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+else
+    echo "⚠️  未找到 .env 文件，请先创建:"
+    echo "   cp .env.example .env"
+    echo "   并填写必要的配置项"
+    exit 1
+fi
+
+# 检查必要的配置
+if [ -z "$DATABASE_URL" ]; then
+    echo "❌ DATABASE_URL 未设置"
+    exit 1
+fi
+
+if [ -z "$JWT_SECRET" ]; then
+    echo "❌ JWT_SECRET 未设置"
+    exit 1
+fi
 
 if [ -z "$LLM_API_KEY" ]; then
     echo "⚠️  未设置 LLM_API_KEY，AI Agent 将使用 Mock 模式"

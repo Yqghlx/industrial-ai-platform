@@ -54,6 +54,17 @@ func (m *MockAlertService) GetAlerts(ctx context.Context, status string, page, p
 	return alerts, total, args.Error(2)
 }
 
+// P0-03: Mock method for GetAlertsWithFilter
+func (m *MockAlertService) GetAlertsWithFilter(ctx context.Context, status, severity, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
+	args := m.Called(ctx, status, severity, deviceID, page, pageSize)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	alerts := args.Get(0).([]model.Alert)
+	total := args.Get(1).(int)
+	return alerts, total, args.Error(2)
+}
+
 func (m *MockAlertService) InitializeDefaultRules(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)

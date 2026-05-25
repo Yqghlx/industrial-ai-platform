@@ -376,6 +376,17 @@ func (s *AlertService) GetAlerts(ctx context.Context, status string, page, pageS
 	return s.alertRepo.List(ctx, status, page, pageSize)
 }
 
+// GetAlertsWithFilter retrieves alerts with more filters (severity, deviceID)
+// P0-03: 将过滤条件传递到数据库层，避免内存过滤
+func (s *AlertService) GetAlertsWithFilter(ctx context.Context, status, severity, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
+	filter := repository.AlertFilter{
+		Status:   status,
+		Severity: severity,
+		DeviceID: deviceID,
+	}
+	return s.alertRepo.ListWithFilter(ctx, filter, page, pageSize)
+}
+
 // InitializeDefaultRules creates default alert rules
 // BE-P2-02: 使用常量替换魔法数字
 // P2-002: 优化告警规则，添加分层阈值和更多指标
