@@ -1,0 +1,31 @@
+Performance Benchmark Results - 20260525_211614
+===========================================
+
+=== 1. Gateway Health Check ===
+Gateway Uptime: 2154 seconds
+
+=== 2. Authentication Test ===
+Login Response Time: 0.231s
+Token: Extracted
+
+=== 3. API Response Time Tests ===
+Health API: health|200|0.001|0.002|0.001|0.001|0.006
+Devices API: devices|200|0.001|0.003|0.002|0.003|0.008
+Alerts API: alerts|200|0.001|0.002|0.001|0.002|0.007
+Telemetry API: telemetry|200|0.017|0.020|0.018|0.022|0.032
+Telemetry POST: telemetry_post|500|0.002|0.003|0.002|0.003|0.008
+
+=== 4. Database Performance Tests ===
+  iai-auth-db: Error: 2
+  iai-device-db: Error: 2
+  iai-telemetry-db: Error: 2
+  iai-alert-db: Error: 2
+Redis Status: Failed - [Errno 2] No such file or dire
+
+=== 5. Concurrent Load Tests (k6) ===
+k6 test completed
+
+=== 6. WebSocket Endpoint Test ===
+WebSocket endpoint: OK (HTTP 400, expected for non-WS request, 0.009s)
+
+=== 7. Service Health Summary ===

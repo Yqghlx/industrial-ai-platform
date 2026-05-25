@@ -256,9 +256,11 @@ func (n *FeishuNotifier) getSeverityText(severity string) string {
 }
 
 // NotifyManager manages multiple notification channels
+// P2-002: 增强通知管理器，支持飞书和钉钉
 type NotifyManager struct {
-	feishu  *FeishuNotifier
-	enabled bool
+	feishu   *FeishuNotifier
+	dingtalk *DingTalkNotifier
+	enabled  bool
 }
 
 // NewNotifyManager creates a notification manager
@@ -266,6 +268,15 @@ func NewNotifyManager(feishuWebhook string, enabled bool) *NotifyManager {
 	return &NotifyManager{
 		feishu:  NewFeishuNotifier(feishuWebhook),
 		enabled: enabled,
+	}
+}
+
+// NewNotifyManagerWithDingTalk creates a notification manager with both Feishu and DingTalk
+func NewNotifyManagerWithDingTalk(feishuWebhook, dingtalkWebhook string, enabled bool) *NotifyManager {
+	return &NotifyManager{
+		feishu:   NewFeishuNotifier(feishuWebhook),
+		dingtalk: NewDingTalkNotifier(dingtalkWebhook),
+		enabled:  enabled,
 	}
 }
 

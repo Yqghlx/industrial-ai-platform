@@ -177,6 +177,32 @@ func (m *MockAlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, 
 	return args.Get(0).(map[int]*model.Alert), args.Error(1)
 }
 
+// P2-002: 告警历史管理 - 新增归档 mock 方法
+func (m *MockAlertRepository) ArchiveOldAlerts(ctx context.Context, daysOld int) (int, error) {
+	args := m.Called(ctx, daysOld)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockAlertRepository) GetArchivedAlerts(ctx context.Context, deviceID string, page, pageSize int) ([]model.Alert, int, error) {
+	args := m.Called(ctx, deviceID, page, pageSize)
+	alerts := args.Get(0).([]model.Alert)
+	total := args.Get(1).(int)
+	return alerts, total, args.Error(2)
+}
+
+func (m *MockAlertRepository) DeleteArchivedAlerts(ctx context.Context, daysOld int) (int, error) {
+	args := m.Called(ctx, daysOld)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockAlertRepository) GetAlertStatistics(ctx context.Context) (*AlertStatistics, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*AlertStatistics), args.Error(1)
+}
+
 // MockRuleRepository implements RuleRepositoryInterface for testing
 type MockRuleRepository struct {
 	mock.Mock

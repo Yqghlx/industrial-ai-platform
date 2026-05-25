@@ -16,4 +16,28 @@ type AlertRepositoryInterface interface {
 	GetRecentByDevice(ctx context.Context, deviceID string, ruleID int, cooldownSec int) (*model.Alert, error)
 	// FIX-P1-01: N+1 查询优化 - 新增批量查询方法
 	GetRecentAlertsByDeviceBatch(ctx context.Context, deviceID string, ruleIDs []int, cooldownSec int) (map[int]*model.Alert, error)
+	
+	// P2-002: 告警历史管理 - 新增归档方法
+	// ArchiveOldAlerts 归档超过指定天数的已解决告警
+	ArchiveOldAlerts(ctx context.Context, daysOld int) (int, error)
+	// GetArchivedAlerts 查询已归档告警
+	GetArchivedAlerts(ctx context.Context, deviceID string, page, pageSize int) ([]model.Alert, int, error)
+	// DeleteArchivedAlerts 删除超过指定天数的归档告警
+	DeleteArchivedAlerts(ctx context.Context, daysOld int) (int, error)
+	// GetAlertStatistics 获取告警统计信息
+	GetAlertStatistics(ctx context.Context) (*AlertStatistics, error)
+}
+
+// AlertStatistics 告警统计信息
+type AlertStatistics struct {
+	TotalActive     int `json:"total_active"`
+	TotalResolved   int `json:"total_resolved"`
+	TotalArchived   int `json:"total_archived"`
+	TodayTriggered  int `json:"today_triggered"`
+	TodayResolved   int `json:"today_resolved"`
+	WeekTriggered   int `json:"week_triggered"`
+	WeekResolved    int `json:"week_resolved"`
+	AvgResolveTime  int `json:"avg_resolve_time_seconds"` // 平均解决时间（秒）
+	CriticalCount   int `json:"critical_count"`
+	WarningCount    int `json:"warning_count"`
 }

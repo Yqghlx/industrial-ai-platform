@@ -1,0 +1,367 @@
+# Industrial Device Alert Rules - P2-002: 监控告警调优
+# 工业设备专用告警规则（温度、压力、振动等）
+# 包含分层告警级别和告警聚合策略
+
+groups:
+  # ==========================================
+  # 温度告警组 - 分层预警
+  # ==========================================
+  - name: industrial-temperature-alerts
+    rules:
+      # 温度预警 - info级别，提前通知
+      - alert: TemperatureWarning
+        expr: device_temperature > 70 and device_temperature <= 80
+        for: 5m
+        labels:
+          severity: info
+          category: device_temperature
+          priority: P3
+        annotations:
+          summary: "温度预警"
+          description: "设备 {{ $labels.device_id }} 温度 {{ $value }}°C，接近警告阈值(80°C)，建议检查"
+          runbook_url: "docs/runbook/device/TemperatureWarning.md"
+      
+      # 高温警告 - warning级别
+      - alert: HighTemperature
+        expr: device_temperature > 80 and device_temperature <= 100
+        for: 3m
+        labels:
+          severity: warning
+          category: device_temperature
+          priority: P2
+        annotations:
+          summary: "高温警告"
+          description: "设备 {{ $labels.device_id }} 温度 {{ $value }}°C，超过警告阈值(80°C)，需要关注"
+          runbook_url: "docs/runbook/device/HighTemperature.md"
+      
+      # 严重高温 - critical级别
+      - alert: CriticalTemperature
+        expr: device_temperature > 100
+        for: 1m
+        labels:
+          severity: critical
+          category: device_temperature
+          priority: P1
+        annotations:
+          summary: "严重高温告警"
+          description: "设备 {{ $labels.device_id }} 温度 {{ $value }}°C，超过严重阈值(100°C)，立即处理"
+          runbook_url: "docs/runbook/device/CriticalTemperature.md"
+      
+      # 温度快速上升 - 预警异常趋势
+      - alert: TemperatureRapidIncrease
+        expr: |
+          (device_temperature - device_temperature offset 5m) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: device_temperature
+          priority: P2
+        annotations:
+          summary: "温度快速上升"
+          description: "设备 {{ $labels.device_id }} 温度在5分钟内上升超过10°C，可能存在异常"
+
+  # ==========================================
+  # 振动告警组 - ISO 10816标准
+  # ==========================================
+  - name: industrial-vibration-alerts
+    rules:
+      # 振动预警 - info级别
+      - alert: VibrationWarning
+        expr: device_vibration > 1.8 and device_vibration <= 2.8
+        for: 10m
+        labels:
+          severity: info
+          category: device_vibration
+          priority: P3
+        annotations:
+          summary: "振动预警"
+          description: "设备 {{ $labels.device_id }} 振动 {{ $value }}mm/s，接近警告阈值(2.8mm/s)"
+          runbook_url: "docs/runbook/device/VibrationWarning.md"
+      
+      # 振动异常 - warning级别
+      - alert: AbnormalVibration
+        expr: device_vibration > 2.8 and device_vibration <= 4.5
+        for: 5m
+        labels:
+          severity: warning
+          category: device_vibration
+          priority: P2
+        annotations:
+          summary: "振动异常"
+          description: "设备 {{ $labels.device_id }} 振动 {{ $value }}mm/s，超过ISO 10816警告阈值"
+          runbook_url: "docs/runbook/device/AbnormalVibration.md"
+      
+      # 严重振动 - critical级别
+      - alert: CriticalVibration
+        expr: device_vibration > 4.5
+        for: 2m
+        labels:
+          severity: critical
+          category: device_vibration
+          priority: P1
+        annotations:
+          summary: "严重振动告警"
+          description: "设备 {{ $labels.device_id }} 振动 {{ $value }}mm/s，超过严重阈值，设备可能损坏"
+          runbook_url: "docs/runbook/device/CriticalVibration.md"
+      
+      # 振动频率异常 - 预测性维护
+      - alert: VibrationFrequencyAbnormal
+        expr: |
+          rate(device_vibration_frequency_change_total[10m]) > 5
+        for: 15m
+        labels:
+          severity: warning
+          category: device_vibration
+          priority: P2
+        annotations:
+          summary: "振动频率异常"
+          description: "设备 {{ $labels.device_id }} 振动频率变化频繁，可能存在轴承或齿轮问题"
+
+  # ==========================================
+  # 压力告警组
+  # ==========================================
+  - name: industrial-pressure-alerts
+    rules:
+      # 压力预警
+      - alert: PressureWarning
+        expr: device_pressure > 100 and device_pressure <= 120
+        for: 5m
+        labels:
+          severity: info
+          category: device_pressure
+          priority: P3
+        annotations:
+          summary: "压力预警"
+          description: "设备 {{ $labels.device_id }} 压力 {{ $value }}kPa，接近警告阈值"
+      
+      # 压力异常 - warning
+      - alert: AbnormalPressure
+        expr: device_pressure > 120 and device_pressure <= 150
+        for: 3m
+        labels:
+          severity: warning
+          category: device_pressure
+          priority: P2
+        annotations:
+          summary: "压力异常"
+          description: "设备 {{ $labels.device_id }} 压力 {{ $value }}kPa，超过警告阈值(120kPa)"
+      
+      # 严重压力 - critical
+      - alert: CriticalPressure
+        expr: device_pressure > 150
+        for: 1m
+        labels:
+          severity: critical
+          category: device_pressure
+          priority: P1
+        annotations:
+          summary: "严重压力告警"
+          description: "设备 {{ $labels.device_id }} 压力 {{ $value }}kPa，超过严重阈值(150kPa)"
+      
+      # 压力骤降
+      - alert: PressureDrop
+        expr: |
+          (device_pressure - device_pressure offset 5m) < -30
+        for: 2m
+        labels:
+          severity: critical
+          category: device_pressure
+          priority: P1
+        annotations:
+          summary: "压力骤降告警"
+          description: "设备 {{ $labels.device_id }} 压力在5分钟内下降超过30kPa，可能泄漏"
+
+  # ==========================================
+  # 湿度告警组
+  # ==========================================
+  - name: industrial-humidity-alerts
+    rules:
+      # 低湿度警告
+      - alert: LowHumidity
+        expr: device_humidity < 30
+        for: 15m
+        labels:
+          severity: warning
+          category: device_humidity
+          priority: P3
+        annotations:
+          summary: "低湿度警告"
+          description: "设备 {{ $labels.device_id }} 湿度 {{ $value }}%，低于30%，可能影响设备运行"
+      
+      # 高湿度警告
+      - alert: HighHumidity
+        expr: device_humidity > 85 and device_humidity <= 95
+        for: 10m
+        labels:
+          severity: warning
+          category: device_humidity
+          priority: P2
+        annotations:
+          summary: "高湿度警告"
+          description: "设备 {{ $labels.device_id }} 湿度 {{ $value }}%，超过85%，需防潮处理"
+      
+      # 严重湿度
+      - alert: CriticalHumidity
+        expr: device_humidity > 95
+        for: 5m
+        labels:
+          severity: critical
+          category: device_humidity
+          priority: P1
+        annotations:
+          summary: "严重湿度告警"
+          description: "设备 {{ $labels.device_id }} 湿度 {{ $value }}%，超过95%，可能导致短路"
+
+  # ==========================================
+  # 功率告警组
+  # ==========================================
+  - name: industrial-power-alerts
+    rules:
+      # 低功率警告（设备可能空转）
+      - alert: LowPower
+        expr: device_power < 100 and device_power > 0
+        for: 30m
+        labels:
+          severity: warning
+          category: device_power
+          priority: P3
+        annotations:
+          summary: "低功率警告"
+          description: "设备 {{ $labels.device_id }} 功率 {{ $value }}W，可能空转或效率低下"
+      
+      # 高功率警告
+      - alert: HighPower
+        expr: device_power > 5000 and device_power <= 8000
+        for: 10m
+        labels:
+          severity: warning
+          category: device_power
+          priority: P2
+        annotations:
+          summary: "高功率警告"
+          description: "设备 {{ $labels.device_id }} 功率 {{ $value }}W，超过5000W"
+      
+      # 严重功率
+      - alert: CriticalPower
+        expr: device_power > 8000
+        for: 3m
+        labels:
+          severity: critical
+          category: device_power
+          priority: P1
+        annotations:
+          summary: "严重功率告警"
+          description: "设备 {{ $labels.device_id }} 功率 {{ $value }}W，超过8000W，可能过载"
+      
+      # 功率突变
+      - alert: PowerSpike
+        expr: |
+          abs(device_power - device_power offset 1m) > 1000
+        for: 1m
+        labels:
+          severity: warning
+          category: device_power
+          priority: P2
+        annotations:
+          summary: "功率突变警告"
+          description: "设备 {{ $labels.device_id }} 功率在1分钟内变化超过1000W"
+
+  # ==========================================
+  # 综合健康告警组
+  # ==========================================
+  - name: industrial-device-health-alerts
+    rules:
+      # 设备离线告警
+      - alert: DeviceOffline
+        expr: device_online_status == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: device_status
+          priority: P1
+        annotations:
+          summary: "设备离线"
+          description: "设备 {{ $labels.device_id }} 已离线超过5分钟"
+      
+      # 设备状态异常
+      - alert: DeviceStatusFault
+        expr: device_status == "fault"
+        for: 1m
+        labels:
+          severity: critical
+          category: device_status
+          priority: P1
+        annotations:
+          summary: "设备故障状态"
+          description: "设备 {{ $labels.device_id }} 处于故障状态，需立即检修"
+      
+      # 多指标同时异常（综合告警）
+      - alert: MultipleMetricsAbnormal
+        expr: |
+          (device_temperature > 80) + 
+          (device_vibration > 2.8) + 
+          (device_pressure > 120) >= 2
+        for: 3m
+        labels:
+          severity: critical
+          category: device_health
+          priority: P1
+        annotations:
+          summary: "多指标异常告警"
+          description: "设备 {{ $labels.device_id }} 同时存在多个指标异常，可能发生严重故障"
+      
+      # 设备维护周期提醒
+      - alert: MaintenanceDue
+        expr: |
+          time() - device_last_maintenance_timestamp > 2592000  # 30天
+        for: 0m
+        labels:
+          severity: info
+          category: device_maintenance
+          priority: P3
+        annotations:
+          summary: "维护周期提醒"
+          description: "设备 {{ $labels.device_id }} 超过30天未维护，建议安排检修"
+
+  # ==========================================
+  # 告警聚合与抑制规则
+  # ==========================================
+  - name: industrial-alert-aggregation
+    rules:
+      # 高告警触发率检测
+      - alert: HighAlertTriggerRate
+        expr: rate(alerts_triggered_total[1h]) > 100
+        for: 15m
+        labels:
+          severity: warning
+          category: alert_system
+          priority: P2
+        annotations:
+          summary: "告警触发率过高"
+          description: "过去1小时告警触发率 {{ $value }}次/小时，可能阈值设置不当或系统异常"
+      
+      # 重复告警检测
+      - alert: RepeatedAlertsDetected
+        expr: |
+          count by (device_id, alertname) (ALERTS{severity=~"warning|critical"}) > 3
+        for: 10m
+        labels:
+          severity: warning
+          category: alert_system
+          priority: P2
+        annotations:
+          summary: "重复告警检测"
+          description: "设备 {{ $labels.device_id }} 的 {{ $labels.alertname }} 告警重复触发超过3次"
+      
+      # 告警处理延迟检测
+      - alert: AlertResolutionDelayed
+        expr: |
+          avg by (device_id) (time() - alert_triggered_timestamp) > 3600  # 1小时
+        for: 30m
+        labels:
+          severity: warning
+          category: alert_system
+          priority: P2
+        annotations:
+          summary: "告警处理延迟"
+          description: "设备 {{ $labels.device_id }} 的告警平均处理时间超过1小时"

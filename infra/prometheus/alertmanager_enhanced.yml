@@ -1,0 +1,404 @@
+# Alertmanager Configuration - P2-002: 监控告警调优
+# 包含告警聚合、抑制策略、飞书/钉钉通知配置
+
+# ==========================================
+# 全局配置
+# ==========================================
+global:
+  # 告警解决超时时间
+  resolve_timeout: 5m
+  
+  # SMTP邮件配置
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: '${SMTP_FROM}'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp-password
+  smtp_require_tls: true
+  
+  # Slack配置
+  slack_api_url_file: /etc/alertmanager/secrets/slack-api-url
+  
+  # PagerDuty配置
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# ==========================================
+# 模板配置
+# ==========================================
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ==========================================
+# 路由配置 - 增强的告警聚合策略
+# ==========================================
+route:
+  # 按这些标签分组告警
+  group_by: ['severity', 'category', 'device_id', 'priority']
+  
+  # 分组等待时间（聚合同类告警）
+  group_wait: 30s
+  
+  # 同组新告警添加后的等待时间
+  group_interval: 5m
+  
+  # 重复发送间隔
+  repeat_interval: 4h
+  
+  # 默认接收器
+  receiver: 'default-webhook'
+  
+  # 子路由
+  routes:
+    # -----------------------------------------
+    # P1 紧急告警 - 立即通知多渠道
+    # -----------------------------------------
+    - match:
+        priority: P1
+      receiver: 'p1-critical-all'
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 30m
+      continue: true
+    
+    # -----------------------------------------
+    # P2 警告告警 - 标准通知
+    # -----------------------------------------
+    - match:
+        priority: P2
+      receiver: 'p2-warning-feishu'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 2h
+      continue: false
+    
+    # -----------------------------------------
+    # P3 提醒告警 - 低优先级通知
+    # -----------------------------------------
+    - match:
+        priority: P3
+      receiver: 'p3-info-dingtalk'
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 12h
+      continue: false
+    
+    # -----------------------------------------
+    # 温度告警 - 专用处理
+    # -----------------------------------------
+    - match:
+        category: device_temperature
+      receiver: 'device-alert-feishu'
+      group_by: ['severity', 'device_id']
+      group_wait: 30s
+      routes:
+        - match:
+            severity: critical
+          receiver: 'temperature-critical'
+          group_wait: 15s
+    
+    # -----------------------------------------
+    # 振动告警 - ISO标准处理
+    # -----------------------------------------
+    - match:
+        category: device_vibration
+      receiver: 'device-alert-feishu'
+      group_by: ['severity', 'device_id']
+      group_wait: 30s
+      routes:
+        - match:
+            severity: critical
+          receiver: 'vibration-critical'
+          group_wait: 15s
+    
+    # -----------------------------------------
+    # 设备状态告警 - 实时通知
+    # -----------------------------------------
+    - match:
+        category: device_status
+      receiver: 'device-status-feishu'
+      group_wait: 10s
+      group_interval: 30s
+    
+    # -----------------------------------------
+    # 告警系统自身告警
+    # -----------------------------------------
+    - match:
+        category: alert_system
+      receiver: 'ops-team'
+      group_wait: 1m
+    
+    # -----------------------------------------
+    # 维护提醒 - 低频通知
+    # -----------------------------------------
+    - match:
+        category: device_maintenance
+      receiver: 'maintenance-reminder'
+      group_wait: 10m
+      repeat_interval: 24h
+
+# ==========================================
+# 抑制规则 - 减少告警噪音
+# ==========================================
+inhibit_rules:
+  # -----------------------------------------
+  # 同设备critical抑制warning/info
+  # -----------------------------------------
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity =~ "warning|info"
+    equal: ['device_id', 'category']
+  
+  # -----------------------------------------
+  # 设备离线抑制其他告警
+  # -----------------------------------------
+  - source_matchers:
+      - alertname = "DeviceOffline"
+      - severity = "critical"
+    target_matchers:
+      - category =~ "device_temperature|device_vibration|device_pressure|device_power"
+    equal: ['device_id']
+  
+  # -----------------------------------------
+  # 设备故障抑制所有设备告警
+  # -----------------------------------------
+  - source_matchers:
+      - alertname = "DeviceStatusFault"
+      - severity = "critical"
+    target_matchers:
+      - category =~ "device_.*"
+    equal: ['device_id']
+  
+  # -----------------------------------------
+  # 多指标异常抑制单独指标告警
+  # -----------------------------------------
+  - source_matchers:
+      - alertname = "MultipleMetricsAbnormal"
+      - severity = "critical"
+    target_matchers:
+      - alertname =~ "HighTemperature|AbnormalVibration|AbnormalPressure"
+    equal: ['device_id']
+  
+  # -----------------------------------------
+  # P1抑制同设备P2/P3告警
+  # -----------------------------------------
+  - source_matchers:
+      - priority = "P1"
+      - severity = "critical"
+    target_matchers:
+      - priority =~ "P2|P3"
+    equal: ['device_id', 'category']
+  
+  # -----------------------------------------
+  # 压力骤降抑制压力异常
+  # -----------------------------------------
+  - source_matchers:
+      - alertname = "PressureDrop"
+      - severity = "critical"
+    target_matchers:
+      - alertname = "AbnormalPressure"
+    equal: ['device_id']
+  
+  # -----------------------------------------
+  # 功率突变抑制功率告警
+  # -----------------------------------------
+  - source_matchers:
+      - alertname = "PowerSpike"
+      - severity = "critical"
+    target_matchers:
+      - alertname =~ "HighPower|CriticalPower"
+    equal: ['device_id']
+
+# ==========================================
+# 接收器配置
+# ==========================================
+receivers:
+  # -----------------------------------------
+  # 默认接收器 - Webhook到后端
+  # -----------------------------------------
+  - name: 'default-webhook'
+    webhook_configs:
+      - url: 'http://backend:8080/api/v1/alerts/webhook'
+        send_resolved: true
+        max_alerts: 100
+        http_config:
+          headers:
+            Content-Type: application/json
+            Authorization: 'Bearer ${ALERT_WEBHOOK_TOKEN}'
+  
+  # -----------------------------------------
+  # P1紧急告警 - 全渠道通知
+  # -----------------------------------------
+  - name: 'p1-critical-all'
+    # PagerDuty紧急呼叫
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-key
+        severity: critical
+        description: '[P1紧急] {{ .GroupLabels.alertname }} - 设备{{ .GroupLabels.device_id }}'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+          num_firing: '{{ .Alerts.Firing | len }}'
+    
+    # 邮件通知
+    email_configs:
+      - to: '${OPS_TEAM_EMAIL}'
+        send_resolved: true
+        headers:
+          Subject: '[P1紧急] 工业AI平台告警 - {{ .GroupLabels.alertname }}'
+        html: |
+          <h2 style="color: red;">🚨 P1紧急告警</h2>
+          <p><strong>告警名称:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>设备ID:</strong> {{ .GroupLabels.device_id }}</p>
+          <p><strong>严重程度:</strong> {{ .GroupLabels.severity }}</p>
+          <p><strong>告警数量:</strong> {{ .Alerts.Firing | len }}</p>
+          {{ range .Alerts.Firing }}
+          <hr>
+          <p><strong>描述:</strong> {{ .Annotations.description }}</p>
+          <p><strong>触发时间:</strong> {{ .StartsAt }}</p>
+          {{ end }}
+    
+    # Slack通知
+    slack_configs:
+      - channel: '#alerts-critical'
+        send_resolved: true
+        color: 'danger'
+        title: '🚨 [P1] {{ .GroupLabels.alertname }}'
+        text: |
+          **设备:** {{ .GroupLabels.device_id }}
+          **严重程度:** {{ .GroupLabels.severity }}
+          {{ range .Alerts.Firing }}
+          **描述:** {{ .Annotations.description }}
+          {{ end }}
+    
+    # 飞书通知
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+        http_config:
+          headers:
+            Content-Type: application/json
+  
+  # -----------------------------------------
+  # P2警告告警 - 飞书+邮件
+  # -----------------------------------------
+  - name: 'p2-warning-feishu'
+    # 飞书通知
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+        http_config:
+          headers:
+            Content-Type: application/json
+    
+    # 邮件通知
+    email_configs:
+      - to: '${OPS_TEAM_EMAIL}'
+        send_resolved: true
+        headers:
+          Subject: '[P2警告] 工业AI平台告警 - {{ .GroupLabels.alertname }}'
+    
+    # Slack通知
+    slack_configs:
+      - channel: '#alerts-warning'
+        send_resolved: true
+        color: 'warning'
+        title: '⚠️ [P2] {{ .GroupLabels.alertname }}'
+  
+  # -----------------------------------------
+  # P3提醒告警 - 钉钉通知
+  # -----------------------------------------
+  - name: 'p3-info-dingtalk'
+    # 钉钉Webhook
+    webhook_configs:
+      - url: '${DINGTALK_WEBHOOK_URL}'
+        send_resolved: false
+        http_config:
+          headers:
+            Content-Type: application/json
+    
+    # 邮件通知（可选）
+    email_configs:
+      - to: '${MAINTENANCE_TEAM_EMAIL}'
+        send_resolved: false
+        headers:
+          Subject: '[P3提醒] 工业AI平台 - {{ .GroupLabels.alertname }}'
+  
+  # -----------------------------------------
+  # 设备告警飞书专用接收器
+  # -----------------------------------------
+  - name: 'device-alert-feishu'
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+  
+  # -----------------------------------------
+  # 设备状态飞书接收器
+  # -----------------------------------------
+  - name: 'device-status-feishu'
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+        max_alerts: 10
+  
+  # -----------------------------------------
+  # 温度严重告警接收器
+  # -----------------------------------------
+  - name: 'temperature-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-temperature-key
+        severity: critical
+        description: '严重温度告警: {{ .GroupLabels.device_id }}'
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+  
+  # -----------------------------------------
+  # 振动严重告警接收器
+  # -----------------------------------------
+  - name: 'vibration-critical'
+    pagerduty_configs:
+      - service_key_file: /etc/alertmanager/secrets/pagerduty-vibration-key
+        severity: critical
+        description: '严重振动告警: {{ .GroupLabels.device_id }}'
+    webhook_configs:
+      - url: '${FEISHU_WEBHOOK_URL}'
+        send_resolved: true
+  
+  # -----------------------------------------
+  # 维护提醒接收器
+  # -----------------------------------------
+  - name: 'maintenance-reminder'
+    email_configs:
+      - to: '${MAINTENANCE_TEAM_EMAIL}'
+        send_resolved: false
+        headers:
+          Subject: '[维护提醒] 设备维护周期到期'
+    webhook_configs:
+      - url: '${DINGTALK_WEBHOOK_URL}'
+        send_resolved: false
+  
+  # -----------------------------------------
+  # 运维团队接收器
+  # -----------------------------------------
+  - name: 'ops-team'
+    slack_configs:
+      - channel: '#ops-alerts'
+        send_resolved: true
+    email_configs:
+      - to: '${OPS_TEAM_EMAIL}'
+        send_resolved: true
+
+# ==========================================
+# 时间窗口配置（工作时间调整）
+# ==========================================
+# 可选：配置工作时间告警策略
+# mute_time_intervals:
+#   - name: business_hours
+#     time_intervals:
+#       - weekdays: ['monday:friday']
+#         times:
+#           - start_time: '09:00'
+#             end_time: '18:00'
+#       - weekdays: ['saturday', 'sunday']
+#         times:
+#           - start_time: '00:00'
+#             end_time: '23:59'

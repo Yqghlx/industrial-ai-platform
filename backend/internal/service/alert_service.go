@@ -378,8 +378,21 @@ func (s *AlertService) GetAlerts(ctx context.Context, status string, page, pageS
 
 // InitializeDefaultRules creates default alert rules
 // BE-P2-02: 使用常量替换魔法数字
+// P2-002: 优化告警规则，添加分层阈值和更多指标
 func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 	defaultRules := []model.AlertRule{
+		// 温度告警 - 分层预警
+		{
+			Name:        "温度预警",
+			DeviceType:  "*",
+			Metric:      "temperature",
+			Operator:    ">",
+			Threshold:   constants.WarningTemperatureThreshold,
+			Severity:    "low",
+			Actions:     `[{"type": "notification"}]`,
+			Enabled:     true,
+			CooldownSec: constants.LongAlertCooldownSec,
+		},
 		{
 			Name:        "高温告警",
 			DeviceType:  "*",
@@ -401,6 +414,19 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}, {"type": "blackbox"}]`,
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
+		},
+		
+		// 振动告警 - ISO 10816标准分层
+		{
+			Name:        "振动预警",
+			DeviceType:  "*",
+			Metric:      "vibration",
+			Operator:    ">",
+			Threshold:   constants.WarningVibrationThreshold,
+			Severity:    "low",
+			Actions:     `[{"type": "notification"}]`,
+			Enabled:     true,
+			CooldownSec: constants.LongAlertCooldownSec,
 		},
 		{
 			Name:        "振动异常告警",
@@ -424,6 +450,19 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
 		},
+		
+		// 压力告警 - 分层预警
+		{
+			Name:        "压力预警",
+			DeviceType:  "*",
+			Metric:      "pressure",
+			Operator:    ">",
+			Threshold:   constants.WarningPressureThreshold,
+			Severity:    "low",
+			Actions:     `[{"type": "notification"}]`,
+			Enabled:     true,
+			CooldownSec: constants.LongAlertCooldownSec,
+		},
 		{
 			Name:        "压力异常告警",
 			DeviceType:  "*",
@@ -434,6 +473,87 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
 			Enabled:     true,
 			CooldownSec: constants.DefaultAlertCooldownSec,
+		},
+		{
+			Name:        "严重压力告警",
+			DeviceType:  "*",
+			Metric:      "pressure",
+			Operator:    ">",
+			Threshold:   constants.CriticalPressureThreshold,
+			Severity:    "critical",
+			Actions:     `[{"type": "notification"}, {"type": "workorder"}, {"type": "blackbox"}]`,
+			Enabled:     true,
+			CooldownSec: constants.ShortAlertCooldownSec,
+		},
+		
+		// 湿度告警 - P2-002新增
+		{
+			Name:        "低湿度警告",
+			DeviceType:  "*",
+			Metric:      "humidity",
+			Operator:    "<",
+			Threshold:   constants.LowHumidityThreshold,
+			Severity:    "medium",
+			Actions:     `[{"type": "notification"}]`,
+			Enabled:     true,
+			CooldownSec: constants.LongAlertCooldownSec,
+		},
+		{
+			Name:        "高湿度警告",
+			DeviceType:  "*",
+			Metric:      "humidity",
+			Operator:    ">",
+			Threshold:   constants.HighHumidityThreshold,
+			Severity:    "high",
+			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
+			Enabled:     true,
+			CooldownSec: constants.DefaultAlertCooldownSec,
+		},
+		{
+			Name:        "严重湿度告警",
+			DeviceType:  "*",
+			Metric:      "humidity",
+			Operator:    ">",
+			Threshold:   constants.CriticalHumidityThreshold,
+			Severity:    "critical",
+			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
+			Enabled:     true,
+			CooldownSec: constants.ShortAlertCooldownSec,
+		},
+		
+		// 功率告警 - P2-002新增
+		{
+			Name:        "低功率警告",
+			DeviceType:  "*",
+			Metric:      "power",
+			Operator:    "<",
+			Threshold:   constants.LowPowerThreshold,
+			Severity:    "medium",
+			Actions:     `[{"type": "notification"}]`,
+			Enabled:     true,
+			CooldownSec: constants.LongAlertCooldownSec,
+		},
+		{
+			Name:        "高功率警告",
+			DeviceType:  "*",
+			Metric:      "power",
+			Operator:    ">",
+			Threshold:   constants.HighPowerThreshold,
+			Severity:    "high",
+			Actions:     `[{"type": "notification"}, {"type": "workorder"}]`,
+			Enabled:     true,
+			CooldownSec: constants.DefaultAlertCooldownSec,
+		},
+		{
+			Name:        "严重功率告警",
+			DeviceType:  "*",
+			Metric:      "power",
+			Operator:    ">",
+			Threshold:   constants.CriticalPowerThreshold,
+			Severity:    "critical",
+			Actions:     `[{"type": "notification"}, {"type": "workorder"}, {"type": "blackbox"}]`,
+			Enabled:     true,
+			CooldownSec: constants.ShortAlertCooldownSec,
 		},
 	}
 

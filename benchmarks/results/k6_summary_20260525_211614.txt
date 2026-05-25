@@ -1,0 +1,2 @@
+time="2026-05-25T21:16:17+08:00" level=warning msg="\"cli\" level configuration overrode scenarios configuration entirely"
+time="2026-05-25T21:16:17+08:00" level=error msg="There were problems with the specified script configuration:\n\t- executor default: function 'default' not found in exports"
