@@ -7,6 +7,8 @@ import { useToast } from './Toast';
 import { Activity, AlertTriangle, Wrench, TrendingUp, Settings, Bell } from 'lucide-react';
 import { getDeviceStatusColor, getDeviceStatusBadgeClass } from '../lib/colorUtils';
 import { Device, LatestTelemetry } from '../types/api';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { isTelemetryData } from '../types/typeGuards';
 
 export default function FleetDashboard() {
   const { t } = useI18n();
@@ -20,6 +22,25 @@ export default function FleetDashboard() {
     online: 0,
     warning: 0,
     fault: 0,
+  });
+
+  // WebSocket real-time updates - primary data source
+  const { isConnected } = useWebSocket({
+    onMessage: (message) => {
+      if (message.type === 'telemetry') {
+        // Update telemetry data in real-time
+        if (isTelemetryData(message.payload)) {
+          const payload = message.payload as LatestTelemetry;
+          setTelemetry(prev => {
+            const exists = prev.find(t => t.device_id === payload.device_id);
+            if (exists) {
+              return prev.map(t => t.device_id === payload.device_id ? payload : t);
+            }
+            return [...prev, payload];
+          });
+        }
+      }
+    },
   });
 
   // FIX-006: 使用 useCallback 稳定化 loadData 函数
@@ -50,11 +71,21 @@ export default function FleetDashboard() {
     }
   }, [showToast, t]);
 
+  // Initial load
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
   }, [loadData]);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) {
+      // WebSocket connected - no polling needed
+      return;
+    }
+    // WebSocket disconnected - use polling fallback
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [isConnected, loadData]);
 
   // FIX-006: 监听路由变化刷新数据
   useEffect(() => {

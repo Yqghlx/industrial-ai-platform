@@ -200,14 +200,31 @@ func (s *ExportService) generateDeviceReportData(ctx context.Context, req *Expor
 		}
 	}
 
-	// Get device stats
+	// Get device stats - Performance optimization: batch query replaces N+1 problem
+	// 使用批量查询替代循环内单查询，将 N 次数据库查询减少为 1 次
 	deviceStats := []model.DeviceStats{}
-	for _, d := range devices {
-		stats, err := s.telemetryRepo.GetStats(ctx, d.ID, req.StartDate, req.EndDate)
+	if len(devices) > 0 {
+		// 收集所有设备ID用于批量查询
+		deviceIDs := make([]string, len(devices))
+		for i, d := range devices {
+			deviceIDs[i] = d.ID
+		}
+
+		// 执行单次批量查询获取所有设备的统计数据
+		statsMap, err := s.telemetryRepo.GetStatsBatch(ctx, deviceIDs, req.StartDate, req.EndDate)
 		if err == nil {
-			deviceStats = append(deviceStats, *stats)
-			summary.AvgTemperature += stats.AvgTemperature
-			summary.AvgVibration += stats.AvgVibration
+			// 从批量查询结果中提取数据
+			for _, d := range devices {
+				if stats, ok := statsMap[d.ID]; ok {
+					deviceStats = append(deviceStats, *stats)
+					summary.AvgTemperature += stats.AvgTemperature
+					summary.AvgVibration += stats.AvgVibration
+				}
+			}
+		} else {
+			logger.L().Warn("Failed to get device stats batch",
+				zap.Error(err),
+			)
 		}
 	}
 

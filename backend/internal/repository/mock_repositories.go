@@ -439,6 +439,16 @@ func (m *MockTelemetryRepository) GetStats(ctx context.Context, deviceID string,
 	return args.Get(0).(*model.DeviceStats), args.Error(1)
 }
 
+// GetStatsBatch 批量获取多个设备的统计数据 mock 实现
+// Performance optimization: batch query support for N+1 query fix
+func (m *MockTelemetryRepository) GetStatsBatch(ctx context.Context, deviceIDs []string, start, end time.Time) (map[string]*model.DeviceStats, error) {
+	args := m.Called(ctx, deviceIDs, start, end)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]*model.DeviceStats), args.Error(1)
+}
+
 // MockWorkOrderRepository implements WorkOrderRepositoryInterface
 type MockWorkOrderRepository struct {
 	mock.Mock

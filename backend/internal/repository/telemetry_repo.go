@@ -17,6 +17,9 @@ type TelemetryRepositoryInterface interface {
 	GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error)
 	GetLatest(ctx context.Context) ([]model.TelemetryData, error)
 	GetStats(ctx context.Context, deviceID string, start, end time.Time) (*model.DeviceStats, error)
+	// GetStatsBatch 批量获取多个设备的统计数据，优化 N+1 查询问题
+	// Performance optimization: replaces N individual GetStats calls with a single batch query
+	GetStatsBatch(ctx context.Context, deviceIDs []string, start, end time.Time) (map[string]*model.DeviceStats, error)
 }
 
 // TelemetryRepository handles telemetry data access
@@ -147,6 +150,55 @@ func (r *TelemetryRepository) GetStats(ctx context.Context, deviceID string, sta
 		return nil, err
 	}
 	return stats, nil
+}
+
+// GetStatsBatch 批量获取多个设备的统计数据
+// Performance optimization: batch query replaces N individual GetStats calls with a single query
+// to solve the N+1 query problem in export_service.go
+func (r *TelemetryRepository) GetStatsBatch(ctx context.Context, deviceIDs []string, start, end time.Time) (map[string]*model.DeviceStats, error) {
+	// 返回空 map 而不是 nil，避免调用方需要检查 nil
+	result := make(map[string]*model.DeviceStats)
+	if len(deviceIDs) == 0 {
+		return result, nil
+	}
+
+	// 使用 GROUP BY 一次性查询所有设备的统计数据
+	// Uses GROUP BY to fetch all device stats in a single query instead of N queries
+	query := `
+		SELECT 
+			device_id,
+			COALESCE(AVG(temperature), 0) as avg_temp,
+			COALESCE(AVG(pressure), 0) as avg_pressure,
+			COALESCE(AVG(vibration), 0) as avg_vibration,
+			COALESCE(MAX(temperature), 0) as max_temp,
+			COALESCE(MAX(pressure), 0) as max_pressure,
+			COALESCE(MAX(vibration), 0) as max_vibration,
+			COUNT(*) as count
+		FROM device_telemetry
+		WHERE device_id = ANY($1) AND time >= $2 AND time <= $3
+		GROUP BY device_id
+	`
+
+	rows, err := r.db.Query(ctx, query, deviceIDs, start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		stats := &model.DeviceStats{}
+		if err := rows.Scan(
+			&stats.DeviceID,
+			&stats.AvgTemperature, &stats.AvgPressure, &stats.AvgVibration,
+			&stats.MaxTemperature, &stats.MaxPressure, &stats.MaxVibration,
+			&stats.DataPoints,
+		); err != nil {
+			return nil, err
+		}
+		result[stats.DeviceID] = stats
+	}
+
+	return result, rows.Err()
 }
 
 // WorkOrderRepositoryInterface defines the interface for work order repository

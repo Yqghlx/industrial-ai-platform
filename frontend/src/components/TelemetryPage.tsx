@@ -40,24 +40,8 @@ export default function TelemetryPage() {
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Load initial data
-  useEffect(() => {
-    loadLatestTelemetry();
-    const interval = setInterval(loadLatestTelemetry, 10000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load history when device or time range changes
-  useEffect(() => {
-    if (selectedDevice) {
-      loadHistory(selectedDevice, timeRange);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDevice, timeRange]);
-
-  // WebSocket real-time updates
-  useWebSocket({
+  // WebSocket real-time updates - primary data source
+  const { isConnected } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'telemetry') {
         // FE-P1-02: 使用类型守卫替代 as Type 断言
@@ -74,6 +58,32 @@ export default function TelemetryPage() {
       }
     },
   });
+
+  // Load history when device or time range changes
+  useEffect(() => {
+    if (selectedDevice) {
+      loadHistory(selectedDevice, timeRange);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDevice, timeRange]);
+
+  // Initial load
+  useEffect(() => {
+    loadLatestTelemetry();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) {
+      // WebSocket connected - no polling needed
+      return;
+    }
+    // WebSocket disconnected - use polling fallback
+    const interval = setInterval(loadLatestTelemetry, 10000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
   const loadLatestTelemetry = async () => {
     try {

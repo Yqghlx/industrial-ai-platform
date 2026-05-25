@@ -16,15 +16,8 @@ export default function DigitalTwinPanel() {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000); // Refresh every 5s
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-// Use shared WebSocket connection
-  useWebSocket({
+  // Use shared WebSocket connection - primary data source
+  const { isConnected } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'telemetry') {
         // FE-P1-01: 使用类型守卫替代 as Type 断言
@@ -43,6 +36,24 @@ export default function DigitalTwinPanel() {
       }
     },
   });
+
+  // Initial load
+  useEffect(() => {
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) {
+      // WebSocket connected - no polling needed
+      return;
+    }
+    // WebSocket disconnected - use polling fallback
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
   const loadData = async () => {
     try {

@@ -335,8 +335,12 @@ func TestExportService_GenerateDeviceReportData(t *testing.T) {
 	}
 
 	mockDeviceRepo.On("List", ctx, 1, 100).Return(devices, 2, nil)
-	mockTelemetryRepo.On("GetStats", ctx, "CNC-001", mock.Anything, mock.Anything).Return(&model.DeviceStats{}, nil)
-	mockTelemetryRepo.On("GetStats", ctx, "CNC-002", mock.Anything, mock.Anything).Return(&model.DeviceStats{}, nil)
+	// Performance optimization: use batch query mock instead of individual GetStats calls
+	mockTelemetryRepo.On("GetStatsBatch", ctx, []string{"CNC-001", "CNC-002"}, mock.Anything, mock.Anything).
+		Return(map[string]*model.DeviceStats{
+			"CNC-001": &model.DeviceStats{DeviceID: "CNC-001"},
+			"CNC-002": &model.DeviceStats{DeviceID: "CNC-002"},
+		}, nil)
 
 	data := svc.generateDeviceReportData(ctx, req)
 	assert.NotNil(t, data)
