@@ -142,7 +142,7 @@ jobs:
       - name: Checkout deployment config
         uses: actions/checkout@v4
         with:
-          repository: industrial-ai/deployment-config
+          repository: Yqghlx/deployment-config
           token: ${{ secrets.DEPLOY_TOKEN }}
           ref: main
 
@@ -183,7 +183,7 @@ jobs:
       - name: Checkout deployment config
         uses: actions/checkout@v4
         with:
-          repository: industrial-ai/deployment-config
+          repository: Yqghlx/deployment-config
           token: ${{ secrets.DEPLOY_TOKEN }}
           ref: main
 
