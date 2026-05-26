@@ -1,10 +1,17 @@
 #!/bin/bash
 # Seed test devices with UUIDs
+# SECURITY: Read credentials from environment variables
+
+# Check required environment variables
+if [ -z "$ADMIN_PASSWORD" ]; then
+  echo "❌ ADMIN_PASSWORD environment variable must be set"
+  exit 1
+fi
 
 # Login and get token
 AUTH_RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"Admin@123456"}')
+  -d "{\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\"}")
 
 TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 
