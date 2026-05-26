@@ -76,18 +76,38 @@ type revocationEntry struct {
 }
 
 // MemoryTokenBlacklist 内存实现的 Token 黑名单
+// SEC-MEDIUM-02: 添加最大条目限制防止内存耗尽
 type MemoryTokenBlacklist struct {
 	entries         map[string]time.Time
 	userRevocations map[int]revocationEntry
 	mu              sync.RWMutex
 	shutdown        chan struct{}
+	maxEntries      int // 最大条目数限制，防止DoS攻击
 }
+
+const DefaultMaxEntries = 10000 // 默认最大条目数
 
 func NewMemoryTokenBlacklist() *MemoryTokenBlacklist {
 	bl := &MemoryTokenBlacklist{
 		entries:         make(map[string]time.Time),
 		userRevocations: make(map[int]revocationEntry),
 		shutdown:        make(chan struct{}),
+		maxEntries:      DefaultMaxEntries,
+	}
+	go bl.cleanupExpiredEntries()
+	return bl
+}
+
+// NewMemoryTokenBlacklistWithLimit 创建带自定义大小限制的黑名单
+func NewMemoryTokenBlacklistWithLimit(maxEntries int) *MemoryTokenBlacklist {
+	if maxEntries <= 0 {
+		maxEntries = DefaultMaxEntries
+	}
+	bl := &MemoryTokenBlacklist{
+		entries:         make(map[string]time.Time),
+		userRevocations: make(map[int]revocationEntry),
+		shutdown:        make(chan struct{}),
+		maxEntries:      maxEntries,
 	}
 	go bl.cleanupExpiredEntries()
 	return bl
@@ -96,6 +116,28 @@ func NewMemoryTokenBlacklist() *MemoryTokenBlacklist {
 func (b *MemoryTokenBlacklist) Add(ctx context.Context, tokenID string, duration time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	
+	// SEC-MEDIUM-02: 检查大小限制，超过时淘汰最旧条目
+	if len(b.entries) >= b.maxEntries {
+		// 找到并删除最旧的条目
+		var oldestKey string
+		var oldestTime time.Time
+		first := true
+		for k, t := range b.entries {
+			if first || t.Before(oldestTime) {
+				oldestKey = k
+				oldestTime = t
+				first = false
+			}
+		}
+		if oldestKey != "" {
+			delete(b.entries, oldestKey)
+			logger.L().Warn("Token blacklist size limit reached, evicted oldest entry",
+				zap.String("key", oldestKey),
+				zap.Int("max_entries", b.maxEntries))
+		}
+	}
+	
 	b.entries[BlacklistPrefix+tokenID] = time.Now().Add(duration)
 	return nil
 }
