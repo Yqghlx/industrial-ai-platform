@@ -26,6 +26,8 @@ export default {
     openMenu: 'Open Menu',
     connected: 'Connected',
     disconnected: 'Disconnected',
+    enable: 'Enable',
+    disable: 'Disable',
   },
   auth: {
     login: 'Login',

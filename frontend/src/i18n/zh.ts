@@ -26,6 +26,8 @@ export default {
     openMenu: '打开菜单',
     connected: '实时连接',
     disconnected: '连接断开',
+    enable: '启用',
+    disable: '禁用',
   },
   auth: {
     login: '登录',
