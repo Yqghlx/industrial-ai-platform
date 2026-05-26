@@ -41,8 +41,8 @@ func DefaultAgentServiceConfig() *AgentServiceConfig {
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
 		IdleConnTimeout:     90 * time.Second,
-		LLMBaseURL:          "https://coding.dashscope.aliyuncs.com/v1",
-		LLMModel:            "glm-5",
+		LLMBaseURL:          "https://open.bigmodel.cn/api/paas/v4",
+		LLMModel:            "glm-4-flash",
 	}
 }
 
