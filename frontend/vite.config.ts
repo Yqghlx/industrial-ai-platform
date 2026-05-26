@@ -17,15 +17,15 @@ export default defineConfig(({ mode }) => ({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost',
+        target: 'ws://localhost:8080',
         ws: true,
       },
       '/health': {
-        target: 'http://localhost',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       '/docs': {
