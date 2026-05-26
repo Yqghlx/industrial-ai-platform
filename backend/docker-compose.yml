@@ -9,17 +9,17 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/industrial_ai?sslmode=disable
-      - REDIS_URL=redis://redis:6379/0
-      - CACHE_ENABLED=true
-      - CACHE_PREFIX=iai:
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set for production}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set for production}
-      - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_BASE_URL=${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
-      - LLM_MODEL=${LLM_MODEL:-glm-5}
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-      - ENV=production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/industrial_ai?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      CACHE_ENABLED: true
+      CACHE_PREFIX: "iai:"
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      LLM_MODEL: ${LLM_MODEL:-glm-4-flash}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:8080
+      ENV: production
     depends_on:
       - postgres
       - redis
@@ -37,9 +37,9 @@ services:
     image: postgres:15-alpine
     container_name: industrial-ai-postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
-      - POSTGRES_DB=industrial_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: industrial_ai
     ports:
       - "5432:5432"
     volumes:
