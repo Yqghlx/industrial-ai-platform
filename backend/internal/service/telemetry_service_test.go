@@ -81,13 +81,13 @@ func TestTelemetryService_Ingest_WarningStatus(t *testing.T) {
 
 	data := &model.TelemetryData{
 		DeviceID:    "CNC-001",
-		Temperature: 105.0, // Above 100, triggers warning
+		Temperature: 85.0, // Between HighTemperatureThreshold(80) and CriticalTemperatureThreshold(100), triggers warning
 		Vibration:   1.5,
 	}
 
 	// Expect telemetry insert with warning status
 	mock.ExpectQuery("INSERT INTO device_telemetry").
-		WithArgs("CNC-001", sqlmock.AnyArg(), 105.0, 0.0, 1.5, 0.0, 0.0, "warning", "").
+		WithArgs("CNC-001", sqlmock.AnyArg(), 85.0, 0.0, 1.5, 0.0, 0.0, "warning", "").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	// Expect device status update to warning

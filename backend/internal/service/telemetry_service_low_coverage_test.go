@@ -350,7 +350,7 @@ func TestTelemetryService_Ingest_StatusWarning(t *testing.T) {
 
 	data := &model.TelemetryData{
 		DeviceID:    "CNC-001",
-		Temperature: 105.0, // Warning level
+		Temperature: 85.0, // Between HighTemperatureThreshold(80) and CriticalTemperatureThreshold(100), triggers warning
 		Vibration:   2.0,
 		Timestamp:   time.Now(),
 	}

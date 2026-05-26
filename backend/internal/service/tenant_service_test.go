@@ -380,7 +380,7 @@ func TestTenantService_DeleteTenant_NotFound(t *testing.T) {
 func TestTenantService_CountTenants(t *testing.T) {
 	svc, mock := newTestTenantService(t)
 
-	mock.ExpectQuery(`SELECT COUNT\(\\*\) FROM tenants`).
+	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM tenants`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(42))
 
 	count, err := svc.CountTenants(context.Background())
