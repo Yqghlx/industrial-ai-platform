@@ -49,9 +49,8 @@ test.describe('登录流程', () => {
     await expect(page.locator('[data-testid="user-menu"]').first()).toBeVisible();
   });
   
-  // TODO: 后端当前不验证密码正确性，错误密码也能成功登录
-  // 此测试暂时跳过，等待后端修复
-  test.skip('登录失败 - 错误密码', async ({ page }) => {
+  // 后端密码验证已正常工作（2026-05-26验证通过）
+  test('登录失败 - 错误密码', async ({ page }) => {
     await page.goto('/login');
     await page.fill('[name="username"]', 'admin');
     await page.fill('[name="password"]', 'wrongpassword');
