@@ -20,11 +20,14 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build binary with optimizations
+# Debug: Print migration content to verify
+RUN echo "=== Migration 000002 content ===" && cat migrations/000002_timescaledb.up.sql
+
+# Build binary with optimizations (force rebuild embed)
 ARG TARGETOS
 ARG TARGETARCH
-RUN GOTOOLCHAIN=auto CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -ldflags="-w -s -extldflags '-static'" \
+RUN go clean -cache && GOTOOLCHAIN=auto CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -a -ldflags="-w -s -extldflags '-static'" \
     -o /build/bin/server .
 
 # Runtime stage

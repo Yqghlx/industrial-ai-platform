@@ -1,4 +1,5 @@
 // Package database provides database migration utilities
+// Updated: 2026-05-26 - TimescaleDB migration made optional for standard PostgreSQL
 package database
 
 import (
@@ -155,12 +156,6 @@ func (m *Migrator) Up(ctx context.Context) error {
 		return nil
 	}
 
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
 	for _, migration := range migrations {
 		if _, exists := applied[migration.Version]; exists {
 			log.Printf("Migration %d already applied, skipping", migration.Version)
@@ -173,22 +168,44 @@ func (m *Migrator) Up(ctx context.Context) error {
 			return fmt.Errorf("migration %d has no up SQL", migration.Version)
 		}
 
+		// Execute each migration in its own transaction
+		tx, err := m.db.BeginTx(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction for migration %d: %w", migration.Version, err)
+		}
+
 		// Execute migration SQL
 		if _, err := tx.ExecContext(ctx, migration.UpSQL); err != nil {
+			tx.Rollback()
+			// TimescaleDB migration (version 2) is optional - continue on failure
+			if migration.Version == 2 {
+				log.Printf("Migration %d failed (optional TimescaleDB), skipping: %v", migration.Version, err)
+				// Mark as skipped in a new transaction
+				recordTx, err := m.db.BeginTx(ctx, nil)
+				if err == nil {
+					query := "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)"
+					if _, err := recordTx.ExecContext(ctx, query, migration.Version, migration.Name+"_skipped"); err != nil {
+						log.Printf("Failed to record skipped migration %d: %v", migration.Version, err)
+					}
+					recordTx.Commit()
+				}
+				continue
+			}
 			return fmt.Errorf("failed to apply migration %d: %w", migration.Version, err)
 		}
 
 		// Record migration
 		query := "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)"
 		if _, err := tx.ExecContext(ctx, query, migration.Version, migration.Name); err != nil {
+			tx.Rollback()
 			return fmt.Errorf("failed to record migration %d: %w", migration.Version, err)
 		}
 
-		log.Printf("Migration %d applied successfully", migration.Version)
-	}
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("failed to commit migration %d: %w", migration.Version, err)
+		}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit migrations: %w", err)
+		log.Printf("Migration %d applied successfully", migration.Version)
 	}
 
 	log.Println("All migrations applied successfully")
