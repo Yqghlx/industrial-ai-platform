@@ -229,6 +229,6 @@ func TestLoadAgentServiceConfigFromEnv_Detailed(t *testing.T) {
 	assert.Equal(t, 100, config.MaxIdleConns)
 	assert.Equal(t, 10, config.MaxIdleConnsPerHost)
 	assert.Equal(t, 90*time.Second, config.IdleConnTimeout)
-	assert.Equal(t, "https://coding.dashscope.aliyuncs.com/v1", config.LLMBaseURL)
-	assert.Equal(t, "glm-5", config.LLMModel)
+	assert.Equal(t, "https://open.bigmodel.cn/api/paas/v4", config.LLMBaseURL)
+	assert.Equal(t, "glm-4-flash", config.LLMModel)
 }
