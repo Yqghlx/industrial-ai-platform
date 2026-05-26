@@ -20,6 +20,12 @@ func NewMockDB(t *testing.T) (db *sql.DB, mock sqlmock.Sqlmock) {
 
 func TestDefaultConnectionConfig(t *testing.T) {
 	t.Run("returns default config", func(t *testing.T) {
+		// 清除环境变量确保测试隔离
+		os.Unsetenv("DB_MAX_OPEN_CONNS")
+		os.Unsetenv("DB_MAX_IDLE_CONNS")
+		os.Unsetenv("DB_CONN_MAX_LIFETIME")
+		os.Unsetenv("DB_CONN_MAX_IDLE_TIME")
+
 		config := DefaultConnectionConfig()
 
 		assert.NotNil(t, config)

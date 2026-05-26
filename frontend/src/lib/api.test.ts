@@ -23,6 +23,24 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
+// Mock sessionStorage (SEC-LOW-02: API uses sessionStorage for tokens)
+const sessionStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
+
 // Mock window.location
 Object.defineProperty(window, 'location', {
   value: {
@@ -46,6 +64,7 @@ describe('ApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.clear();
+    sessionStorageMock.clear();
     api = new ApiClient();
   });
 
@@ -66,21 +85,21 @@ describe('ApiClient', () => {
   });
 
   describe('token management', () => {
-    it('should set token and store in localStorage', () => {
+    it('should set token and store in sessionStorage', () => {
       api.setToken('test-token-123');
       expect(api.getToken()).toBe('test-token-123');
-      expect(localStorageMock.getItem('token')).toBe('test-token-123');
+      expect(sessionStorageMock.getItem('token')).toBe('test-token-123');
     });
 
-    it('should remove token from localStorage when set to null', () => {
+    it('should remove token from sessionStorage when set to null', () => {
       api.setToken('test-token');
       api.setToken(null);
       expect(api.getToken()).toBe(null);
-      expect(localStorageMock.getItem('token')).toBe(null);
+      expect(sessionStorageMock.getItem('token')).toBe(null);
     });
 
-    it('should load token from localStorage on construction', () => {
-      localStorageMock.setItem('token', 'stored-token');
+    it('should load token from sessionStorage on construction', () => {
+      sessionStorageMock.setItem('token', 'stored-token');
       const newApi = new ApiClient();
       expect(newApi.getToken()).toBe('stored-token');
     });
@@ -169,7 +188,7 @@ describe('ApiClient', () => {
   describe('getDevices', () => {
     it('should fetch devices successfully', async () => {
       const mockResponse = {
-        devices: [
+        data: [
           { id: 'CNC-001', name: 'CNC Machine', status: 'online' },
           { id: 'INJ-001', name: 'Injection Molder', status: 'warning' },
         ],
@@ -275,7 +294,7 @@ describe('ApiClient', () => {
   describe('getRules', () => {
     it('should fetch alert rules', async () => {
       const mockResponse = {
-        rules: [
+        data: [
           { id: 1, name: 'Temperature Rule', enabled: true },
           { id: 2, name: 'Vibration Rule', enabled: false },
         ],
@@ -418,7 +437,7 @@ describe('ApiClient', () => {
   describe('getUsers', () => {
     it('should fetch users', async () => {
       const mockResponse = {
-        users: [
+        data: [
           { id: 1, username: 'admin', role: 'admin' },
           { id: 2, username: 'operator', role: 'operator' },
         ],
