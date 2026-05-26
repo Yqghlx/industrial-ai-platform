@@ -102,3 +102,4 @@ test-results/
 # Backend binary (use go build -o bin/)
 backend/industrial_ai_backend
 .secrets.tmp
+\n# Secrets - never commit generated secrets\ninfra/k8s/secrets-generated.yaml
