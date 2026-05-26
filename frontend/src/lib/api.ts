@@ -271,15 +271,15 @@ class ApiClient {
 
   // Devices
   async getDevices(page = 1, pageSize = 20): Promise<PaginatedResponse<Device>> {
-    const response = await this.request<{ devices: Device[]; total: number; page: number; page_size: number }>(
+    const response = await this.request<{ data: Device[]; total: number; page: number; page_size: number }>(
       'GET',
       '/devices',
       undefined,
       { page: String(page), page_size: String(pageSize) }
     );
-    // Adapt backend response format (devices -> data)
+    // Backend now returns 'data' field directly
     return {
-      data: response.devices,
+      data: response.data,
       total: response.total,
       page: response.page,
       page_size: response.page_size,
@@ -330,9 +330,8 @@ class ApiClient {
 
   // Rules
   async getRules(): Promise<{ data: AlertRule[] }> {
-    const response = await this.request<{ rules: AlertRule[]; total?: number; page?: number; page_size?: number }>('GET', '/alert-rules');
-    // Adapt backend response format (rules -> data)
-    return { data: response.rules };
+    const response = await this.request<{ data: AlertRule[]; total?: number; page?: number; page_size?: number }>('GET', '/rules');
+    return { data: response.data };
   }
 
   async getRule(id: number): Promise<AlertRule> {
@@ -435,15 +434,15 @@ class ApiClient {
 
   // Admin
   async getUsers(page = 1, pageSize = 20): Promise<PaginatedResponse<User>> {
-    const response = await this.request<{ users: User[]; total: number; page: number; page_size: number }>(
+    const response = await this.request<{ data: User[]; total: number; page: number; page_size: number }>(
       'GET',
       '/admin/users',
       undefined,
       { page: String(page), page_size: String(pageSize) }
     );
-    // Adapt backend response format (users -> data)
+    // Backend now returns 'data' field directly
     return {
-      data: response.users,
+      data: response.data,
       total: response.total,
       page: response.page,
       page_size: response.page_size,

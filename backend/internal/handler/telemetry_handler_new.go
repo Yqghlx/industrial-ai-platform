@@ -175,5 +175,5 @@ func (h *TelemetryHandlerNew) AgentQuery(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"response": resp})
+	c.JSON(http.StatusOK, resp)
 }
