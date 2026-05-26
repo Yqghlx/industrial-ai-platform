@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/pkg/database"
@@ -125,6 +125,10 @@ func (r *TenantRepo) List(ctx context.Context, limit, offset int) ([]model.Tenan
 			return nil, err
 		}
 		tenants = append(tenants, tenant)
+	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return tenants, nil
 }

@@ -86,6 +86,10 @@ func (r *TelemetryRepository) GetByDeviceID(ctx context.Context, deviceID string
 		data = append(data, d)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return data, nil
 }
 
@@ -123,6 +127,10 @@ func (r *TelemetryRepository) GetLatest(ctx context.Context) ([]model.TelemetryD
 		data = append(data, d)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return data, nil
 }
 
@@ -316,6 +324,10 @@ func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string,
 		orders = append(orders, wo)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return orders, total, nil
 }
 
@@ -416,6 +428,10 @@ func (r *NotificationRepository) List(ctx context.Context, notifType string, unr
 		notifications = append(notifications, n)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return notifications, total, nil
 }
 
@@ -505,6 +521,10 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 		records = append(records, r)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return records, total, nil
 }
 
@@ -588,12 +608,16 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 		); err != nil {
 			return nil, 0, err
 		}
-		if deviceID.Valid {
+if deviceID.Valid {
 			r.DeviceID = &deviceID.String
 		}
 		reports = append(reports, r)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return reports, total, nil
 }
 
@@ -681,6 +705,10 @@ func (r *AgentTaskLogRepository) List(ctx context.Context, limit int) ([]model.A
 		logs = append(logs, l)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return logs, nil
 }
 

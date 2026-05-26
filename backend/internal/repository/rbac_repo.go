@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -110,6 +111,10 @@ func (r *RBACRepository) ListRoles(ctx context.Context, tenantID string) ([]mode
 		}
 		roles = append(roles, role)
 	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return roles, nil
 }
 
@@ -198,6 +203,10 @@ func (r *RBACRepository) GetUserRoles(ctx context.Context, userID int) ([]model.
 		}
 		roles = append(roles, role)
 	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return roles, nil
 }
 
@@ -253,6 +262,10 @@ func (r *RBACRepository) ListPermissions(ctx context.Context) ([]model.Permissio
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return permissions, nil
 }
@@ -310,6 +323,10 @@ func (r *RBACRepository) GetRolePermissions(ctx context.Context, roleID int) ([]
 		}
 		permissions = append(permissions, perm)
 	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return permissions, nil
 }
 
@@ -355,6 +372,10 @@ func (r *RBACRepository) GetUserPermissions(ctx context.Context, userID int) ([]
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return permissions, nil
 }

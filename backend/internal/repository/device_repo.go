@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -105,6 +106,10 @@ func (r *DeviceRepository) List(ctx context.Context, page, pageSize int) ([]mode
 		devices = append(devices, d)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return devices, total, nil
 }
 
@@ -259,6 +264,10 @@ func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.
 		users = append(users, u)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return users, total, nil
 }
 

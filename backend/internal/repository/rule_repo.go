@@ -88,6 +88,10 @@ func (r *RuleRepository) List(ctx context.Context) ([]model.AlertRule, error) {
 		rules = append(rules, rule)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return rules, nil
 }
 
@@ -118,6 +122,10 @@ func (r *RuleRepository) ListEnabled(ctx context.Context) ([]model.AlertRule, er
 		rules = append(rules, rule)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return rules, nil
 }
 
@@ -230,6 +238,10 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 		alerts = append(alerts, a)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return alerts, total, nil
 }
 
@@ -294,6 +306,10 @@ func (r *AlertRepository) ListWithFilter(ctx context.Context, filter AlertFilter
 		alerts = append(alerts, a)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return alerts, total, nil
 }
 
@@ -387,6 +403,10 @@ func (r *AlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, devi
 		result[a.RuleID] = &a
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return result, nil
 }
 
@@ -457,6 +477,10 @@ func (r *AlertRepository) GetArchivedAlerts(ctx context.Context, deviceID string
 		alerts = append(alerts, a)
 	}
 
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return alerts, total, nil
 }
 

@@ -39,12 +39,12 @@ export default function NotificationCenter() {
   const handleMarkRead = async (id: number) => {
     try {
       await api.markNotificationRead(id);
-      setNotifications(prev => prev.map(n => 
+      setNotifications(prev => prev.map(n =>
         n.id === id ? { ...n, read: true } : n
       ));
-      showToast({ type: 'success', message: '已标记已读' });
+      showToast({ type: 'success', message: t('notification.markedRead') });
     } catch (error) {
-      showToast({ type: 'error', message: '操作失败' });
+      showToast({ type: 'error', message: t('notification.failed') });
     }
   };
 
@@ -53,9 +53,9 @@ export default function NotificationCenter() {
     // FE-P2-07: 使用 Promise.all 替代串行 API 调用，提升性能
     try {
       await Promise.all(unread.map(n => api.markNotificationRead(n.id)));
-      showToast({ type: 'success', message: '已全部标记已读' });
+      showToast({ type: 'success', message: t('notification.allMarkedRead') });
     } catch (error) {
-      showToast({ type: 'error', message: '部分标记失败' });
+      showToast({ type: 'error', message: t('notification.partialFailed') });
     }
     loadNotifications();
   };
@@ -88,12 +88,12 @@ export default function NotificationCenter() {
         <div className="card-body">
           <div className="flex items-center gap-4">
             <Filter className="w-5 h-5 text-slate-400" />
-            <select
+           <select
               value={filter.type}
               onChange={(e) => setFilter({ ...filter, type: e.target.value })}
               className="input"
             >
-              <option value="">全部类型</option>
+              <option value="">{t('device.allTypes')}</option>
               <option value="alert">告警</option>
               <option value="system">系统</option>
               <option value="work_order">工单</option>
@@ -121,7 +121,7 @@ export default function NotificationCenter() {
           <div className="card">
             <div className="card-body text-center py-8">
               <Bell className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-300">暂无通知</p>
+              <p className="text-slate-300">{t('notification.noNotifications')}</p>
             </div>
           </div>
         ) : (

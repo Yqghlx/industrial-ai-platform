@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -150,6 +151,10 @@ func (r *PermissionRepo) List() ([]model.Permission, error) {
 		}
 		permissions = append(permissions, perm)
 	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return permissions, nil
 }
 
@@ -182,6 +187,10 @@ func (r *PermissionRepo) ListByResource(resource string) ([]model.Permission, er
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return permissions, nil
 }
@@ -258,6 +267,10 @@ func (r *PermissionRepo) GetByIDs(ids []int) ([]model.Permission, error) {
 		}
 		permissions = append(permissions, perm)
 	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 	return permissions, nil
 }
 
@@ -299,6 +312,10 @@ func (r *PermissionRepo) ListByRoleID(roleID int) ([]model.Permission, error) {
 			return nil, err
 		}
 		permissions = append(permissions, perm)
+	}
+	// Check for errors during rows iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return permissions, nil
 }
