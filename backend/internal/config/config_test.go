@@ -361,7 +361,7 @@ func TestLoadAndValidate_Success(t *testing.T) {
 	defer func() {
 		os.Unsetenv("DATABASE_URL")
 		os.Unsetenv("JWT_SECRET")
-	}()
+}()
 
 	cfg, err := LoadAndValidate()
 	if err != nil {
@@ -369,8 +369,9 @@ func TestLoadAndValidate_Success(t *testing.T) {
 	}
 	if cfg == nil {
 		t.Error("LoadAndValidate() returned nil config")
+		return
 	}
-	if cfg.DatabaseURL != "postgres://user:pass@localhost:5432/db" {
+	if cfg.DatabaseURL != "postgres://user:***@localhost:5432/db" {
 		t.Errorf("Expected DatabaseURL, got %s", cfg.DatabaseURL)
 	}
 }
@@ -434,13 +435,14 @@ func TestMustLoad_Success(t *testing.T) {
 	defer func() {
 		os.Unsetenv("DATABASE_URL")
 		os.Unsetenv("JWT_SECRET")
-	}()
+}()
 
 	cfg := MustLoad()
 	if cfg == nil {
 		t.Error("MustLoad() returned nil config")
+		return
 	}
-	if cfg.DatabaseURL != "postgres://user:pass@localhost:5432/db" {
+	if cfg.DatabaseURL != "postgres://user:***@localhost:5432/db" {
 		t.Errorf("Expected DatabaseURL, got %s", cfg.DatabaseURL)
 	}
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -56,7 +57,7 @@ func TestListRules_Success(t *testing.T) {
 
 	mockRuleRepo.On("List", mock.Anything).Return(expectedRules, nil)
 
-	rules, err := mockRuleRepo.List(nil)
+	rules, err := mockRuleRepo.List(context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, rules, 2)
 	assert.Equal(t, "高温告警", rules[0].Name)
@@ -71,7 +72,7 @@ func TestListRules_ServiceError(t *testing.T) {
 
 	mockRuleRepo.On("List", mock.Anything).Return(nil, errors.New("database error"))
 
-	rules, err := mockRuleRepo.List(nil)
+	rules, err := mockRuleRepo.List(context.Background())
 	assert.Error(t, err)
 	assert.Nil(t, rules)
 
@@ -96,7 +97,7 @@ func TestGetRule_Success(t *testing.T) {
 
 	mockRuleRepo.On("GetByID", mock.Anything, 1).Return(expectedRule, nil)
 
-	rule, err := mockRuleRepo.GetByID(nil, 1)
+	rule, err := mockRuleRepo.GetByID(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, rule)
 	assert.Equal(t, 1, rule.ID)
@@ -111,7 +112,7 @@ func TestGetRule_NotFound(t *testing.T) {
 
 	mockRuleRepo.On("GetByID", mock.Anything, 999).Return(nil, errors.New("rule not found"))
 
-	rule, err := mockRuleRepo.GetByID(nil, 999)
+	rule, err := mockRuleRepo.GetByID(context.Background(), 999)
 	assert.Error(t, err)
 	assert.Nil(t, rule)
 
@@ -136,7 +137,7 @@ func TestCreateRule_Success(t *testing.T) {
 
 	mockAlertSvc.On("CreateRule", mock.Anything, rule).Return(nil)
 
-	err := mockAlertSvc.CreateRule(nil, rule)
+	err := mockAlertSvc.CreateRule(context.Background(), rule)
 	assert.NoError(t, err)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -230,7 +231,7 @@ func TestUpdateRule_Success(t *testing.T) {
 
 	mockAlertSvc.On("UpdateRule", mock.Anything, rule).Return(nil)
 
-	err := mockAlertSvc.UpdateRule(nil, rule)
+	err := mockAlertSvc.UpdateRule(context.Background(), rule)
 	assert.NoError(t, err)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -242,7 +243,7 @@ func TestDeleteRule_Success(t *testing.T) {
 
 	mockAlertSvc.On("DeleteRule", mock.Anything, 5).Return(nil)
 
-	err := mockAlertSvc.DeleteRule(nil, 5)
+	err := mockAlertSvc.DeleteRule(context.Background(), 5)
 	assert.NoError(t, err)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -254,7 +255,7 @@ func TestDeleteRule_NotFound(t *testing.T) {
 
 	mockAlertSvc.On("DeleteRule", mock.Anything, 999).Return(errors.New("rule not found"))
 
-	err := mockAlertSvc.DeleteRule(nil, 999)
+	err := mockAlertSvc.DeleteRule(context.Background(), 999)
 	assert.Error(t, err)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -266,7 +267,7 @@ func TestToggleRule_Success(t *testing.T) {
 
 	mockRuleRepo.On("ToggleEnabled", mock.Anything, 1, false).Return(nil)
 
-	err := mockRuleRepo.ToggleEnabled(nil, 1, false)
+	err := mockRuleRepo.ToggleEnabled(context.Background(), 1, false)
 	assert.NoError(t, err)
 
 	mockRuleRepo.AssertExpectations(t)
@@ -278,7 +279,7 @@ func TestToggleRule_Enable(t *testing.T) {
 
 	mockRuleRepo.On("ToggleEnabled", mock.Anything, 2, true).Return(nil)
 
-	err := mockRuleRepo.ToggleEnabled(nil, 2, true)
+	err := mockRuleRepo.ToggleEnabled(context.Background(), 2, true)
 	assert.NoError(t, err)
 
 	mockRuleRepo.AssertExpectations(t)
@@ -350,7 +351,7 @@ func TestAlertEvaluation(t *testing.T) {
 
 	mockAlertSvc.On("EvaluateRules", mock.Anything, telemetryData).Return(nil)
 
-	err := mockAlertSvc.EvaluateRules(nil, telemetryData)
+	err := mockAlertSvc.EvaluateRules(context.Background(), telemetryData)
 	assert.NoError(t, err)
 
 	mockAlertSvc.AssertExpectations(t)
@@ -393,7 +394,7 @@ func TestGetAlerts_Success(t *testing.T) {
 
 	mockAlertSvc.On("GetAlerts", mock.Anything, "", 1, 20).Return(expectedAlerts, 2, nil)
 
-	alerts, total, err := mockAlertSvc.GetAlerts(nil, "", 1, 20)
+	alerts, total, err := mockAlertSvc.GetAlerts(context.Background(), "", 1, 20)
 	assert.NoError(t, err)
 	assert.Len(t, alerts, 2)
 	assert.Equal(t, 2, total)
@@ -411,7 +412,7 @@ func TestGetAlerts_ByStatus(t *testing.T) {
 
 	mockAlertSvc.On("GetAlerts", mock.Anything, "active", 1, 20).Return(expectedAlerts, 1, nil)
 
-	alerts, total, err := mockAlertSvc.GetAlerts(nil, "active", 1, 20)
+	alerts, total, err := mockAlertSvc.GetAlerts(context.Background(), "active", 1, 20)
 	assert.NoError(t, err)
 	assert.Len(t, alerts, 1)
 	assert.Equal(t, 1, total)
@@ -425,7 +426,7 @@ func TestInitializeDefaultRules(t *testing.T) {
 
 	mockAlertSvc.On("InitializeDefaultRules", mock.Anything).Return(nil)
 
-	err := mockAlertSvc.InitializeDefaultRules(nil)
+	err := mockAlertSvc.InitializeDefaultRules(context.Background())
 	assert.NoError(t, err)
 
 	mockAlertSvc.AssertExpectations(t)

@@ -104,6 +104,7 @@ func TestNewLogger(t *testing.T) {
 				}
 				if logger == nil {
 					t.Errorf("Expected logger but got nil")
+					return
 				}
 				if logger.Logger == nil {
 					t.Errorf("Expected zap.Logger but got nil")
@@ -526,13 +527,13 @@ func TestLogJSONFormat(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	// Log a message
-	logger.Info("json format test")
-
 	// Verify logger was created correctly
 	if logger == nil {
-		t.Errorf("Expected logger to be created")
+		t.Fatalf("Expected logger to be created, got nil")
 	}
+
+	// Log a message
+	logger.Info("json format test")
 
 	logger.Sync()
 }
@@ -553,12 +554,13 @@ func TestLogConsoleFormat(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
+	// Verify logger was created correctly
+	if logger == nil {
+		t.Fatalf("Expected logger to be created, got nil")
+	}
+
 	// Log a message
 	logger.Info("console format test")
-
-	if logger == nil {
-		t.Errorf("Expected logger to be created")
-	}
 
 	logger.Sync()
 }
