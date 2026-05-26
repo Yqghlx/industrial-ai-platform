@@ -855,3 +855,12 @@ func (m *MockAuthService) GetUserByID(ctx context.Context, id int) (*model.User,
 	}
 	return args.Get(0).(*model.User), args.Error(1)
 }
+
+// FIX-016/017: 新增 AuthServiceInterface 方法
+func (m *MockAuthService) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
+	args := m.Called(ctx, page, pageSize)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	return args.Get(0).([]model.User), args.Get(1).(int), args.Error(2)
+}

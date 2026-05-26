@@ -516,7 +516,7 @@ func TestAlertHandler_ListAlerts_CustomPagination(t *testing.T) {
 		{ID: 1, DeviceID: "device-1", Severity: "high", Status: "active", TriggeredAt: time.Now()},
 	}
 
-	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 2, 50).Return(alerts, 1, nil)
+	mockAlertSvc.On("GetAlertsWithFilter", mock.Anything, "all", "", "", 2, 50).Return(alerts, 1, nil)
 
 	router.GET("/alerts", handler.ListAlerts)
 

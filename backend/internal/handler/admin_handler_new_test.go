@@ -9,7 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/industrial-ai/platform/internal/model"
 )
 
 // ============================================
@@ -30,6 +33,7 @@ func TestAdminHandlerNew_ListUsers(t *testing.T) {
 	router := gin.New()
 
 	mockAuthSvc := new(MockAuthService)
+	mockAuthSvc.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil)
 
 	handler := NewAdminHandlerNew(mockAuthSvc)
 

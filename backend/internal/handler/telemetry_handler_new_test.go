@@ -304,8 +304,9 @@ func TestTelemetryHandlerNew_AgentQuery_Success(t *testing.T) {
 	var resp map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &resp)
 
-	agentResp := resp["response"].(map[string]interface{})
-	assert.Equal(t, "Analysis complete", agentResp["response"])
+	// After AI response de-nesting, response is directly a string
+	assert.Equal(t, "Analysis complete", resp["response"])
+	assert.Equal(t, "session-1", resp["session_id"])
 
 	mockAgentSvc.AssertExpectations(t)
 }

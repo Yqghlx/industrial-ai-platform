@@ -98,6 +98,35 @@ func (m *MockAuthService) GetUserByID(ctx context.Context, id int) (*model.User,
 	return args.Get(0).(*model.User), args.Error(1)
 }
 
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
+	args := m.Called(ctx, refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*TokenPair), args.Error(1)
+}
+
+func (m *MockAuthService) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	args := m.Called(ctx, userID, oldPassword, newPassword)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (*Claims, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Claims), args.Error(1)
+}
+
+func (m *MockAuthService) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
+	args := m.Called(ctx, page, pageSize)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	return args.Get(0).([]model.User), args.Get(1).(int), args.Error(2)
+}
+
 // MockUserService 用户服务 Mock
 type MockUserService struct {
 	mock.Mock

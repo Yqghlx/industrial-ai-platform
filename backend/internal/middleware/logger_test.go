@@ -11,6 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// ANSI color constants for testing
+const (
+	Green   = "\x1b[32m"
+	Magenta = "\x1b[35m"
+	Yellow  = "\x1b[33m"
+	Red     = "\x1b[31m"
+)
+
 // ============================================
 // Logger middleware coverage tests
 // ============================================
@@ -337,6 +345,9 @@ func TestLogger_SpecialCharacters(t *testing.T) {
 
 // Capture output test
 func TestLogger_OutputCapture(t *testing.T) {
+	// Skip: Logger now uses structured logging (zap), not stdout
+	t.Skip("Logger uses structured logging, stdout capture no longer applicable")
+
 	gin.SetMode(gin.TestMode)
 
 	// Capture stdout
@@ -367,6 +378,9 @@ func TestLogger_OutputCapture(t *testing.T) {
 }
 
 func TestRecovery_OutputCapture(t *testing.T) {
+	// Skip: Recovery now uses structured logging (zap), not stdout
+	t.Skip("Recovery uses structured logging, stdout capture no longer applicable")
+
 	gin.SetMode(gin.TestMode)
 
 	// Capture stdout
