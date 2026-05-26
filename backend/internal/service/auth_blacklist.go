@@ -6,7 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 // Blacklist constants
@@ -195,7 +197,7 @@ func (b *HybridTokenBlacklist) Add(ctx context.Context, tokenID string, duration
 	if useRedis && b.redisBlacklist != nil {
 		err := b.redisBlacklist.Add(ctx, tokenID, duration)
 		if err != nil {
-			fmt.Printf("Warning: Redis blacklist write failed: %v\n", err)
+			logger.L().Warn("Redis blacklist write failed", zap.Error(err))
 			b.mu.Lock()
 			b.useRedis = false
 			b.mu.Unlock()
@@ -263,12 +265,12 @@ func (b *HybridTokenBlacklist) checkRedisHealth(client *redis.Client) {
 			currentUseRedis := b.useRedis
 			b.mu.RUnlock()
 			if err != nil && currentUseRedis {
-				fmt.Printf("Warning: Redis unavailable: %v\n", err)
+				logger.L().Warn("Redis unavailable", zap.Error(err))
 				b.mu.Lock()
 				b.useRedis = false
 				b.mu.Unlock()
 			} else if err == nil && !currentUseRedis {
-				fmt.Printf("Info: Redis recovered\n")
+				logger.L().Info("Redis recovered")
 				b.mu.Lock()
 				b.useRedis = true
 				b.mu.Unlock()

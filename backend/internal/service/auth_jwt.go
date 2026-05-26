@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // JWTInitError JWT 初始化错误
@@ -163,7 +165,7 @@ func (s *JWTService) ParseToken(tokenString string) (*Claims, error) {
 		if s.userTokenStore != nil {
 			currentVersion, err := s.userTokenStore.GetTokenVersion(ctx, claims.UserID)
 			if err != nil {
-				fmt.Printf("Warning: failed to get token version: %v\n", err)
+				logger.L().Warn("failed to get token version", zap.Error(err))
 			} else if claims.TokenVersion != currentVersion {
 				return nil, errors.New("token has been revoked (version mismatch)")
 			}
@@ -185,7 +187,7 @@ func (s *JWTService) RefreshAccessToken(refreshTokenString string) (*TokenPair, 
 	if s.userTokenStore != nil {
 		currentVersion, err := s.userTokenStore.GetTokenVersion(context.Background(), claims.UserID)
 		if err != nil {
-			fmt.Printf("Warning: failed to get token version: %v\n", err)
+			logger.L().Warn("failed to get token version", zap.Error(err))
 		} else {
 			tokenVersion = currentVersion
 		}
@@ -214,7 +216,7 @@ func (s *JWTService) RevokeAllUserTokens(userID int) error {
 		now := time.Now()
 		err := s.tokenBlacklist.AddUserRevocation(ctx, userID, now, RefreshTokenDuration)
 		if err != nil {
-			fmt.Printf("Warning: failed to add user revocation: %v\n", err)
+			logger.L().Warn("failed to add user revocation", zap.Error(err))
 		}
 	}
 	if s.userTokenStore == nil {

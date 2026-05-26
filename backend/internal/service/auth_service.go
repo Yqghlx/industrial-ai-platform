@@ -7,6 +7,8 @@ import (
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/industrial-ai/platform/pkg/errors"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // AuthService handles authentication
@@ -169,7 +171,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int, oldPasswor
 	// Revoke all user tokens to force re-login
 	if err := s.userRepo.UpdateTokenVersion(ctx, userID); err != nil {
 		// Log warning but don't fail the password change
-		fmt.Printf("Warning: failed to update token version: %v\n", err)
+		logger.L().Warn("failed to update token version", zap.Error(err))
 	}
 
 	return nil
