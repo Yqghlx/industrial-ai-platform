@@ -190,3 +190,8 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*Claims,
 
 	return claims, nil
 }
+
+// ListUsers 列出所有用户
+func (s *AuthService) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
+	return s.userRepo.List(ctx, page, pageSize)
+}

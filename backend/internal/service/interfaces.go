@@ -59,6 +59,9 @@ type AuthServiceInterface interface {
 
 	// ValidateToken 验证令牌
 	ValidateToken(ctx context.Context, token string) (*Claims, error)
+
+	// ListUsers 列出所有用户
+	ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error)
 }
 
 // UserServiceInterface 用户服务接口

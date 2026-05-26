@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,14 +25,33 @@ func NewAdminHandlerNew(authSvc service.AuthServiceInterface) *AdminHandlerNew {
 }
 
 // ListUsers 列出所有用户
-// TODO: 需要扩展 AuthServiceInterface 添加 List 方法
 func (h *AdminHandlerNew) ListUsers(c *gin.Context) {
+	page := 1
+	pageSize := 50
+
+	// 从查询参数获取分页信息
+	if p := c.Query("page"); p != "" {
+		if val, err := strconv.Atoi(p); err == nil && val > 0 {
+			page = val
+		}
+	}
+	if ps := c.Query("page_size"); ps != "" {
+		if val, err := strconv.Atoi(ps); err == nil && val > 0 && val <= 100 {
+			pageSize = val
+		}
+	}
+
+	users, total, err := h.authSvc.ListUsers(c.Request.Context(), page, pageSize)
+	if err != nil {
+		response.InternalError(c, "Failed to list users")
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"data":      []interface{}{},
-		"total":     0,
-		"page":      1,
-		"page_size": 50,
-		"message":   "ListUsers requires AuthServiceInterface extension",
+		"data":      users,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	})
 }
 

@@ -649,6 +649,11 @@ func (c *compatAuthSvc) ValidateToken(ctx context.Context, token string) (*servi
 	return nil, fmt.Errorf("validate token not supported in compat mode")
 }
 
+// ListUsers 用户列表 - compat模式不支持
+func (c *compatAuthSvc) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
+	return nil, 0, fmt.Errorf("list users not supported in compat mode")
+}
+
 // getCacheStatus wrapper for backward compat
 func (s *HTTPServerNew) getCacheStatus(c *gin.Context) {
 	s.healthHandler.GetCacheStatus(c)
