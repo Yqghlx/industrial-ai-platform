@@ -314,7 +314,7 @@ func (s *HTTPServerNew) setupHandlers() {
 	s.authHandler = NewAuthHandlerNew(s.authSvc, s.userSvc)
 	s.tenantHandler = NewTenantHandler(s.tenantSvc)
 	s.rbacHandler = NewRBACHandler(s.rbacSvc)
-	s.adminHandler = NewAdminHandlerNew(s.authSvc)
+	s.adminHandler = NewAdminHandlerNew(s.authSvc, s.telemetrySvc)
 	s.healthHandler = NewHealthHandlerNew(s.startTime)
 	s.exportHandler = NewExportHandler(s.exportSvc)
 

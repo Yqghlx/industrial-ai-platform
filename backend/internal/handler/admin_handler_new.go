@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/industrial-ai/platform/internal/service"
@@ -16,12 +15,13 @@ import (
 
 // AdminHandlerNew 管理员处理器
 type AdminHandlerNew struct {
-	authSvc service.AuthServiceInterface
+	authSvc      service.AuthServiceInterface
+	telemetrySvc service.TelemetryServiceInterface
 }
 
 // NewAdminHandlerNew 创建管理员处理器
-func NewAdminHandlerNew(authSvc service.AuthServiceInterface) *AdminHandlerNew {
-	return &AdminHandlerNew{authSvc: authSvc}
+func NewAdminHandlerNew(authSvc service.AuthServiceInterface, telemetrySvc service.TelemetryServiceInterface) *AdminHandlerNew {
+	return &AdminHandlerNew{authSvc: authSvc, telemetrySvc: telemetrySvc}
 }
 
 // ListUsers 列出所有用户
@@ -85,9 +85,13 @@ func (h *AdminHandlerNew) DeleteUser(c *gin.Context) {
 
 // GetSystemStatus 获取系统状态
 func (h *AdminHandlerNew) GetSystemStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "ok",
-		"timestamp": time.Now().Format(time.RFC3339),
-		"uptime":    "running",
-	})
+	ctx := c.Request.Context()
+
+	status, err := h.telemetrySvc.GetSystemStatus(ctx)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, status)
 }

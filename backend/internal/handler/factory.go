@@ -68,6 +68,7 @@ func (f *HandlerFactory) CreateAuthHandler() *AuthHandlerNew {
 func (f *HandlerFactory) CreateAdminHandler() *AdminHandlerNew {
 	return NewAdminHandlerNew(
 		f.serviceFactory.GetAuthService(),
+		f.serviceFactory.GetTelemetryService(),
 	)
 }
 
