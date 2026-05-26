@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -13,13 +13,7 @@ export default function SystemStatus() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadStatus();
-    const interval = setInterval(loadStatus, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     setRefreshing(true);
     try {
       const res = await api.getSystemStatus();
@@ -31,7 +25,13 @@ export default function SystemStatus() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [showToast, t]);
+
+  useEffect(() => {
+    loadStatus();
+    const interval = setInterval(loadStatus, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [loadStatus]);
 
   return (
     <div className="space-y-6">

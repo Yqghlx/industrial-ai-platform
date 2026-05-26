@@ -21,8 +21,9 @@ import (
 
 func TestNewAdminHandlerNew(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
+	mockTelemetrySvc := new(MockTelemetryService)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, mockTelemetrySvc)
 
 	assert.NotNil(t, handler)
 	assert.Equal(t, mockAuthSvc, handler.authSvc)
@@ -35,7 +36,7 @@ func TestAdminHandlerNew_ListUsers(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockAuthSvc.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
 	router.GET("/users", handler.ListUsers)
 
@@ -60,7 +61,7 @@ func TestAdminHandlerNew_CreateUser_Success(t *testing.T) {
 
 	mockAuthSvc := new(MockAuthService)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
 	router.POST("/users", handler.CreateUser)
 
@@ -92,7 +93,7 @@ func TestAdminHandlerNew_CreateUser_MissingFields(t *testing.T) {
 
 	mockAuthSvc := new(MockAuthService)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
 	router.POST("/users", handler.CreateUser)
 
@@ -116,7 +117,7 @@ func TestAdminHandlerNew_DeleteUser(t *testing.T) {
 
 	mockAuthSvc := new(MockAuthService)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
 	router.DELETE("/users/:id", handler.DeleteUser)
 
@@ -139,8 +140,17 @@ func TestAdminHandlerNew_GetSystemStatus(t *testing.T) {
 	router := gin.New()
 
 	mockAuthSvc := new(MockAuthService)
+	mockTelemetrySvc := new(MockTelemetryService)
+	mockTelemetrySvc.On("GetSystemStatus", mock.Anything).Return(&model.SystemStatus{
+		Database:     "healthy",
+		Version:      "1.0.0",
+		Uptime:       "running",
+		DBLatency:    0,
+		DeviceCount:  0,
+		UserCount:    0,
+	}, nil)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, mockTelemetrySvc)
 
 	router.GET("/system/status", handler.GetSystemStatus)
 
@@ -154,9 +164,9 @@ func TestAdminHandlerNew_GetSystemStatus(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	assert.Equal(t, "ok", response["status"])
+	assert.Equal(t, "healthy", response["database"])
 	assert.Contains(t, response, "timestamp")
-	assert.Equal(t, "running", response["uptime"])
+	assert.Equal(t, "1.0.0", response["version"])
 }
 
 func TestAdminHandlerNew_CreateUser_WithOptionalFields(t *testing.T) {
@@ -165,7 +175,7 @@ func TestAdminHandlerNew_CreateUser_WithOptionalFields(t *testing.T) {
 
 	mockAuthSvc := new(MockAuthService)
 
-	handler := NewAdminHandlerNew(mockAuthSvc)
+	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
 	router.POST("/users", handler.CreateUser)
 
