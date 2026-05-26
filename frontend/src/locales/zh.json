@@ -245,6 +245,8 @@
     "title": "工单",
     "id": "工单ID",
     "priority": "优先级",
+    "create": "创建工单",
+    "status": "状态",
     "pending": "待处理",
     "inProgress": "进行中",
     "completed": "已完成",
