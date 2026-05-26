@@ -585,6 +585,7 @@ func TestAgentService_NewAgentService(t *testing.T) {
 		mockTaskLogRepo,
 		mockDeviceRepo,
 		mockTelemetryRepo,
+		nil, // OPT-002: No cache for test
 	)
 	assert.NotNil(t, svc)
 }

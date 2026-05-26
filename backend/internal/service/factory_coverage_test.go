@@ -86,7 +86,7 @@ func TestServiceFactory_SetAndGetAgentService(t *testing.T) {
 	mockTaskLogRepo := &repository.MockAgentTaskLogRepository{}
 	mockDeviceRepo := &repository.MockDeviceRepository{}
 	mockTelemetryRepo := &repository.MockTelemetryRepository{}
-	svc := NewAgentService(mockTaskLogRepo, mockDeviceRepo, mockTelemetryRepo)
+	svc := NewAgentService(mockTaskLogRepo, mockDeviceRepo, mockTelemetryRepo, nil)
 
 	factory.SetAgentService(svc)
 	result := factory.GetAgentService()

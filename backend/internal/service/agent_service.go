@@ -10,6 +10,7 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
+	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -110,10 +111,12 @@ type AgentService struct {
 }
 
 // NewAgentService creates a new agent service
+// OPT-002: Added cacheSvc parameter for optimizer initialization
 func NewAgentService(
 	taskLogRepo repository.AgentTaskLogRepositoryInterface,
 	deviceRepo repository.DeviceRepositoryInterface,
 	telemetryRepo repository.TelemetryRepositoryInterface,
+	cacheSvc cache.CacheService, // OPT-002: Added for caching
 ) *AgentService {
 	// FIX-039: 从环境变量加载配置
 	config := LoadAgentServiceConfigFromEnv()
@@ -138,6 +141,16 @@ func NewAgentService(
 		}
 	}
 
+	// OPT-002: Initialize optimizer with cache for response caching
+	var optimizer *AgentOptimizer
+	if cacheSvc != nil {
+		optimizer = NewAgentOptimizer(cacheSvc, 10) // Max 10 concurrent LLM calls
+		logger.L().Info("Agent optimizer initialized with caching",
+			zap.Int("max_concurrent", 10),
+			zap.Duration("cache_ttl", 30*time.Minute),
+		)
+	}
+
 	return &AgentService{
 		taskLogRepo:   taskLogRepo,
 		deviceRepo:    deviceRepo,
@@ -147,6 +160,7 @@ func NewAgentService(
 		model:         config.LLMModel,
 		httpClient:    httpClient,
 		config:        config,
+		optimizer:     optimizer, // OPT-002: Enable caching
 	}
 }
 

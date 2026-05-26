@@ -188,6 +188,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		taskLogRepo,
 		deviceRepo,
 		telemetryRepo,
+		cacheSvc.GetCache(), // OPT-002: Pass cache service for response caching
 	)
 
 	// Initialize Gin router

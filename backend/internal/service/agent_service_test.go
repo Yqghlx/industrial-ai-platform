@@ -23,7 +23,7 @@ func TestAgentService_Query_Success(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 	ctx := context.Background()
 
 	query := model.AgentQuery{
@@ -59,7 +59,7 @@ func TestAgentService_Query_GeneratesSessionID(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 	ctx := context.Background()
 
 	query := model.AgentQuery{
@@ -92,7 +92,7 @@ func TestAgentService_DetermineAgent_DeviceExpert(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test queries that should route to 设备专家
 	queries := []string{
@@ -118,7 +118,7 @@ func TestAgentService_DetermineAgent_MaintenanceExpert(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test queries that should route to 维护专家
 	queries := []string{
@@ -143,7 +143,7 @@ func TestAgentService_DetermineAgent_PredictExpert(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test queries that should route to 预测专家
 	queries := []string{
@@ -168,7 +168,7 @@ func TestAgentService_DetermineAgent_OptimizeExpert(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test queries that should route to 优化专家
 	queries := []string{
@@ -193,7 +193,7 @@ func TestAgentService_DetermineAgent_DefaultAgent(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test queries that should route to 通用智能体
 	queries := []string{
@@ -218,7 +218,7 @@ func TestAgentService_MockResponse(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test mock response for each agent type
 	agents := []string{"设备专家", "维护专家", "预测专家", "优化专家", "通用智能体"}
@@ -239,7 +239,7 @@ func TestAgentService_GetTaskLogs_Success(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 	ctx := context.Background()
 
 	// Expect query for listing task logs
@@ -270,7 +270,7 @@ func TestAgentService_GetTaskLogs_DefaultLimit(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 	ctx := context.Background()
 
 	// Expect query with default limit (50)
@@ -299,7 +299,7 @@ func TestAgentService_AnalyzeQuery_ExtractDeviceID(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test device ID extraction
 	analysis := agentService.AnalyzeQuery("分析CNC-001设备状态")
@@ -317,7 +317,7 @@ func TestAgentService_AnalyzeQuery_ExtractIntent(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test intent extraction
 	testCases := map[string]string{
@@ -347,7 +347,7 @@ func TestAgentService_BuildSystemPrompt(t *testing.T) {
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 
-	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo)
+	agentService := NewAgentService(taskLogRepo, deviceRepo, telemetryRepo, nil)
 
 	// Test system prompt generation for each agent
 	agents := []string{"设备专家", "维护专家", "预测专家", "优化专家", "通用智能体"}
