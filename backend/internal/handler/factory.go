@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -122,6 +124,18 @@ func (f *HandlerFactory) CreateTenantHandler() *TenantHandler {
 }
 
 // ============================================
+// Handler 接口定义
+// ============================================
+
+// Handler 定义处理器接口，所有处理器必须实现此接口
+type Handler interface {
+	// RegisterRoutes 注册路由到路由组
+	RegisterRoutes(router *gin.RouterGroup) error
+	// Name 返回处理器名称
+	Name() string
+}
+
+// ============================================
 // Handler 注册器
 // ============================================
 
@@ -143,4 +157,81 @@ func NewHandlerRegistry(factory *HandlerFactory, router *gin.Engine) *HandlerReg
 func (r *HandlerRegistry) RegisterAll() {
 	// 使用现有的 setupHandlers 实现
 	// 此处仅做接口定义，实际路由注册在 server_new.go 中完成
+}
+
+// RegisterAll 注册所有实现了 Handler 接口的处理器到路由引擎
+// 返回注册过程中遇到的任何错误
+func RegisterAll(router *gin.Engine, handlers ...Handler) error {
+	if router == nil {
+		return ErrNilRouter
+	}
+
+	// 创建一个根路由组
+	rootGroup := router.Group("")
+
+	for _, handler := range handlers {
+		if handler == nil {
+			continue
+		}
+
+		if err := handler.RegisterRoutes(rootGroup); err != nil {
+			return NewHandlerError(handler.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+// RegisterAllWithGroup 注册所有处理器到指定的路由组
+func RegisterAllWithGroup(group *gin.RouterGroup, handlers ...Handler) error {
+	if group == nil {
+		return ErrNilRouterGroup
+	}
+
+	for _, handler := range handlers {
+		if handler == nil {
+			continue
+		}
+
+		if err := handler.RegisterRoutes(group); err != nil {
+			return NewHandlerError(handler.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+// ============================================
+// 错误定义
+// ============================================
+
+var (
+	// ErrNilRouter 路由器为空错误
+	ErrNilRouter = errors.New("router cannot be nil")
+	// ErrNilRouterGroup 路由组为空错误
+	ErrNilRouterGroup = errors.New("router group cannot be nil")
+)
+
+// HandlerError 处理器注册错误
+type HandlerError struct {
+	HandlerName string
+	Err         error
+}
+
+// NewHandlerError 创建处理器错误
+func NewHandlerError(name string, err error) *HandlerError {
+	return &HandlerError{
+		HandlerName: name,
+		Err:         err,
+	}
+}
+
+// Error 实现 error 接口
+func (e *HandlerError) Error() string {
+	return "handler [" + e.HandlerName + "] registration failed: " + e.Err.Error()
+}
+
+// Unwrap 返回底层错误
+func (e *HandlerError) Unwrap() error {
+	return e.Err
 }
