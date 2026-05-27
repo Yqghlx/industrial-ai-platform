@@ -6,11 +6,63 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
 )
+
+// FIX-018: 敏感信息关键词列表
+var sensitivePatterns = []string{
+	"password",
+	"passwd",
+	"secret",
+	"key",
+	"token",
+	"credential",
+	"api_key",
+	"apikey",
+	"auth",
+}
+
+// sensitiveRegex 匹配敏感信息的正则表达式
+// FIX-018: 编译一次，提高性能
+var sensitiveRegex *regexp.Regexp
+
+func init() {
+	// 构建正则表达式: (password|secret|...)=([^\s&]+)
+	pattern := "(?i)(" + strings.Join(sensitivePatterns, "|") + `)\s*[=:]\s*[^\s&]+`
+	sensitiveRegex = regexp.MustCompile(pattern)
+}
+
+// redactSensitiveInfo 过滤日志中的敏感信息
+// FIX-018: 将敏感信息替换为 [REDACTED]
+func redactSensitiveInfo(msg string) string {
+	return sensitiveRegex.ReplaceAllStringFunc(msg, func(match string) string {
+		// 保留键名，只替换值
+		parts := regexp.MustCompile(`(?i)(` + strings.Join(sensitivePatterns, "|") + `)\s*[=:]\s*`).FindStringSubmatch(match)
+		if len(parts) > 1 {
+			return parts[0] + "[REDACTED]"
+		}
+		return "[REDACTED]"
+	})
+}
+
+// safeLog 安全日志输出，过滤敏感信息
+// FIX-018: 包装标准日志函数
+func safeLog(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Print(redactSensitiveInfo(msg))
+}
+
+// safeLogf 安全格式化日志输出，过滤敏感信息
+// FIX-018: 包装 log.Printf 函数
+func safeLogf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Printf("%s", redactSensitiveInfo(msg))
+}
 
 // ConnectionConfig 数据库连接配置
 type ConnectionConfig struct {
@@ -86,7 +138,8 @@ func Connect(config *ConnectionConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Printf("Database connection established: %s:%d/%s", config.Host, config.Port, config.Database)
+	// FIX-018: 使用安全日志函数，防止敏感信息泄露
+	safeLogf("Database connection established: %s:%d/%s", config.Host, config.Port, config.Database)
 	return db, nil
 }
 
@@ -101,14 +154,14 @@ func ConfigurePool(db *sql.DB, config *ConnectionConfig) {
 	// 防止连接数过多导致数据库压力过大或连接耗尽攻击
 	if config.MaxOpenConns > 0 {
 		db.SetMaxOpenConns(config.MaxOpenConns)
-		log.Printf("Connection pool: MaxOpenConns=%d", config.MaxOpenConns)
+		safeLogf("Connection pool: MaxOpenConns=%d", config.MaxOpenConns)
 	}
 
 	// SetMaxIdleConns 设置数据库的最大空闲连接数
 	// 保持一定数量的空闲连接可以提高性能，避免频繁创建和销毁连接
 	if config.MaxIdleConns > 0 {
 		db.SetMaxIdleConns(config.MaxIdleConns)
-		log.Printf("Connection pool: MaxIdleConns=%d", config.MaxIdleConns)
+		safeLogf("Connection pool: MaxIdleConns=%d", config.MaxIdleConns)
 	}
 
 	// SetConnMaxLifetime 设置连接的最大可复用时间
@@ -116,7 +169,7 @@ func ConfigurePool(db *sql.DB, config *ConnectionConfig) {
 	// 建议生产环境设置为 30 分钟到 1 小时
 	if config.ConnMaxLifetime > 0 {
 		db.SetConnMaxLifetime(config.ConnMaxLifetime)
-		log.Printf("Connection pool: ConnMaxLifetime=%v", config.ConnMaxLifetime)
+		safeLogf("Connection pool: ConnMaxLifetime=%v", config.ConnMaxLifetime)
 	}
 
 	// SetConnMaxIdleTime 设置空闲连接的最大存活时间
@@ -124,7 +177,7 @@ func ConfigurePool(db *sql.DB, config *ConnectionConfig) {
 	// 建议设置为 ConnMaxLifetime 的 1/6 到 1/3
 	if config.ConnMaxIdleTime > 0 {
 		db.SetConnMaxIdleTime(config.ConnMaxIdleTime)
-		log.Printf("Connection pool: ConnMaxIdleTime=%v", config.ConnMaxIdleTime)
+		safeLogf("Connection pool: ConnMaxIdleTime=%v", config.ConnMaxIdleTime)
 	}
 }
 
@@ -207,7 +260,7 @@ func CheckHealth(db *sql.DB) error {
 	}
 
 	if usagePercent > 90 {
-		log.Printf("Warning: Connection pool usage is high: %.1f%%", usagePercent)
+		safeLogf("Warning: Connection pool usage is high: %.1f%%", usagePercent)
 	}
 
 	return nil
