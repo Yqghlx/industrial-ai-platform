@@ -9,13 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// State 熔断器状态
+// State represents circuit breaker state
 type State int
 
 const (
-	StateClosed   State = 0 // 关闭状态 (正常)
-	StateOpen     State = 1 // 打开状态 (熔断)
-	StateHalfOpen State = 2 // 半开状态 (试探)
+	StateClosed   State = 0 // Closed state (normal operation)
+	StateOpen     State = 1 // Open state (circuit breaker tripped)
+	StateHalfOpen State = 2 // Half-open state (probing)
 )
 
 func (s State) String() string {
@@ -151,7 +151,12 @@ func (cb *CircuitBreaker) CallWithFallback(fn func() error, fallback func() erro
 
 // === 状态记录 ===
 
-// recordSuccess 记录成功
+// recordSuccess 记录成功请求
+// 在不同状态下更新成功计数器：
+//   - HalfOpen状态: 增加半开成功计数，达到成功阈值后恢复到Closed状态
+//   - Closed状态: 重置失败计数器，保持正常状态
+//
+// 注意：调用此方法前必须持有写锁
 func (cb *CircuitBreaker) recordSuccess() {
 	cb.successCount++
 	cb.requestCount++
@@ -174,7 +179,12 @@ func (cb *CircuitBreaker) recordSuccess() {
 	}
 }
 
-// recordFailure 记录失败
+// recordFailure 记录失败请求
+// 在不同状态下更新失败计数器：
+//   - HalfOpen状态: 立即转换到Open状态，半开探测失败
+//   - Closed状态: 增加失败计数，达到失败率阈值后触发熔断
+//
+// 注意：调用此方法前必须持有写锁
 func (cb *CircuitBreaker) recordFailure() {
 	cb.failureCount++
 	cb.requestCount++
@@ -208,7 +218,19 @@ func (cb *CircuitBreaker) recordFailure() {
 
 // === 状态转换 ===
 
-// transitionTo 状态转换
+// transitionTo 执行状态转换
+// 参数:
+//   - newState: 目标状态 (StateClosed, StateOpen, StateHalfOpen)
+//
+// 功能:
+//   - 更新熔断器当前状态
+//   - 记录状态变更时间
+//   - 根据新状态重置相关计数器
+//   - 触发状态变更回调函数 (如果已设置)
+//
+// 注意：
+//   - 如果目标状态与当前状态相同，则不做任何操作
+//   - 调用此方法前必须持有写锁
 func (cb *CircuitBreaker) transitionTo(newState State) {
 	if cb.state == newState {
 		return
