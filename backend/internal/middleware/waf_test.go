@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -313,7 +314,8 @@ func TestIsBlockedUserAgentWithConfig(t *testing.T) {
 }
 
 func TestDetectAttack(t *testing.T) {
-	sqlPatterns := []string{`(?i)select\s+.*\s+from`}
+	// P1-11: 使用预编译的正则表达式
+	sqlPatterns := []*regexp.Regexp{regexp.MustCompile(`(?i)select\s+.*\s+from`)}
 	assert.True(t, detectAttack("SELECT * FROM users", sqlPatterns))
 	assert.False(t, detectAttack("hello world", sqlPatterns))
 }

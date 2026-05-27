@@ -215,6 +215,8 @@ type WorkOrderRepositoryInterface interface {
 	GetByID(ctx context.Context, id int) (*model.WorkOrder, error)
 	List(ctx context.Context, status, deviceID string, page, pageSize int) ([]model.WorkOrder, int, error)
 	UpdateStatus(ctx context.Context, id int, status string) error
+	CountOpen(ctx context.Context) (int, error)
+	CountByStatus(ctx context.Context, status string) (int, error)
 }
 
 // WorkOrderRepository handles work order data access
@@ -338,6 +340,25 @@ func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id int, status s
 		status, time.Now(), id,
 	)
 	return err
+}
+
+// CountOpen counts open work orders (status: open, in_progress, pending)
+func (r *WorkOrderRepository) CountOpen(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		"SELECT COUNT(*) FROM work_orders WHERE status IN ('open', 'in_progress', 'pending')",
+	).Scan(&count)
+	return count, err
+}
+
+// CountByStatus counts work orders by specific status
+func (r *WorkOrderRepository) CountByStatus(ctx context.Context, status string) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		"SELECT COUNT(*) FROM work_orders WHERE status = $1",
+		status,
+	).Scan(&count)
+	return count, err
 }
 
 // NotificationRepositoryInterface defines the interface for notification repository

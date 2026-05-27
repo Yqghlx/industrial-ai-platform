@@ -21,6 +21,7 @@ type AlertRepositoryInterface interface {
 	// ListWithFilter 支持更多过滤条件的列表查询
 	ListWithFilter(ctx context.Context, filter AlertFilter, page, pageSize int) ([]model.Alert, int, error)
 	CountActive(ctx context.Context) (int, error)
+	CountByStatus(ctx context.Context, status string) (int, error)
 	Resolve(ctx context.Context, id int) error
 	UpdateStatus(ctx context.Context, id int, status string) error
 	GetRecentByDevice(ctx context.Context, deviceID string, ruleID int, cooldownSec int) (*model.Alert, error)

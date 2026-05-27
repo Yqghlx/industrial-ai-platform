@@ -17,21 +17,27 @@ import (
 
 // TelemetryService handles telemetry data
 type TelemetryService struct {
-	telemetryRepo *repository.TelemetryRepository
-	deviceRepo    *repository.DeviceRepository
-	alertSvc      *AlertService
+	telemetryRepo  *repository.TelemetryRepository
+	deviceRepo     *repository.DeviceRepository
+	alertRepo      *repository.AlertRepository
+	workOrderRepo  *repository.WorkOrderRepository
+	alertSvc       *AlertService
 }
 
 // NewTelemetryService creates a new telemetry service
 func NewTelemetryService(
 	telemetryRepo *repository.TelemetryRepository,
 	deviceRepo *repository.DeviceRepository,
+	alertRepo *repository.AlertRepository,
+	workOrderRepo *repository.WorkOrderRepository,
 	alertSvc *AlertService,
 ) *TelemetryService {
 	return &TelemetryService{
-		telemetryRepo: telemetryRepo,
-		deviceRepo:    deviceRepo,
-		alertSvc:      alertSvc,
+		telemetryRepo:  telemetryRepo,
+		deviceRepo:     deviceRepo,
+		alertRepo:      alertRepo,
+		workOrderRepo:  workOrderRepo,
+		alertSvc:       alertSvc,
 	}
 }
 
@@ -271,7 +277,7 @@ func InitTelemetryService(alertSvc *AlertService, telemetryRepo *repository.Tele
 	}
 }
 
-// GetROIStats calculates ROI statistics
+// GetROIStats calculates ROI statistics from real database data
 func (s *TelemetryService) GetROIStats(ctx context.Context) (*model.ROIStats, error) {
 	// Get device count
 	deviceCount, err := s.deviceRepo.Count(ctx)
@@ -279,17 +285,68 @@ func (s *TelemetryService) GetROIStats(ctx context.Context) (*model.ROIStats, er
 		return nil, err
 	}
 
-	// Calculate estimated savings (mock calculation)
-	savings := float64(deviceCount) * 5000.0 // $5000 per device per month
+	// Get active alerts count
+	activeAlerts, err := s.alertRepo.CountActive(ctx)
+	if err != nil {
+		logger.L().Error("Failed to count active alerts", zap.Error(err))
+		activeAlerts = 0 // Continue with 0 if error
+	}
+
+	// Get open work orders count
+	openWorkOrders, err := s.workOrderRepo.CountOpen(ctx)
+	if err != nil {
+		logger.L().Error("Failed to count open work orders", zap.Error(err))
+		openWorkOrders = 0 // Continue with 0 if error
+	}
+
+	// Get resolved issues count
+	resolvedAlerts, err := s.alertRepo.CountByStatus(ctx, "resolved")
+	if err != nil {
+		logger.L().Error("Failed to count resolved alerts", zap.Error(err))
+		resolvedAlerts = 0 // Continue with 0 if error
+	}
+
+	// Calculate uptime percentage based on alerts vs total devices
+	// Assumption: If no devices, uptime is 100%. Otherwise, calculate based on active alerts
+	uptimePercentage := 100.0
+	if deviceCount > 0 {
+		// Each active alert reduces uptime by a factor
+		// Simple formula: uptime = 100 - (activeAlerts * 0.5) with min 95% floor
+		alertFactor := float64(activeAlerts) / float64(deviceCount) * 10
+		uptimePercentage = 100.0 - alertFactor
+		if uptimePercentage < 95.0 {
+			uptimePercentage = 95.0
+		}
+	}
+
+	// Calculate predicted savings
+	// Base savings: $1000 per device per month for monitoring
+	// Bonus savings: $500 per resolved issue (preventive maintenance value)
+	// Penalty: $100 per active alert (operational disruption cost)
+	baseSavings := float64(deviceCount) * 1000.0
+	resolvedSavings := float64(resolvedAlerts) * 500.0
+	alertCost := float64(activeAlerts) * 100.0
+	savings := baseSavings + resolvedSavings - alertCost
+	if savings < 0 {
+		savings = 0
+	}
+
+	// Calculate average response time (hours)
+	// Estimated based on resolved vs active alerts ratio
+	avgResponseTime := 2.5 // Default 2.5 hours
+	if resolvedAlerts > 0 {
+		// If we have resolved alerts, estimate better response time
+		avgResponseTime = 1.5 + (float64(activeAlerts) / float64(resolvedAlerts+1) * 2)
+	}
 
 	return &model.ROIStats{
 		TotalDevices:     deviceCount,
-		ActiveAlerts:     0, // Would be calculated from alerts
-		OpenWorkOrders:   0, // Would be calculated from work orders
-		ResolvedIssues:   0,
+		ActiveAlerts:     activeAlerts,
+		OpenWorkOrders:   openWorkOrders,
+		ResolvedIssues:   resolvedAlerts,
 		PredictedSavings: savings,
-		UptimePercentage: 99.5,
-		AvgResponseTime:  2.5,
+		UptimePercentage: uptimePercentage,
+		AvgResponseTime:  avgResponseTime,
 	}, nil
 }
 

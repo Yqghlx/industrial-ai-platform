@@ -18,6 +18,17 @@ import (
 // WAF 中间件 - Web 应用防火墙
 // ============================================
 
+// compiledPatterns 预编译的正则表达式
+// P1-11: 预编译正则表达式以提升性能
+var compiledPatterns struct {
+	sqlInjection      []*regexp.Regexp
+	xss               []*regexp.Regexp
+	pathTraversal     []*regexp.Regexp
+	commandInjection  []*regexp.Regexp
+	ssrf              []*regexp.Regexp
+	initialized       bool
+}
+
 // WAFConfig WAF 配置
 type WAFConfig struct {
 	Enabled                  bool     // 是否启用 WAF
@@ -198,12 +209,16 @@ func containsString(list []string, s string) bool {
 
 // WAFMiddleware WAF 中间件
 // 用途: 检查请求中的恶意攻击特征
+// P1-11: 使用预编译正则表达式提升性能
 func WAFMiddleware(config WAFConfig, logger *zap.Logger) gin.HandlerFunc {
 	if !config.Enabled {
 		return func(c *gin.Context) {
 			c.Next()
 		}
 	}
+
+	// P1-11: 初始化时预编译所有正则表达式
+	initWAFPatterns(config)
 
 	return func(c *gin.Context) {
 		// 1. 检查请求方法
@@ -238,32 +253,32 @@ func WAFMiddleware(config WAFConfig, logger *zap.Logger) gin.HandlerFunc {
 			}
 
 			for _, value := range values {
-				// SQL 注入检测
-				if detectAttack(value, config.SQLInjectionPatterns) {
+				// SQL 注入检测 - P1-11: 使用预编译正则表达式
+				if detectAttack(value, compiledPatterns.sqlInjection) {
 					blockRequest(c, logger, "sql_injection", "SQL Injection detected in query param: "+key)
 					return
 				}
 
-				// XSS 检测
-				if detectAttack(value, config.XSSPatterns) {
+				// XSS 检测 - P1-11: 使用预编译正则表达式
+				if detectAttack(value, compiledPatterns.xss) {
 					blockRequest(c, logger, "xss_attack", "XSS Attack detected in query param: "+key)
 					return
 				}
 
-				// 路径遍历检测
-				if detectAttack(value, config.PathTraversalPatterns) {
+				// 路径遍历检测 - P1-11: 使用预编译正则表达式
+				if detectAttack(value, compiledPatterns.pathTraversal) {
 					blockRequest(c, logger, "path_traversal", "Path Traversal detected in query param: "+key)
 					return
 				}
 
-				// 命令注入检测
-				if detectAttack(value, config.CommandInjectionPatterns) {
+				// 命令注入检测 - P1-11: 使用预编译正则表达式
+				if detectAttack(value, compiledPatterns.commandInjection) {
 					blockRequest(c, logger, "command_injection", "Command Injection detected in query param: "+key)
 					return
 				}
 
-				// SSRF 检测
-				if detectAttack(value, config.SSRFPatterns) {
+				// SSRF 检测 - P1-11: 使用预编译正则表达式
+				if detectAttack(value, compiledPatterns.ssrf) {
 					blockRequest(c, logger, "ssrf_attack", "SSRF Attack detected in query param: "+key)
 					return
 				}
@@ -278,32 +293,32 @@ func WAFMiddleware(config WAFConfig, logger *zap.Logger) gin.HandlerFunc {
 
 			body := string(bodyBytes)
 
-			// SQL 注入检测
-			if detectAttack(body, config.SQLInjectionPatterns) {
+			// SQL 注入检测 - P1-11: 使用预编译正则表达式
+			if detectAttack(body, compiledPatterns.sqlInjection) {
 				blockRequest(c, logger, "sql_injection", "SQL Injection detected in request body")
 				return
 			}
 
-			// XSS 检测
-			if detectAttack(body, config.XSSPatterns) {
+			// XSS 检测 - P1-11: 使用预编译正则表达式
+			if detectAttack(body, compiledPatterns.xss) {
 				blockRequest(c, logger, "xss_attack", "XSS Attack detected in request body")
 				return
 			}
 
-			// 路径遍历检测
-			if detectAttack(body, config.PathTraversalPatterns) {
+			// 路径遍历检测 - P1-11: 使用预编译正则表达式
+			if detectAttack(body, compiledPatterns.pathTraversal) {
 				blockRequest(c, logger, "path_traversal", "Path Traversal detected in request body")
 				return
 			}
 
-			// 命令注入检测
-			if detectAttack(body, config.CommandInjectionPatterns) {
+			// 命令注入检测 - P1-11: 使用预编译正则表达式
+			if detectAttack(body, compiledPatterns.commandInjection) {
 				blockRequest(c, logger, "command_injection", "Command Injection detected in request body")
 				return
 			}
 
-			// SSRF 检测
-			if detectAttack(body, config.SSRFPatterns) {
+			// SSRF 检测 - P1-11: 使用预编译正则表达式
+			if detectAttack(body, compiledPatterns.ssrf) {
 				blockRequest(c, logger, "ssrf_attack", "SSRF Attack detected in request body")
 				return
 			}
@@ -318,8 +333,8 @@ func WAFMiddleware(config WAFConfig, logger *zap.Logger) gin.HandlerFunc {
 			return
 		}
 
-		// 路径遍历检测
-		if detectAttack(path, config.PathTraversalPatterns) {
+		// 路径遍历检测 - P1-11: 使用预编译正则表达式
+		if detectAttack(path, compiledPatterns.pathTraversal) {
 			blockRequest(c, logger, "path_traversal", "Path Traversal detected in URL path")
 			return
 		}
@@ -384,17 +399,53 @@ func isBlockedUserAgent(userAgent string) bool {
 	return isBlockedUserAgentWithConfig(userAgent, defaultConfig.BlockedUserAgents, defaultConfig.BlockEmptyUserAgent)
 }
 
+// initWAFPatterns 初始化预编译的正则表达式
+// P1-11: 在初始化时预编译所有正则表达式以提升性能
+func initWAFPatterns(config WAFConfig) {
+	if compiledPatterns.initialized {
+		return
+	}
+
+	// SQL注入模式预编译
+	for _, p := range config.SQLInjectionPatterns {
+		compiledPatterns.sqlInjection = append(compiledPatterns.sqlInjection, regexp.MustCompile(p))
+	}
+
+	// XSS模式预编译
+	for _, p := range config.XSSPatterns {
+		compiledPatterns.xss = append(compiledPatterns.xss, regexp.MustCompile(p))
+	}
+
+	// 路径遍历模式预编译
+	for _, p := range config.PathTraversalPatterns {
+		compiledPatterns.pathTraversal = append(compiledPatterns.pathTraversal, regexp.MustCompile(p))
+	}
+
+	// 命令注入模式预编译
+	for _, p := range config.CommandInjectionPatterns {
+		compiledPatterns.commandInjection = append(compiledPatterns.commandInjection, regexp.MustCompile(p))
+	}
+
+	// SSRF模式预编译
+	for _, p := range config.SSRFPatterns {
+		compiledPatterns.ssrf = append(compiledPatterns.ssrf, regexp.MustCompile(p))
+	}
+
+	compiledPatterns.initialized = true
+}
+
 // detectAttack 检测攻击特征
-func detectAttack(input string, patterns []string) bool {
+// P1-11: 使用预编译的正则表达式
+func detectAttack(input string, patterns []*regexp.Regexp) bool {
 	// URL 解码
 	decodedInput, err := url.QueryUnescape(input)
 	if err != nil {
 		decodedInput = input
 	}
 
-	// 检查每个模式
-	for _, pattern := range patterns {
-		if matched, _ := regexp.MatchString(pattern, decodedInput); matched {
+	// 使用预编译的正则表达式进行匹配
+	for _, re := range patterns {
+		if re.MatchString(decodedInput) {
 			return true
 		}
 	}

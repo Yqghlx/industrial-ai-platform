@@ -158,6 +158,11 @@ func (m *MockAlertRepository) CountActive(ctx context.Context) (int, error) {
 	return args.Get(0).(int), args.Error(1)
 }
 
+func (m *MockAlertRepository) CountByStatus(ctx context.Context, status string) (int, error) {
+	args := m.Called(ctx, status)
+	return args.Get(0).(int), args.Error(1)
+}
+
 func (m *MockAlertRepository) Resolve(ctx context.Context, id int) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
@@ -482,6 +487,21 @@ func (m *MockWorkOrderRepository) Delete(ctx context.Context, id int) error {
 	return args.Error(0)
 }
 
+func (m *MockWorkOrderRepository) UpdateStatus(ctx context.Context, id int, status string) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
+func (m *MockWorkOrderRepository) CountOpen(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int), args.Error(1)
+}
+
+func (m *MockWorkOrderRepository) CountByStatus(ctx context.Context, status string) (int, error) {
+	args := m.Called(ctx, status)
+	return args.Get(0).(int), args.Error(1)
+}
+
 // MockNotificationRepository implements NotificationRepositoryInterface
 type MockNotificationRepository struct {
 	mock.Mock
@@ -584,11 +604,6 @@ func (m *MockDeviceRepository) WithTx(tx database.TransactionInterface) DeviceRe
 func (m *MockTelemetryRepository) GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error) {
 	args := m.Called(ctx, deviceID, start, end, limit)
 	return args.Get(0).([]model.TelemetryData), args.Error(1)
-}
-
-func (m *MockWorkOrderRepository) UpdateStatus(ctx context.Context, id int, status string) error {
-	args := m.Called(ctx, id, status)
-	return args.Error(0)
 }
 
 func (m *MockWorkOrderRepository) WithTx(tx database.TransactionInterface) WorkOrderRepositoryInterface {

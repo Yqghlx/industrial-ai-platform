@@ -340,16 +340,26 @@ func TestTelemetryService_GetROIStats_Success(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
-		telemetryRepo: telemetryRepo,
-		deviceRepo:    deviceRepo,
-		alertSvc:      nil,
+		telemetryRepo:  telemetryRepo,
+		deviceRepo:     deviceRepo,
+		alertRepo:      alertRepo,
+		workOrderRepo:  workOrderRepo,
+		alertSvc:       nil,
 	}
 	ctx := context.Background()
 
 	// Expect device count query
 	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(10))
+	// Expect active alerts count
+	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
+	// Expect open work orders count
+	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
+	// Expect resolved alerts count
+	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
 
 	// Execute GetROIStats
 	stats, err := telemetryService.GetROIStats(ctx)
@@ -358,10 +368,18 @@ func TestTelemetryService_GetROIStats_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, stats)
 	assert.Equal(t, 10, stats.TotalDevices)
-	// Predicted savings = deviceCount * 5000
-	assert.Equal(t, 50000.0, stats.PredictedSavings)
-	assert.Equal(t, 99.5, stats.UptimePercentage)
-	assert.Equal(t, 2.5, stats.AvgResponseTime)
+	assert.Equal(t, 2, stats.ActiveAlerts)
+	assert.Equal(t, 3, stats.OpenWorkOrders)
+	assert.Equal(t, 5, stats.ResolvedIssues)
+	// Base savings = 10 * 1000 = 10000
+	// Resolved savings = 5 * 500 = 2500
+	// Alert cost = 2 * 100 = 200
+	// Total = 10000 + 2500 - 200 = 12300
+	assert.Equal(t, 12300.0, stats.PredictedSavings)
+	// Uptime = 100 - (2/10 * 10) = 98.0
+	assert.Equal(t, 98.0, stats.UptimePercentage)
+	// Avg response time = 1.5 + (2/(5+1) * 2) = 1.5 + 0.67 = 2.17 (approximately)
+	assert.InDelta(t, 2.17, stats.AvgResponseTime, 0.1)
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

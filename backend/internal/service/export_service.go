@@ -312,7 +312,7 @@ func (s *ExportService) generateAlertReportData(ctx context.Context, req *Export
 	}
 }
 
-// generateROIReportData generates ROI report data
+// generateROIReportData generates ROI report data from real data
 func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportData {
 	roiStats, err := s.reportSvc.GetROIStats(ctx)
 	if err != nil {
@@ -322,31 +322,177 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 		roiStats = &model.ROIStats{}
 	}
 
-	// Generate device metrics (mock data for demonstration)
+	// Calculate date range for metrics (last 30 days)
+	now := time.Now()
+	startDate := now.AddDate(0, 0, -30)
+
+	// Generate device metrics from real data
 	deviceMetrics := []DeviceMetric{}
-	devices, _, err := s.deviceRepo.List(ctx, 1, 10)
-	if err == nil {
+	devices, _, err := s.deviceRepo.List(ctx, 1, 100) // Get more devices for ROI report
+	if err != nil {
+		logger.L().Warn("Failed to get devices for ROI report",
+			zap.Error(err),
+		)
+		devices = []model.Device{}
+	}
+
+	if len(devices) > 0 {
+		// Batch query telemetry stats for all devices
+		deviceIDs := make([]string, len(devices))
+		for i, d := range devices {
+			deviceIDs[i] = d.ID
+		}
+
+		statsMap, err := s.telemetryRepo.GetStatsBatch(ctx, deviceIDs, startDate, now)
+		if err != nil {
+			logger.L().Warn("Failed to get telemetry stats batch for ROI report",
+				zap.Error(err),
+			)
+			statsMap = make(map[string]*model.DeviceStats)
+		}
+
+		// Get work orders for each device
 		for _, d := range devices {
+			// Get telemetry stats
+			var uptimeHours float64
+			var uptimePercent float64
+			if stats, ok := statsMap[d.ID]; ok && stats.DataPoints > 0 {
+				// Calculate uptime based on data points (assuming 1 point per minute)
+				// 30 days = 43200 minutes, each data point = 1 minute of uptime
+				uptimeHours = float64(stats.DataPoints) / 60.0
+				uptimePercent = (float64(stats.DataPoints) / 43200.0) * 100
+				if uptimePercent > 100 {
+					uptimePercent = 100
+				}
+			}
+
+			// Get work orders for this device
+			workOrders, _, err := s.workOrderRepo.List(ctx, "", d.ID, 1, 1000)
+			if err != nil {
+				logger.L().Warn("Failed to get work orders for device",
+					zap.Error(err),
+					zap.String("device_id", d.ID),
+				)
+				workOrders = []model.WorkOrder{}
+			}
+
+			// Count fault (urgent/high priority) and maintenance work orders
+			var faultCount, maintenanceCount int
+			for _, wo := range workOrders {
+				// Filter work orders within the time range
+				if wo.CreatedAt.Before(startDate) || wo.CreatedAt.After(now) {
+					continue
+				}
+				if wo.Priority == "urgent" || wo.Priority == "high" {
+					faultCount++
+				} else {
+					maintenanceCount++
+				}
+			}
+
+			// Calculate savings based on uptime and reduced downtime
+			// Base savings: $50/hour of uptime, minus cost of faults ($500 each) and maintenance ($100 each)
+			savings := uptimeHours*50.0 - float64(faultCount)*500.0 - float64(maintenanceCount)*100.0
+			if savings < 0 {
+				savings = 0
+			}
+
 			deviceMetrics = append(deviceMetrics, DeviceMetric{
 				DeviceID:         d.ID,
 				DeviceName:       d.Name,
-				UptimeHours:      720.0 * roiStats.UptimePercentage / 100, // Monthly hours
-				FaultCount:       2,
-				MaintenanceCount: 5,
-				Savings:          5000.0,
+				UptimeHours:      uptimeHours,
+				FaultCount:       faultCount,
+				MaintenanceCount: maintenanceCount,
+				Savings:          savings,
 			})
 		}
 	}
 
-	// Generate monthly trend (mock data)
+	// Generate monthly trend from real data (last 6 months)
 	monthlyTrend := []MonthlyMetric{}
 	for i := 5; i >= 0; i-- {
-		month := time.Now().AddDate(0, -i, 0).Format("2006-01")
+		monthStart := time.Now().AddDate(0, -i, 0)
+		monthStart = time.Date(monthStart.Year(), monthStart.Month(), 1, 0, 0, 0, 0, monthStart.Location())
+		monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Second)
+
+		monthStr := monthStart.Format("2006-01")
+
+		// Get device stats for this month
+		monthDevices, _, err := s.deviceRepo.List(ctx, 1, 100)
+		if err != nil {
+			logger.L().Warn("Failed to get devices for monthly trend",
+				zap.Error(err),
+				zap.String("month", monthStr),
+			)
+			continue
+		}
+
+		var totalSavings float64
+		var totalUptimePercent float64
+		var validDevices int
+
+		if len(monthDevices) > 0 {
+			deviceIDs := make([]string, len(monthDevices))
+			for i, d := range monthDevices {
+				deviceIDs[i] = d.ID
+			}
+
+			statsMap, err := s.telemetryRepo.GetStatsBatch(ctx, deviceIDs, monthStart, monthEnd)
+			if err != nil {
+				logger.L().Warn("Failed to get telemetry stats for monthly trend",
+					zap.Error(err),
+					zap.String("month", monthStr),
+				)
+				statsMap = make(map[string]*model.DeviceStats)
+			}
+
+			// Calculate uptime and savings for each device
+			daysInMonth := monthEnd.Sub(monthStart).Hours() / 24.0
+			minutesInMonth := daysInMonth * 24.0 * 60.0
+
+			for _, d := range monthDevices {
+				if stats, ok := statsMap[d.ID]; ok && stats.DataPoints > 0 {
+					validDevices++
+					uptimePercent := (float64(stats.DataPoints) / minutesInMonth) * 100
+					if uptimePercent > 100 {
+						uptimePercent = 100
+					}
+					totalUptimePercent += uptimePercent
+
+					uptimeHours := float64(stats.DataPoints) / 60.0
+					savings := uptimeHours * 50.0 // $50/hour of uptime
+					totalSavings += savings
+				}
+			}
+		}
+
+		// Get alert count for this month
+		alerts, _, err := s.alertRepo.List(ctx, "", 1, 10000)
+		if err != nil {
+			logger.L().Warn("Failed to get alerts for monthly trend",
+				zap.Error(err),
+				zap.String("month", monthStr),
+			)
+			alerts = []model.Alert{}
+		}
+
+		var alertCount int
+		for _, a := range alerts {
+			if a.TriggeredAt.After(monthStart) && a.TriggeredAt.Before(monthEnd) {
+				alertCount++
+			}
+		}
+
+		avgUptimePercent := 0.0
+		if validDevices > 0 {
+			avgUptimePercent = totalUptimePercent / float64(validDevices)
+		}
+
 		monthlyTrend = append(monthlyTrend, MonthlyMetric{
-			Month:         month,
-			TotalSavings:  roiStats.PredictedSavings * float64(6-i+1) / 6,
-			UptimePercent: 95 + float64(i)*0.5,
-			AlertCount:    10 + i*2,
+			Month:         monthStr,
+			TotalSavings:  totalSavings,
+			UptimePercent: avgUptimePercent,
+			AlertCount:    alertCount,
 		})
 	}
 

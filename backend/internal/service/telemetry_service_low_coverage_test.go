@@ -31,8 +31,10 @@ func TestNewTelemetryService(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	assert.NotNil(t, svc)
 }
 
@@ -232,8 +234,10 @@ func TestTelemetryService_GetROIStats_DBError(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
 	mock.ExpectQuery("SELECT COUNT").WillReturnError(errors.New("db error"))
@@ -254,8 +258,10 @@ func TestTelemetryService_GetSystemStatus(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
 	// GetSystemStatus calls deviceRepo.Count twice:
@@ -279,8 +285,10 @@ func TestTelemetryService_GetSystemStatus_DBError(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
 	mock.ExpectQuery("SELECT COUNT").WillReturnError(errors.New("db error"))
@@ -310,7 +318,7 @@ func TestTelemetryService_Ingest_WithAlertService(t *testing.T) {
 	blackBoxRepo := repository.NewBlackBoxRepository(database.NewDBWrapper(db))
 	alertSvc := NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, AlertServiceConfig{})
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertSvc)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, alertSvc)
 	ctx := context.Background()
 
 	data := &model.TelemetryData{
@@ -344,8 +352,10 @@ func TestTelemetryService_Ingest_StatusWarning(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
 	data := &model.TelemetryData{
@@ -370,8 +380,10 @@ func TestTelemetryService_Ingest_StatusFault(t *testing.T) {
 
 	telemetryRepo := repository.NewTelemetryRepository(database.NewDBWrapper(db))
 	deviceRepo := repository.NewDeviceRepository(database.NewDBWrapper(db))
+	alertRepo := repository.NewAlertRepository(database.NewDBWrapper(db))
+	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
-	svc := NewTelemetryService(telemetryRepo, deviceRepo, nil)
+	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
 	data := &model.TelemetryData{

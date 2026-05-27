@@ -322,6 +322,16 @@ func (r *AlertRepository) CountActive(ctx context.Context) (int, error) {
 	return count, err
 }
 
+// CountByStatus counts alerts by specific status
+func (r *AlertRepository) CountByStatus(ctx context.Context, status string) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		"SELECT COUNT(*) FROM alerts WHERE status = $1",
+		status,
+	).Scan(&count)
+	return count, err
+}
+
 // Resolve resolves an alert
 func (r *AlertRepository) Resolve(ctx context.Context, id int) error {
 	now := time.Now()

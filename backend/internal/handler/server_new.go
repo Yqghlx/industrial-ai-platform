@@ -177,7 +177,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	userSvc := service.NewUserService(userRepo)
 	alertSvc := service.NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, service.AlertServiceConfig{})
 	deviceSvc := service.NewDeviceService(deviceRepo, userRepo)
-	telemetrySvc := service.NewTelemetryService(telemetryRepo, deviceRepo, alertSvc)
+	telemetrySvc := service.NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, alertSvc)
 	tenantSvc := service.NewTenantService(tenantRepo)
 	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
 	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
