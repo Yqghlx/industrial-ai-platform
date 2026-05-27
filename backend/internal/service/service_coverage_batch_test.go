@@ -404,17 +404,21 @@ func TestWorkOrderService_GetByID(t *testing.T) {
 	assert.Equal(t, order, result)
 }
 
+
 func TestWorkOrderService_UpdateStatus(t *testing.T) {
 	mockWorkOrderRepo := &repository.MockWorkOrderRepository{}
 	svc := NewWorkOrderService(mockWorkOrderRepo)
 
-	ctx := context.Background()
+	// FIX-019: ensureContextTimeout会修改context类型，但功能不变
+	// 所以不再比较context类型，只验证功能正确性
+	mockWorkOrderRepo.On("UpdateStatus", mock.Anything, 1, "completed").Return(nil)
 
-	mockWorkOrderRepo.On("UpdateStatus", ctx, 1, "completed").Return(nil)
-
-	err := svc.UpdateStatus(ctx, 1, "completed")
+	err := svc.UpdateStatus(context.Background(), 1, "completed")
 	assert.NoError(t, err)
+
+	mockWorkOrderRepo.AssertExpectations(t)
 }
+
 
 func TestWorkOrderService_List(t *testing.T) {
 	mockWorkOrderRepo := &repository.MockWorkOrderRepository{}
