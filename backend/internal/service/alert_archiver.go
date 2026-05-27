@@ -39,7 +39,7 @@ type AlertArchiver struct {
 }
 
 // NewAlertArchiver 创建告警归档器
-func NewAlertArchiver(alertRepo repository.AlertRepositoryInterface, config AlertArchiverConfig) *AlertArchiver {
+func NewAlertArchiver(alertRepo AlertRepositoryInterface, config AlertArchiverConfig) *AlertArchiver {
 	return &AlertArchiver{
 		alertRepo: alertRepo,
 		config:    config,
