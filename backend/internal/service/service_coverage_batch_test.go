@@ -624,7 +624,6 @@ func TestUserService_GetByID_Simple(t *testing.T) {
 	mockUserRepo := &repository.MockUserRepository{}
 	svc := NewUserService(mockUserRepo)
 
-	ctx := context.Background()
 	user := &model.User{ID: 1, Username: "testuser"}
 
 	mockUserRepo.On("GetByID", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(user, nil)
