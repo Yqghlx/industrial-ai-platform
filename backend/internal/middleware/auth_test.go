@@ -1352,3 +1352,419 @@ func BenchmarkAdminRequired(b *testing.B) {
 		router.ServeHTTP(w, req)
 	}
 }
+
+// ============================================
+// FIX-016: Telemetry Endpoint Authentication Tests
+// ============================================
+
+// TestDefaultAuthConfig tests default auth configuration
+func TestDefaultAuthConfig(t *testing.T) {
+	config := DefaultAuthConfig()
+	assert.NotNil(t, config)
+	assert.NotEmpty(t, config.PublicEndpoints)
+	assert.Contains(t, config.PublicEndpoints, "/health")
+	assert.Contains(t, config.PublicEndpoints, "/api/v1/devices/telemetry")
+	assert.NotEmpty(t, config.PublicEndpointPolicy)
+}
+
+// TestIsPublicEndpoint tests public endpoint matching
+func TestIsPublicEndpoint(t *testing.T) {
+	publicEndpoints := []string{
+		"/health",
+		"/api/v1/devices/telemetry",
+		"/api/v1/telemetry/*",
+	}
+
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{
+			name:     "exact match - health",
+			path:     "/health",
+			expected: true,
+		},
+		{
+			name:     "exact match - telemetry",
+			path:     "/api/v1/devices/telemetry",
+			expected: true,
+		},
+		{
+			name:     "prefix match - telemetry latest",
+			path:     "/api/v1/telemetry/latest",
+			expected: true,
+		},
+		{
+			name:     "prefix match - telemetry device",
+			path:     "/api/v1/telemetry/device/123",
+			expected: true,
+		},
+		{
+			name:     "no match - protected endpoint",
+			path:     "/api/v1/devices",
+			expected: false,
+		},
+		{
+			name:     "no match - admin endpoint",
+			path:     "/api/v1/admin/users",
+			expected: false,
+		},
+		{
+			name:     "no match - similar but not public",
+			path:     "/api/v1/devices/telemetry/batch",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isPublicEndpoint(tt.path, publicEndpoints)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestAuthRequiredWithConfig_PublicEndpoint tests public endpoint access
+func TestAuthRequiredWithConfig_PublicEndpoint(t *testing.T) {
+	setupJWT(t)
+
+	config := &AuthConfig{
+		JWTSecret: "test-jwt-secret-key-for-testing-must-be-32-chars",
+		PublicEndpoints: []string{
+			"/health",
+			"/api/v1/devices/telemetry",
+		},
+		PublicEndpointPolicy: "Health and telemetry endpoints are intentionally public",
+	}
+
+	router := gin.New()
+	router.Use(AuthRequiredWithConfig(config))
+	router.GET("/health", func(c *gin.Context) {
+		// Verify public endpoint markers are set
+		assert.True(t, IsPublicEndpointRequest(c))
+		assert.NotEmpty(t, GetPublicEndpointReason(c))
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+	router.POST("/api/v1/devices/telemetry", func(c *gin.Context) {
+		assert.True(t, IsPublicEndpointRequest(c))
+		c.JSON(http.StatusOK, gin.H{"message": "telemetry received"})
+	})
+
+	// Test health endpoint without auth
+	t.Run("health endpoint without auth", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/health", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "healthy")
+	})
+
+	// Test telemetry endpoint without auth
+	t.Run("telemetry endpoint without auth", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/devices/telemetry", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "telemetry received")
+	})
+}
+
+// TestAuthRequiredWithConfig_ProtectedEndpoint tests protected endpoint requires auth
+func TestAuthRequiredWithConfig_ProtectedEndpoint(t *testing.T) {
+	setupJWT(t)
+
+	config := DefaultAuthConfig()
+	config.JWTSecret = "test-jwt-secret-key-for-testing-must-be-32-chars"
+
+	router := gin.New()
+	router.Use(AuthRequiredWithConfig(config))
+	router.GET("/api/v1/devices", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"devices": []string{}})
+	})
+
+	// Test protected endpoint without auth - should fail
+	t.Run("protected endpoint without auth", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/devices", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Body.String(), "MISSING_TOKEN")
+	})
+
+	// Test protected endpoint with valid auth - should succeed
+	t.Run("protected endpoint with valid auth", func(t *testing.T) {
+		token := generateTestToken(t, 1, "testuser", "user", "tenant-1", "access", time.Now().Add(15*time.Minute))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/devices", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}
+
+// TestAuthRequiredWithConfig_NilConfig tests nil config uses defaults
+func TestAuthRequiredWithConfig_NilConfig(t *testing.T) {
+	setupJWT(t)
+
+	router := gin.New()
+	router.Use(AuthRequiredWithConfig(nil)) // Should use DefaultAuthConfig
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	// Should succeed because /health is in default public endpoints
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestAuthRequired_BackwardCompatibility tests backward compatibility
+func TestAuthRequired_BackwardCompatibility(t *testing.T) {
+	setupJWT(t)
+
+	// AuthRequired without config should NOT have public endpoints
+	router := gin.New()
+	router.Use(AuthRequired("test-jwt-secret-key-for-testing-must-be-32-chars"))
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// Health endpoint should require auth with old AuthRequired
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "MISSING_TOKEN")
+}
+
+// TestAuthOptional tests optional authentication middleware
+func TestAuthOptional(t *testing.T) {
+	setupJWT(t)
+
+	router := gin.New()
+	router.Use(AuthOptional("test-jwt-secret-key-for-testing-must-be-32-chars"))
+	router.GET("/api/v1/data", func(c *gin.Context) {
+		if IsAuthenticated(c) {
+			c.JSON(http.StatusOK, gin.H{"authenticated": true, "user_id": GetUserID(c)})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"authenticated": false, "data": "public"})
+		}
+	})
+
+	// Without auth - should proceed as public
+	t.Run("no auth token", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/data", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "public")
+	})
+
+	// With valid auth - should authenticate
+	t.Run("valid auth token", func(t *testing.T) {
+		token := generateTestToken(t, 1, "testuser", "user", "tenant-1", "access", time.Now().Add(15*time.Minute))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/data", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "authenticated")
+	})
+
+	// With invalid auth - should proceed as public
+	t.Run("invalid auth token", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/data", nil)
+		req.Header.Set("Authorization", "Bearer invalid-token")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "public")
+	})
+}
+
+// TestIsPublicEndpointRequest tests helper function
+func TestIsPublicEndpointRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("public endpoint marker set", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("public_endpoint", true)
+
+		assert.True(t, IsPublicEndpointRequest(c))
+	})
+
+	t.Run("public endpoint marker not set", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		assert.False(t, IsPublicEndpointRequest(c))
+	})
+
+	t.Run("public endpoint marker wrong type", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("public_endpoint", "true") // Wrong type
+
+		assert.False(t, IsPublicEndpointRequest(c))
+	})
+}
+
+// TestGetPublicEndpointReason tests helper function
+func TestGetPublicEndpointReason(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("reason set", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("public_endpoint_reason", "Health endpoint is public")
+
+		assert.Equal(t, "Health endpoint is public", GetPublicEndpointReason(c))
+	})
+
+	t.Run("reason not set", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		assert.Empty(t, GetPublicEndpointReason(c))
+	})
+}
+
+// TestIsAuthenticated tests authentication check helper
+func TestIsAuthenticated(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("authenticated flag set true", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("authenticated", true)
+
+		assert.True(t, IsAuthenticated(c))
+	})
+
+	t.Run("user_id set", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("user_id", 1)
+
+		assert.True(t, IsAuthenticated(c))
+	})
+
+	t.Run("not authenticated", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		assert.False(t, IsAuthenticated(c))
+	})
+}
+
+// TestTelemetryEndpoint_SecurityIntegration tests telemetry security
+func TestTelemetryEndpoint_SecurityIntegration(t *testing.T) {
+	setupJWT(t)
+
+	// Simulate production config with device auth optional
+	config := &AuthConfig{
+		JWTSecret: "test-jwt-secret-key-for-testing-must-be-32-chars",
+		PublicEndpoints: []string{
+			"/api/v1/devices/telemetry", // SEC-MED-02: Intentionally public
+		},
+		PublicEndpointPolicy: "Telemetry endpoint is public for edge device data ingestion with rate limiting",
+	}
+
+	router := gin.New()
+	router.Use(AuthRequiredWithConfig(config))
+	router.POST("/api/v1/devices/telemetry", func(c *gin.Context) {
+		// Verify the request is marked as public
+		assert.True(t, IsPublicEndpointRequest(c))
+		// Verify policy is available for audit logging
+		assert.NotEmpty(t, GetPublicEndpointReason(c))
+		c.JSON(http.StatusOK, gin.H{"status": "received"})
+	})
+	router.GET("/api/v1/devices", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"devices": []string{}})
+	})
+
+	// Telemetry should be accessible without auth
+	t.Run("telemetry without auth succeeds", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/devices/telemetry", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	// Other endpoints should still require auth
+	t.Run("devices endpoint requires auth", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/devices", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	// With auth, both should work
+	t.Run("authenticated user can access all", func(t *testing.T) {
+		token := generateTestToken(t, 1, "testuser", "user", "tenant-1", "access", time.Now().Add(15*time.Minute))
+
+		// Telemetry with auth
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/devices/telemetry", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Devices with auth
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("GET", "/api/v1/devices", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}
+
+// BenchmarkAuthRequiredWithConfig benchmarks configured auth middleware
+func BenchmarkAuthRequiredWithConfig_PublicEndpoint(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+	err := service.InitJWT("test-jwt-secret-key-for-testing-must-be-32-chars")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	config := DefaultAuthConfig()
+	config.JWTSecret = "test-jwt-secret-key-for-testing-must-be-32-chars"
+
+	router := gin.New()
+	router.Use(AuthRequiredWithConfig(config))
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/health", nil)
+		router.ServeHTTP(w, req)
+	}
+}
+
+func BenchmarkIsPublicEndpoint(b *testing.B) {
+	publicEndpoints := DefaultAuthConfig().PublicEndpoints
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = isPublicEndpoint("/api/v1/devices/telemetry", publicEndpoints)
+	}
+}

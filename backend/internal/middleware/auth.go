@@ -8,10 +8,69 @@ import (
 	"github.com/industrial-ai/platform/internal/service"
 )
 
-// AuthRequired validates JWT token and sets user info in context (增强版)
-// 支持 Access Token + Refresh Token 机制
-func AuthRequired(jwtSecret string) gin.HandlerFunc {
+// FIX-016: AuthConfig for public endpoint whitelist configuration
+// AuthConfig holds configuration for authentication middleware
+type AuthConfig struct {
+	// JWTSecret is the secret key for JWT validation
+	JWTSecret string
+	// PublicEndpoints is a list of endpoints that don't require authentication
+	// These endpoints are intentionally public (e.g., telemetry, health checks)
+	PublicEndpoints []string
+	// PublicEndpointPolicy documents the reason for public access
+	PublicEndpointPolicy string
+}
+
+// DefaultAuthConfig returns default auth configuration
+func DefaultAuthConfig() *AuthConfig {
+	return &AuthConfig{
+		PublicEndpoints: []string{
+			"/health",
+			"/api/v1/devices/telemetry", // SEC-MED-02: Intentionally public for edge device data ingestion
+		},
+		PublicEndpointPolicy: "Health checks and telemetry endpoints are intentionally public for operational reasons",
+	}
+}
+
+// isPublicEndpoint checks if the request path matches a public endpoint
+// Supports exact match and prefix match (e.g., "/api/v1/telemetry/*")
+func isPublicEndpoint(path string, publicEndpoints []string) bool {
+	for _, endpoint := range publicEndpoints {
+		// Exact match
+		if path == endpoint {
+			return true
+		}
+		// Prefix match for wildcard endpoints (e.g., "/api/v1/telemetry")
+		if strings.HasSuffix(endpoint, "*") {
+			prefix := strings.TrimSuffix(endpoint, "*")
+			if strings.HasPrefix(path, prefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// AuthRequiredWithConfig validates JWT token with configurable public endpoints
+// This is the enhanced version that supports public endpoint whitelist
+func AuthRequiredWithConfig(config *AuthConfig) gin.HandlerFunc {
+	if config == nil {
+		config = DefaultAuthConfig()
+	}
+	if config.JWTSecret == "" {
+		// Fallback to global JWT secret
+		config.JWTSecret = string(GetJWTSecret())
+	}
+
 	return func(c *gin.Context) {
+		// FIX-016: Check if this is a public endpoint
+		if isPublicEndpoint(c.Request.URL.Path, config.PublicEndpoints) {
+			// Mark request as public for logging/auditing
+			c.Set("public_endpoint", true)
+			c.Set("public_endpoint_reason", config.PublicEndpointPolicy)
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -75,6 +134,97 @@ func AuthRequired(jwtSecret string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// AuthRequired validates JWT token and sets user info in context (增强版)
+// 支持 Access Token + Refresh Token 机制
+// This is the backward-compatible version without public endpoint whitelist
+func AuthRequired(jwtSecret string) gin.HandlerFunc {
+	// Use AuthRequiredWithConfig with empty public endpoints for backward compatibility
+	config := &AuthConfig{
+		JWTSecret:      jwtSecret,
+		PublicEndpoints: []string{}, // No public endpoints for backward compatibility
+	}
+	return AuthRequiredWithConfig(config)
+}
+
+// AuthOptional creates a middleware that optionally authenticates requests.
+// If a token is provided, it's validated; if not, the request proceeds as public.
+// Use this for endpoints that can serve both authenticated and public data.
+func AuthOptional(jwtSecret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			// No token - mark as public request
+			c.Set("optional_auth", true)
+			c.Set("authenticated", false)
+			c.Next()
+			return
+		}
+
+		tokenString := ExtractToken(authHeader)
+		if tokenString == "" {
+			// Invalid format - still proceed as public
+			c.Set("optional_auth", true)
+			c.Set("authenticated", false)
+			c.Next()
+			return
+		}
+
+		// Try to validate the token
+		claims, err := service.ParseToken(tokenString)
+		if err != nil {
+			// Invalid token - proceed as public
+			c.Set("optional_auth", true)
+			c.Set("authenticated", false)
+			c.Next()
+			return
+		}
+
+		// Valid token - set user info
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("user_role", claims.Role)
+		c.Set("role", claims.Role)
+		c.Set("tenant_id", claims.TenantID)
+		c.Set("token_id", claims.TokenID)
+		c.Set("authenticated", true)
+		c.Next()
+	}
+}
+
+// IsPublicEndpointRequest checks if the current request is to a public endpoint
+func IsPublicEndpointRequest(c *gin.Context) bool {
+	if public, exists := c.Get("public_endpoint"); exists {
+		if isPublic, ok := public.(bool); ok {
+			return isPublic
+		}
+	}
+	return false
+}
+
+// GetPublicEndpointReason returns the reason/policy for public endpoint access
+func GetPublicEndpointReason(c *gin.Context) string {
+	if reason, exists := c.Get("public_endpoint_reason"); exists {
+		if r, ok := reason.(string); ok {
+			return r
+		}
+	}
+	return ""
+}
+
+// IsAuthenticated checks if the request is authenticated (either via JWT or optional auth)
+func IsAuthenticated(c *gin.Context) bool {
+	if auth, exists := c.Get("authenticated"); exists {
+		if isAuthenticated, ok := auth.(bool); ok {
+			return isAuthenticated
+		}
+	}
+	// Check if user_id is set (from AuthRequired)
+	if _, exists := c.Get("user_id"); exists {
+		return true
+	}
+	return false
 }
 
 // ExtractToken 从 Authorization Header 提取 Token
