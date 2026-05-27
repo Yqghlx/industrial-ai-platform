@@ -35,10 +35,22 @@ func NewPostgresRepository(db *sqlx.DB, logger *zap.Logger) *PostgresRepository 
 // Create 创建审计日志
 func (r *PostgresRepository) Create(ctx context.Context, log *AuditLog) error {
 	// 序列化 JSON 字段
-	beforeState, _ := json.Marshal(log.BeforeState)
-	afterState, _ := json.Marshal(log.AfterState)
-	changes, _ := json.Marshal(log.Changes)
-	metadata, _ := json.Marshal(log.Metadata)
+	beforeState, err := json.Marshal(log.BeforeState)
+	if err != nil {
+		return fmt.Errorf("marshal before state: %w", err)
+	}
+	afterState, err := json.Marshal(log.AfterState)
+	if err != nil {
+		return fmt.Errorf("marshal after state: %w", err)
+	}
+	changes, err := json.Marshal(log.Changes)
+	if err != nil {
+		return fmt.Errorf("marshal changes: %w", err)
+	}
+	metadata, err := json.Marshal(log.Metadata)
+	if err != nil {
+		return fmt.Errorf("marshal metadata: %w", err)
+	}
 
 	query := `
 		INSERT INTO audit_logs (
@@ -54,7 +66,7 @@ func (r *PostgresRepository) Create(ctx context.Context, log *AuditLog) error {
 		)
 	`
 
-	_, err := r.db.ExecContext(ctx, query,
+_, err = r.db.ExecContext(ctx, query,
 		log.AuditID, log.Timestamp, log.EventType, log.EventCategory, log.Severity,
 		log.UserID, log.TenantID, log.SessionID, log.IPAddress, log.UserAgent,
 		log.ResourceType, log.ResourceID, log.Action, log.Operation, log.RequestID, log.TraceID,
@@ -319,7 +331,9 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 	for eventTypeRows.Next() {
 		var eventType string
 		var count int64
-		eventTypeRows.Scan(&eventType, &count)
+		if err := eventTypeRows.Scan(&eventType, &count); err != nil {
+			return nil, fmt.Errorf("scan event type row: %w", err)
+		}
 		stats.EventTypes[eventType] = count
 	}
 	// Check for errors during rows iteration
@@ -344,7 +358,9 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 	for categoryRows.Next() {
 		var category string
 		var count int64
-		categoryRows.Scan(&category, &count)
+		if err := categoryRows.Scan(&category, &count); err != nil {
+			return nil, fmt.Errorf("scan category row: %w", err)
+		}
 		stats.Categories[category] = count
 	}
 	// Check for errors during rows iteration
