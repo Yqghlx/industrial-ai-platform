@@ -2,11 +2,24 @@ import { test as base, expect, Page, BrowserContext } from '@playwright/test';
 
 /**
  * 测试用户凭据
+ * 
+ * 重要：测试密码从环境变量读取，必须与后端 ADMIN_PASSWORD 一致
+ * 
+ * 环境变量配置：
+ * - E2E_ADMIN_PASSWORD: 管理员密码（必须与 docker-compose ADMIN_PASSWORD 相同）
+ * - E2E_OPERATOR_PASSWORD: 操作员密码
+ * - E2E_VIEWER_PASSWORD: 观察者密码
+ * 
+ * 使用方法：
+ * export E2E_ADMIN_PASSWORD="你的实际admin密码"
+ * npx playwright test
  */
 export const TEST_USERS = {
   admin: {
     username: 'admin',
-    password: process.env.E2E_ADMIN_PASSWORD || 'Admin@123456',
+    // 必须与后端环境变量 ADMIN_PASSWORD 一致
+    // 默认密码（docker-compose ADMIN_PASSWORD）
+    password: process.env.E2E_ADMIN_PASSWORD || 'Admin@TPby8q1dmPk',
   },
   operator: {
     username: 'operator',
@@ -14,7 +27,7 @@ export const TEST_USERS = {
   },
   viewer: {
     username: 'viewer',
-    password: 'Viewer@123',
+    password: process.env.E2E_VIEWER_PASSWORD || 'Viewer@123',
   },
 };
 

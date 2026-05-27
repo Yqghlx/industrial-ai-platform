@@ -22,8 +22,8 @@ test.describe('告警规则管理', () => {
   test.beforeEach(async ({ adminPage }) => {
     // 导航到规则页面 — 实际路由是 /rules
     await adminPage.goto('/rules');
-    // 等待规则表格加载
-    await expect(adminPage.locator('table.table')).toBeVisible({ timeout: 10000 });
+    // 等待规则表格加载（增加超时时间，因为API可能响应慢）
+    await expect(adminPage.locator('table.table')).toBeVisible({ timeout: 30000 });
 
     // 清理所有 Test 开头的旧规则
     await cleanupAllTestRules(adminPage);

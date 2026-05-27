@@ -25,8 +25,8 @@ export default defineConfig({
   // CI 上失败时禁止 retry
   retries: process.env.CI ? 2 : 0,
   
-  // CI 上限制并行 worker
-  workers: process.env.CI ? 1 : undefined,
+  // 限制并行 worker 数量，避免触发后端速率限制
+  workers: process.env.CI ? 1 : 2,
   
   // Reporter 配置
   reporter: [

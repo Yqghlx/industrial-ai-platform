@@ -12,8 +12,9 @@ test.describe('AI Agent 对话', () => {
     // 导航到 AI Agent 页面
     await adminPage.goto('/ai-agent');
     
-    // 等待页面加载 - 使用 .first() 避免 strict mode（Sidebar 和页面都有 h1）
-    await expect(adminPage.locator('h1, h2').filter({ hasText: /AI|智能助手|Agent/i }).first()).toBeVisible({ timeout: 10000 });
+    // 等待页面加载 - 在 main 区域内查找标题，避免匹配 Sidebar
+    // 页面标题是 "AI智能体"（中文）或 "AI Agent"（英文）
+    await expect(adminPage.locator('main').locator('h1').filter({ hasText: /AI|智能体|Agent/i })).toBeVisible({ timeout: 10000 });
   });
   
   test('显示 AI 对话界面', async ({ adminPage }) => {

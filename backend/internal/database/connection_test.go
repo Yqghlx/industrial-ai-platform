@@ -505,25 +505,13 @@ func TestMigrator_Up(t *testing.T) {
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(rows)
 
-		// Expect transaction for applying migrations
-		mock.ExpectBegin()
-
-		// Expect each migration to be applied (there are 6 migration files)
-		// We'll match any SQL execution for up migrations
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-
-		mock.ExpectCommit()
+		// Each migration runs in its own transaction: Begin -> Exec(SQL) -> Exec(INSERT) -> Commit
+		for i := 0; i < 6; i++ {
+			mock.ExpectBegin()
+			mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
+		}
 
 		migrator := NewMigrator(db)
 		err = migrator.Up(context.Background())
@@ -550,9 +538,7 @@ func TestMigrator_Up(t *testing.T) {
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(rows)
 
-		// Transaction should still begin but no migrations applied
-		mock.ExpectBegin()
-		mock.ExpectCommit()
+		// No transaction expectations needed - all migrations are already applied and skipped
 
 		migrator := NewMigrator(db)
 		err = migrator.Up(context.Background())
@@ -655,18 +641,16 @@ func TestMigrator_Up(t *testing.T) {
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(rows)
 
+		// First migration's transaction: Begin -> Exec(SQL) -> Exec(INSERT) -> Commit(fails)
 		mock.ExpectBegin()
-		// All 6 migrations need to be applied before commit
-		for i := 0; i < 6; i++ {
-			mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
-			mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
-		}
+		mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectCommit().WillReturnError(sql.ErrTxDone)
 
 		migrator := NewMigrator(db)
 		err = migrator.Up(context.Background())
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to commit migrations")
+		assert.Contains(t, err.Error(), "failed to commit migration")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
@@ -689,13 +673,14 @@ func TestMigrator_Reset(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(sqlmock.NewRows([]string{"version", "name"}))
-		mock.ExpectBegin()
-		// Apply all migrations
+
+		// Each migration runs in its own transaction: Begin -> Exec(SQL) -> Exec(INSERT) -> Commit
 		for i := 0; i < 6; i++ {
+			mock.ExpectBegin()
 			mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
 			mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
 		}
-		mock.ExpectCommit()
 
 		migrator := NewMigrator(db)
 		err = migrator.Reset(context.Background())
@@ -749,6 +734,7 @@ func TestRunMigrations(t *testing.T) {
 		mock.ExpectExec(`CREATE TABLE IF NOT EXISTS schema_migrations`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
+		// All 6 migrations already applied - no new migrations to run
 		rows := sqlmock.NewRows([]string{"version", "name"}).
 			AddRow(1, "init").
 			AddRow(2, "timescaledb").
@@ -758,9 +744,6 @@ func TestRunMigrations(t *testing.T) {
 			AddRow(6, "add_audit_logs")
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(rows)
-
-		mock.ExpectBegin()
-		mock.ExpectCommit()
 
 		err = RunMigrations(db)
 		assert.NoError(t, err)
@@ -792,12 +775,13 @@ func TestRunMigrations(t *testing.T) {
 		mock.ExpectQuery(`SELECT version, name FROM schema_migrations`).
 			WillReturnRows(rows)
 
-		mock.ExpectBegin()
+		// Each migration runs in its own transaction: Begin -> Exec(SQL) -> Exec(INSERT) -> Commit
 		for i := 0; i < 6; i++ {
+			mock.ExpectBegin()
 			mock.ExpectExec(`.+`).WillReturnResult(sqlmock.NewResult(0, 1))
 			mock.ExpectExec(`INSERT INTO schema_migrations`).WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
 		}
-		mock.ExpectCommit()
 
 		err = RunMigrations(db)
 		assert.NoError(t, err)
