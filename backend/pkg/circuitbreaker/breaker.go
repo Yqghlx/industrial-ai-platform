@@ -31,38 +31,38 @@ func (s State) String() string {
 	}
 }
 
-// Errors 熔断器错误
+// Errors represents circuit breaker errors
 var (
 	ErrCircuitBreakerOpen = errors.New("circuit breaker is open")
 )
 
-// Config 熔断器配置
+// Config represents circuit breaker configuration
 type Config struct {
-	Name             string        // 熔断器名称
-	FailureThreshold int           // 失败阈值 (百分比)
-	MinRequests      int           // 最小请求数 (判断失败率前)
-	OpenTimeout      time.Duration // 打开状态超时时间
-	HalfOpenRequests int           // 半开状态允许请求数
-	SuccessThreshold int           // 成功阈值 (半开状态后恢复)
+	Name             string        // Circuit breaker name
+	FailureThreshold int           // Failure threshold (percentage)
+	MinRequests      int           // Minimum requests before checking failure rate
+	OpenTimeout      time.Duration // Open state timeout duration
+	HalfOpenRequests int           // Allowed requests in half-open state
+	SuccessThreshold int           // Success threshold to recover from half-open state
 }
 
-// DefaultConfig 默认配置
+// DefaultConfig returns default configuration
 func DefaultConfig(name string) *Config {
 	return &Config{
 		Name:             name,
-		FailureThreshold: 50,               // 50% 失败率
-		MinRequests:      10,               // 最少 10 次请求
-		OpenTimeout:      30 * time.Second, // 30 秒后试探
-		HalfOpenRequests: 3,                // 半开状态 3 次请求
-		SuccessThreshold: 5,                // 连续 5 次成功恢复
+		FailureThreshold: 50,               // 50% failure rate
+		MinRequests:      10,               // Minimum 10 requests
+		OpenTimeout:      30 * time.Second, // Probe after 30 seconds
+		HalfOpenRequests: 3,                // 3 requests in half-open state
+		SuccessThreshold: 5,                // Recover after 5 consecutive successes
 	}
 }
 
-// CircuitBreaker 熔断器
+// CircuitBreaker represents a circuit breaker
 type CircuitBreaker struct {
 	config Config
 
-	// 状态
+	// State tracking
 	state           State
 	failureCount    int
 	successCount    int
@@ -70,7 +70,7 @@ type CircuitBreaker struct {
 	lastFailureTime time.Time
 	lastStateChange time.Time
 
-	// 半开状态计数
+	// Half-open state counters
 	halfOpenSuccesses int
 	halfOpenFailures  int
 
@@ -78,7 +78,7 @@ type CircuitBreaker struct {
 	onStateChange func(name string, old, new State)
 }
 
-// NewCircuitBreaker 创建熔断器
+// NewCircuitBreaker creates a new circuit breaker
 func NewCircuitBreaker(config Config) *CircuitBreaker {
 	return &CircuitBreaker{
 		config:          config,
@@ -87,17 +87,17 @@ func NewCircuitBreaker(config Config) *CircuitBreaker {
 	}
 }
 
-// Call 执行请求 (带熔断保护)
-// 优化: 将状态检查和状态更新分离，用户函数执行不持锁，防止系统阻塞
+// Call executes a request with circuit breaker protection
+// Optimization: separate state check and state update, user function execution without lock to prevent system blocking
 func (cb *CircuitBreaker) Call(fn func() error) error {
-	// === 阶段1: 状态检查 - 短暂持锁 ===
+	// === Phase 1: State check - briefly hold lock ===
 	cb.mutex.Lock()
 	currentState := cb.state
 	allowed := true
 
 	switch currentState {
 	case StateOpen:
-		// 检查是否可以进入半开状态
+		// Check if can transition to half-open state
 		if time.Since(cb.lastStateChange) > cb.config.OpenTimeout {
 			cb.transitionTo(StateHalfOpen)
 			logger.L().Info("CircuitBreaker transitioning to half-open",
@@ -109,25 +109,25 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 		}
 
 	case StateHalfOpen:
-		// 检查半开状态请求限制
+		// Check half-open state request limit
 		if cb.halfOpenSuccesses+cb.halfOpenFailures >= cb.config.HalfOpenRequests {
 			allowed = false
 		}
 
 	case StateClosed:
-		// 正常状态，允许请求
+		// Normal state, allow request
 	}
 	cb.mutex.Unlock()
 
-	// 如果不允许请求，直接返回
+	// If not allowed, return immediately
 	if !allowed {
 		return ErrCircuitBreakerOpen
 	}
 
-	// === 阶段2: 执行用户函数 - 不持锁 ===
+	// === Phase 2: Execute user function - without lock ===
 	err := fn()
 
-	// === 阶段3: 更新状态 - 再次短暂持锁 ===
+	// === Phase 3: Update state - briefly hold lock again ===
 	cb.mutex.Lock()
 	if err != nil {
 		cb.recordFailure()
@@ -139,24 +139,24 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 	return err
 }
 
-// CallWithFallback 执行请求 (带降级回调)
+// CallWithFallback executes a request with fallback callback
 func (cb *CircuitBreaker) CallWithFallback(fn func() error, fallback func() error) error {
 	err := cb.Call(fn)
 	if err == ErrCircuitBreakerOpen {
-		// 熔断状态，执行降级回调
+		// Circuit breaker open, execute fallback callback
 		return fallback()
 	}
 	return err
 }
 
-// === 状态记录 ===
+// === State Recording ===
 
-// recordSuccess 记录成功请求
-// 在不同状态下更新成功计数器：
-//   - HalfOpen状态: 增加半开成功计数，达到成功阈值后恢复到Closed状态
-//   - Closed状态: 重置失败计数器，保持正常状态
+// recordSuccess records a successful request
+// Updates success counters in different states:
+//   - HalfOpen state: increment half-open success count, recover to Closed state when threshold reached
+//   - Closed state: reset failure counter, maintain normal state
 //
-// 注意：调用此方法前必须持有写锁
+// Note: Must hold write lock before calling this method
 func (cb *CircuitBreaker) recordSuccess() {
 	cb.successCount++
 	cb.requestCount++
@@ -164,7 +164,7 @@ func (cb *CircuitBreaker) recordSuccess() {
 	switch cb.state {
 	case StateHalfOpen:
 		cb.halfOpenSuccesses++
-		// 检查是否可以恢复到关闭状态
+		// Check if can recover to closed state
 		if cb.halfOpenSuccesses >= cb.config.SuccessThreshold {
 			cb.transitionTo(StateClosed)
 			logger.L().Info("CircuitBreaker recovered to closed state",
@@ -174,17 +174,17 @@ func (cb *CircuitBreaker) recordSuccess() {
 		}
 
 	case StateClosed:
-		// 正常状态，重置失败计数
+		// Normal state, reset failure count
 		cb.failureCount = 0
 	}
 }
 
-// recordFailure 记录失败请求
-// 在不同状态下更新失败计数器：
-//   - HalfOpen状态: 立即转换到Open状态，半开探测失败
-//   - Closed状态: 增加失败计数，达到失败率阈值后触发熔断
+// recordFailure records a failed request
+// Updates failure counters in different states:
+//   - HalfOpen state: immediately transition to Open state, half-open probe failed
+//   - Closed state: increment failure count, trigger circuit breaker when failure rate threshold reached
 //
-// 注意：调用此方法前必须持有写锁
+// Note: Must hold write lock before calling this method
 func (cb *CircuitBreaker) recordFailure() {
 	cb.failureCount++
 	cb.requestCount++
@@ -193,7 +193,7 @@ func (cb *CircuitBreaker) recordFailure() {
 	switch cb.state {
 	case StateHalfOpen:
 		cb.halfOpenFailures++
-		// 半开状态失败，立即进入打开状态
+		// Half-open state failure, immediately enter open state
 		cb.transitionTo(StateOpen)
 		logger.L().Warn("CircuitBreaker failure in half-open, back to open",
 			zap.String("name", cb.config.Name),
@@ -201,7 +201,7 @@ func (cb *CircuitBreaker) recordFailure() {
 		)
 
 	case StateClosed:
-		// 检查失败率是否超过阈值
+		// Check if failure rate exceeds threshold
 		if cb.requestCount >= cb.config.MinRequests {
 			failureRate := cb.failureCount * 100 / cb.requestCount
 			if failureRate >= cb.config.FailureThreshold {
@@ -216,21 +216,21 @@ func (cb *CircuitBreaker) recordFailure() {
 	}
 }
 
-// === 状态转换 ===
+// === State Transition ===
 
-// transitionTo 执行状态转换
-// 参数:
-//   - newState: 目标状态 (StateClosed, StateOpen, StateHalfOpen)
+// transitionTo executes state transition
+// Parameters:
+//   - newState: target state (StateClosed, StateOpen, StateHalfOpen)
 //
-// 功能:
-//   - 更新熔断器当前状态
-//   - 记录状态变更时间
-//   - 根据新状态重置相关计数器
-//   - 触发状态变更回调函数 (如果已设置)
+// Functions:
+//   - Update circuit breaker current state
+//   - Record state change time
+//   - Reset related counters based on new state
+//   - Trigger state change callback function (if set)
 //
-// 注意：
-//   - 如果目标状态与当前状态相同，则不做任何操作
-//   - 调用此方法前必须持有写锁
+// Notes:
+//   - If target state equals current state, no operation is performed
+//   - Must hold write lock before calling this method
 func (cb *CircuitBreaker) transitionTo(newState State) {
 	if cb.state == newState {
 		return
@@ -240,7 +240,7 @@ func (cb *CircuitBreaker) transitionTo(newState State) {
 	cb.state = newState
 	cb.lastStateChange = time.Now()
 
-	// 重置计数器
+	// Reset counters
 	switch newState {
 	case StateClosed:
 		cb.failureCount = 0
@@ -248,29 +248,29 @@ func (cb *CircuitBreaker) transitionTo(newState State) {
 		cb.requestCount = 0
 
 	case StateOpen:
-		// 打开状态，等待超时
+		// Open state, wait for timeout
 
 	case StateHalfOpen:
 		cb.halfOpenSuccesses = 0
 		cb.halfOpenFailures = 0
 	}
 
-	// 触发状态变更回调
+	// Trigger state change callback
 	if cb.onStateChange != nil {
 		cb.onStateChange(cb.config.Name, oldState, newState)
 	}
 }
 
-// === 状态查询 ===
+// === State Query ===
 
-// GetState 获取当前状态
+// GetState returns current state
 func (cb *CircuitBreaker) GetState() State {
 	cb.mutex.RLock()
 	defer cb.mutex.RUnlock()
 	return cb.state
 }
 
-// GetStats 获取统计信息
+// GetStats returns statistics
 func (cb *CircuitBreaker) GetStats() Stats {
 	cb.mutex.RLock()
 	defer cb.mutex.RUnlock()
@@ -292,7 +292,7 @@ func (cb *CircuitBreaker) GetStats() Stats {
 	}
 }
 
-// Stats 熔断器统计
+// Stats represents circuit breaker statistics
 type Stats struct {
 	Name            string    `json:"name"`
 	State           string    `json:"state"`
@@ -304,18 +304,18 @@ type Stats struct {
 	LastStateChange time.Time `json:"last_state_change"`
 }
 
-// === 回调设置 ===
+// === Callback Settings ===
 
-// OnStateChange 设置状态变更回调
+// OnStateChange sets state change callback
 func (cb *CircuitBreaker) OnStateChange(callback func(name string, old, new State)) {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
 	cb.onStateChange = callback
 }
 
-// === 手动控制 ===
+// === Manual Control ===
 
-// ForceOpen 强制打开熔断器
+// ForceOpen forces circuit breaker to open
 func (cb *CircuitBreaker) ForceOpen() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
@@ -325,7 +325,7 @@ func (cb *CircuitBreaker) ForceOpen() {
 	)
 }
 
-// ForceClose 强制关闭熔断器
+// ForceClose forces circuit breaker to close
 func (cb *CircuitBreaker) ForceClose() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
@@ -335,22 +335,22 @@ func (cb *CircuitBreaker) ForceClose() {
 	)
 }
 
-// === 熔断器管理器 ===
+// === Circuit Breaker Manager ===
 
-// CircuitBreakerManager 熔断器管理器
+// CircuitBreakerManager manages multiple circuit breakers
 type CircuitBreakerManager struct {
 	breakers map[string]*CircuitBreaker
 	mutex    sync.RWMutex
 }
 
-// NewCircuitBreakerManager 创建熔断器管理器
+// NewCircuitBreakerManager creates a circuit breaker manager
 func NewCircuitBreakerManager() *CircuitBreakerManager {
 	return &CircuitBreakerManager{
 		breakers: make(map[string]*CircuitBreaker),
 	}
 }
 
-// Register 注册熔断器
+// Register registers a circuit breaker
 func (m *CircuitBreakerManager) Register(config Config) *CircuitBreaker {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -365,14 +365,14 @@ func (m *CircuitBreakerManager) Register(config Config) *CircuitBreaker {
 	return cb
 }
 
-// Get 获取熔断器
+// Get retrieves a circuit breaker by name
 func (m *CircuitBreakerManager) Get(name string) *CircuitBreaker {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	return m.breakers[name]
 }
 
-// GetAllStats 获取所有熔断器状态
+// GetAllStats returns statistics for all circuit breakers
 func (m *CircuitBreakerManager) GetAllStats() map[string]Stats {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -384,9 +384,9 @@ func (m *CircuitBreakerManager) GetAllStats() map[string]Stats {
 	return stats
 }
 
-// RegisterDefaultBreakers 注册默认熔断器
+// RegisterDefaultBreakers registers default circuit breakers
 func RegisterDefaultBreakers(m *CircuitBreakerManager) {
-	// GLM API 熔断器
+	// GLM API circuit breaker
 	glmConfig := Config{
 		Name:             "glm_api",
 		FailureThreshold: 50,
@@ -397,7 +397,7 @@ func RegisterDefaultBreakers(m *CircuitBreakerManager) {
 	}
 	m.Register(glmConfig)
 
-	// Database 熔断器
+	// Database circuit breaker
 	dbConfig := Config{
 		Name:             "database",
 		FailureThreshold: 30,
@@ -408,7 +408,7 @@ func RegisterDefaultBreakers(m *CircuitBreakerManager) {
 	}
 	m.Register(dbConfig)
 
-	// Redis 熔断器
+	// Redis circuit breaker
 	redisConfig := Config{
 		Name:             "redis",
 		FailureThreshold: 40,

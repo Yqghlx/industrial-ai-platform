@@ -1,5 +1,5 @@
 // Package validation provides input validation utilities
-// FIX-027: 输入验证UUID
+// FIX-027: Input validation UUID
 //
 // Naming Conventions:
 //   - Primary functions use full descriptive names (e.g., ValidatePasswordComplexity)
@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	// UUID格式: 8-4-4-4-12 hex digits
+	// UUID format: 8-4-4-4-12 hex digits
 	UUIDPattern = `^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`
-	// 简单ID格式: alphanumeric, dash, underscore
+	// Simple ID format: alphanumeric, dash, underscore
 	IDPattern = `^[a-zA-Z0-9_-]+$`
-	// Email格式
+	// Email format
 	EmailPattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 )
 
@@ -79,7 +79,7 @@ func ValidateEmail(email string) error {
 }
 
 // Password complexity error types
-// FIX-P2: 增强密码复杂度验证
+// FIX-P2: Enhanced password complexity validation
 type PasswordComplexityError struct {
 	Errors []string
 }
@@ -104,7 +104,7 @@ func ValidatePassword(password string, minLen, maxLen int) error {
 }
 
 // ValidatePasswordComplexity validates password with complexity requirements
-// FIX-P2: 增强密码复杂度验证 - 检查大小写字母、数字、特殊字符
+// FIX-P2: Enhanced password complexity validation - check uppercase, lowercase, digits, special characters
 // Requirements:
 //   - Minimum length of 12 characters
 //   - At least one uppercase letter
@@ -162,7 +162,7 @@ func ValidatePWDComplexity(password string) error {
 }
 
 // ValidatePasswordWithComplexity validates password with both length and complexity requirements
-// FIX-P2: 组合长度和复杂度验证
+// FIX-P2: Combined length and complexity validation
 func ValidatePasswordWithComplexity(password string, minLen, maxLen int) error {
 	// First validate length
 	if err := ValidatePassword(password, minLen, maxLen); err != nil {
@@ -293,20 +293,20 @@ const (
 
 // ValidDeviceTypes contains the list of valid device types
 var ValidDeviceTypes = []string{
-	"CNC",             // CNC加工中心
-	"InjectionMolder", // 注塑机
-	"AssemblyRobot",   // 装配机器人
-	"Conveyor",        // 输送带
-	"Sensor",          // 传感器节点
-	"sensor",          // 传感器 (legacy)
-	"gauge",           // 仪表
-	"PLC",             // 可编程逻辑控制器
-	"robot",           // 机器人
-	"motor",           // 电机
-	"pump",            // 泵
-	"valve",           // 阀门
-	"heater",          // 加热器
-	"cooler",          // 冷却器
+	"CNC",             // CNC machining center
+	"InjectionMolder", // Injection molding machine
+	"AssemblyRobot",   // Assembly robot
+	"Conveyor",        // Conveyor belt
+	"Sensor",          // Sensor node
+	"sensor",          // Sensor (legacy)
+	"gauge",           // Gauge/Instrument
+	"PLC",             // Programmable Logic Controller
+	"robot",           // Robot
+	"motor",           // Motor
+	"pump",            // Pump
+	"valve",           // Valve
+	"heater",          // Heater
+	"cooler",          // Cooler
 }
 
 // ValidateDeviceID validates device ID format (length and characters)

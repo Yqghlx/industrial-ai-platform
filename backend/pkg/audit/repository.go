@@ -11,16 +11,16 @@ import (
 )
 
 // ============================================
-// PostgreSQL 审计日志仓库
+// PostgreSQL Audit Log Repository
 // ============================================
 
-// PostgresRepository PostgreSQL 审计日志仓库
+// PostgresRepository represents PostgreSQL audit log repository
 type PostgresRepository struct {
 	db     *sqlx.DB
 	logger *zap.Logger
 }
 
-// NewPostgresRepository 创建 PostgreSQL 审计日志仓库
+// NewPostgresRepository creates a PostgreSQL audit log repository
 func NewPostgresRepository(db *sqlx.DB, logger *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		db:     db,
@@ -29,12 +29,12 @@ func NewPostgresRepository(db *sqlx.DB, logger *zap.Logger) *PostgresRepository 
 }
 
 // ============================================
-// 仓库接口实现
+// Repository Interface Implementation
 // ============================================
 
-// Create 创建审计日志
+// Create creates an audit log
 func (r *PostgresRepository) Create(ctx context.Context, log *AuditLog) error {
-	// 序列化 JSON 字段
+	// Serialize JSON fields
 	beforeState, err := json.Marshal(log.BeforeState)
 	if err != nil {
 		return fmt.Errorf("marshal before state: %w", err)
@@ -85,9 +85,9 @@ func (r *PostgresRepository) Create(ctx context.Context, log *AuditLog) error {
 	return nil
 }
 
-// Query 查询审计日志
+// Query queries audit logs
 func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]*AuditLog, int64, error) {
-	// 构建查询条件
+	// Build query conditions
 	whereClause := "WHERE 1=1"
 	args := []interface{}{}
 	argIndex := 1
@@ -152,7 +152,7 @@ func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]
 		argIndex++
 	}
 
-	// 查询总数
+	// Query total count
 	countQuery := "SELECT COUNT(*) FROM audit_logs " + whereClause
 	var total int64
 	err := r.db.GetContext(ctx, &total, countQuery, args...)
@@ -160,7 +160,7 @@ func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]
 		return nil, 0, err
 	}
 
-	// 设置默认分页参数
+	// Set default pagination parameters
 	if query.Page <= 0 {
 		query.Page = 1
 	}
@@ -168,10 +168,10 @@ func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]
 		query.PageSize = 20
 	}
 
-	// 计算偏移量
+	// Calculate offset
 	offset := (query.Page - 1) * query.PageSize
 
-	// 查询数据
+	// Query data
 	dataQuery := `
 		SELECT 
 			audit_id, timestamp, event_type, event_category, severity,
@@ -192,7 +192,7 @@ func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]
 		return nil, 0, err
 	}
 
-	// 解析 JSON 字段
+	// Parse JSON fields
 	for _, log := range logs {
 		if log.BeforeState != nil && len(log.BeforeState) > 0 {
 			// BeforeState already is map, no conversion needed from DB
@@ -211,7 +211,7 @@ func (r *PostgresRepository) Query(ctx context.Context, query *QueryRequest) ([]
 	return logs, total, nil
 }
 
-// GetByID 获取审计日志详情
+// GetByID retrieves audit log details by ID
 func (r *PostgresRepository) GetByID(ctx context.Context, auditID string) (*AuditLog, error) {
 	query := `
 		SELECT 
@@ -230,7 +230,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, auditID string) (*Audi
 		return nil, err
 	}
 
-	// 解析 JSON 字段
+	// Parse JSON fields
 	if log.BeforeState != nil && len(log.BeforeState) > 0 {
 		// BeforeState already is map, no conversion needed from DB
 	}
@@ -247,7 +247,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, auditID string) (*Audi
 	return &log, nil
 }
 
-// DeleteOld 删除旧审计日志
+// DeleteOld deletes old audit logs based on retention days
 func (r *PostgresRepository) DeleteOld(ctx context.Context, retentionDays int) error {
 	query := `
 		DELETE FROM audit_logs
@@ -269,10 +269,10 @@ func (r *PostgresRepository) DeleteOld(ctx context.Context, retentionDays int) e
 }
 
 // ============================================
-// 审计日志统计
+// Audit Log Statistics
 // ============================================
 
-// Statistics 审计日志统计
+// Statistics represents audit log statistics
 type Statistics struct {
 	TotalLogs       int64            `json:"total_logs"`
 	EventTypes      map[string]int64 `json:"event_types"`
@@ -283,19 +283,19 @@ type Statistics struct {
 	AverageDuration float64          `json:"average_duration"`
 }
 
-// UserStats 用户统计
+// UserStats represents user statistics
 type UserStats struct {
 	UserID string `json:"user_id"`
 	Count  int64  `json:"count"`
 }
 
-// ResourceStats 资源统计
+// ResourceStats represents resource statistics
 type ResourceStats struct {
 	ResourceType string `json:"resource_type"`
 	Count        int64  `json:"count"`
 }
 
-// GetStatistics 获取审计日志统计
+// GetStatistics retrieves audit log statistics
 func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTime time.Time) (*Statistics, error) {
 	stats := &Statistics{
 		EventTypes:   make(map[string]int64),
@@ -304,7 +304,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		TopResources: []ResourceStats{},
 	}
 
-	// 总数
+	// Total count
 	totalQuery := `
 		SELECT COUNT(*) FROM audit_logs
 		WHERE timestamp >= $1 AND timestamp <= $2
@@ -314,7 +314,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// 事件类型统计
+	// Event type statistics
 	eventTypeQuery := `
 		SELECT event_type, COUNT(*) as count
 		FROM audit_logs
@@ -341,7 +341,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// 分类统计
+	// Category statistics
 	categoryQuery := `
 		SELECT event_category, COUNT(*) as count
 		FROM audit_logs
@@ -368,7 +368,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// Top 用户
+	// Top users
 	topUsersQuery := `
 		SELECT user_id, COUNT(*) as count
 		FROM audit_logs
@@ -382,7 +382,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// Top 资源
+	// Top resources
 	topResourcesQuery := `
 		SELECT resource_type, COUNT(*) as count
 		FROM audit_logs
@@ -396,7 +396,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// 失败率
+	// Failure rate
 	failureQuery := `
 		SELECT 
 			COUNT(CASE WHEN result = 'failure' THEN 1 END) * 100.0 / COUNT(*)
@@ -408,7 +408,7 @@ func (r *PostgresRepository) GetStatistics(ctx context.Context, startTime, endTi
 		return nil, err
 	}
 
-	// 平均延迟
+	// Average duration
 	avgDurationQuery := `
 		SELECT AVG(duration_ms)
 		FROM audit_logs

@@ -1,5 +1,5 @@
 // Package errors provides unified error handling
-// FIX-029: 错误类型统一
+// FIX-029: Unified error types
 package errors
 
 import "fmt"
