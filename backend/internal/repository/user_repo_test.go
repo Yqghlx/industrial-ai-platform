@@ -256,10 +256,11 @@ func TestUserRepository_List_Success(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
 
 	// Expect SELECT query with pagination
-	rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "created_at", "updated_at"})
-	rows.AddRow(1, "admin", "hash1", "admin@example.com", "admin", now, now)
-	rows.AddRow(2, "operator", "hash2", "operator@example.com", "operator", now, now)
-	rows.AddRow(3, "viewer", "hash3", "viewer@example.com", "viewer", now, now)
+	// FIX-022: 修复 P1-12 - 添加 tenant_id 和 token_version 字段
+	rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "token_version", "tenant_id", "created_at", "updated_at"})
+	rows.AddRow(1, "admin", "hash1", "admin@example.com", "admin", 0, "", now, now)
+	rows.AddRow(2, "operator", "hash2", "operator@example.com", "operator", 0, "", now, now)
+	rows.AddRow(3, "viewer", "hash3", "viewer@example.com", "viewer", 0, "", now, now)
 
 	mock.ExpectQuery(`SELECT .* FROM users ORDER BY created_at DESC LIMIT .* OFFSET .*`).
 		WithArgs(10, 0).
@@ -289,7 +290,8 @@ func TestUserRepository_List_EmptyResult(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
 	// Expect SELECT query returning empty rows
-	rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "created_at", "updated_at"})
+	// FIX-022: 修复 P1-12 - 添加 tenant_id 和 token_version 字段
+	rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "token_version", "tenant_id", "created_at", "updated_at"})
 
 	mock.ExpectQuery(`SELECT .* FROM users ORDER BY created_at DESC LIMIT .* OFFSET .*`).
 		WithArgs(10, 0).

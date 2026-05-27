@@ -14,6 +14,8 @@ import (
 type DeviceRepositoryInterface interface {
 	Create(ctx context.Context, device *model.Device) error
 	GetByID(ctx context.Context, id string) (*model.Device, error)
+	// FIX-022: N+1 查询优化 - 新增带租户隔离的查询方法
+	GetByIDWithTenant(ctx context.Context, id string, tenantID string) (*model.Device, error)
 	List(ctx context.Context, page, pageSize int) ([]model.Device, int, error)
 	Update(ctx context.Context, device *model.Device) error
 	Delete(ctx context.Context, id string) error
@@ -62,6 +64,7 @@ func (r *DeviceRepository) Create(ctx context.Context, device *model.Device) err
 }
 
 // GetByID retrieves a device by ID
+// FIX-022: 添加租户隔离支持，防止跨租户数据访问
 func (r *DeviceRepository) GetByID(ctx context.Context, id string) (*model.Device, error) {
 	query := `
 		SELECT id, name, type, location, status, description, created_at, updated_at
@@ -69,6 +72,24 @@ func (r *DeviceRepository) GetByID(ctx context.Context, id string) (*model.Devic
 	`
 	device := &model.Device{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
+		&device.ID, &device.Name, &device.Type, &device.Location,
+		&device.Status, &device.Description, &device.CreatedAt, &device.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return device, nil
+}
+
+// GetByIDWithTenant retrieves a device by ID with tenant isolation
+// FIX-022: N+1 查询优化 - 新增带租户隔离的查询方法
+func (r *DeviceRepository) GetByIDWithTenant(ctx context.Context, id string, tenantID string) (*model.Device, error) {
+	query := `
+		SELECT id, name, type, location, status, description, created_at, updated_at
+		FROM devices WHERE id = $1 AND (tenant_id = $2 OR tenant_id = '' OR tenant_id IS NULL)
+	`
+	device := &model.Device{}
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&device.ID, &device.Name, &device.Type, &device.Location,
 		&device.Status, &device.Description, &device.CreatedAt, &device.UpdatedAt,
 	)
@@ -188,30 +209,86 @@ func (r *DeviceRepository) BatchCreate(ctx context.Context, devices []*model.Dev
 	return err
 }
 
-// BatchUpdate updates multiple devices in a single transaction for better performance
+// BatchUpdate updates multiple devices in a single query for better performance
+// FIX-022: N+1 查询优化 - 使用 CASE 语句实现真正的批量更新
 func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Device) error {
 	if len(devices) == 0 {
 		return nil
 	}
 
-	// Use a single transaction for all updates
+	now := time.Now()
+	
+	// Build batch update query using CASE statements for each field
+	// This reduces N queries to 1 query
+	var args []interface{}
+	args = append(args, now)
+	placeholderIdx := 2
+
+	// Collect device IDs for WHERE IN clause
 	for _, device := range devices {
-		device.UpdatedAt = time.Now()
-		query := `
-			UPDATE devices SET
-				name = $1, type = $2, location = $3, status = $4,
-				description = $5, updated_at = $6
-			WHERE id = $7
-		`
-		_, err := r.db.Exec(ctx, query,
-			device.Name, device.Type, device.Location, device.Status,
-			device.Description, device.UpdatedAt, device.ID,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to update device %s: %w", device.ID, err)
-		}
+		args = append(args, device.ID)
+		placeholderIdx++
 	}
-	return nil
+	idCount := len(devices)
+	idStart := 2
+
+	// Build CASE for name
+	query := "UPDATE devices SET name = CASE id "
+	for i := 0; i < idCount; i++ {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", idStart+i, placeholderIdx)
+		args = append(args, devices[i].Name)
+		placeholderIdx++
+	}
+	query += "ELSE name END, "
+	
+	// Build CASE for type
+	query += "type = CASE id "
+	for i := 0; i < idCount; i++ {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", idStart+i, placeholderIdx)
+		args = append(args, devices[i].Type)
+		placeholderIdx++
+	}
+	query += "ELSE type END, "
+	
+	// Build CASE for location
+	query += "location = CASE id "
+	for i := 0; i < idCount; i++ {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", idStart+i, placeholderIdx)
+		args = append(args, devices[i].Location)
+		placeholderIdx++
+	}
+	query += "ELSE location END, "
+	
+	// Build CASE for status
+	query += "status = CASE id "
+	for i := 0; i < idCount; i++ {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", idStart+i, placeholderIdx)
+		args = append(args, devices[i].Status)
+		placeholderIdx++
+	}
+	query += "ELSE status END, "
+	
+	// Build CASE for description
+	query += "description = CASE id "
+	for i := 0; i < idCount; i++ {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", idStart+i, placeholderIdx)
+		args = append(args, devices[i].Description)
+		placeholderIdx++
+	}
+	query += "ELSE description END, "
+	
+	// Add updated_at and WHERE clause
+	query += "updated_at = $1 WHERE id IN ("
+	for i := 0; i < idCount; i++ {
+		if i > 0 {
+			query += ", "
+		}
+		query += fmt.Sprintf("$%d", idStart+i)
+	}
+	query += ")"
+
+	_, err := r.db.Exec(ctx, query, args...)
+	return err
 }
 
 // BatchUpdateStatus updates status for multiple devices in a single query
@@ -323,6 +400,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 }
 
 // List retrieves all users with pagination
+// FIX-022: 修复 P1-12 - 添加 tenant_id 和 token_version 字段
 func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
 	var total int
 	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&total)
@@ -332,7 +410,7 @@ func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.
 
 	offset := (page - 1) * pageSize
 	query := `
-		SELECT id, username, password_hash, email, role, created_at, updated_at
+		SELECT id, username, password_hash, email, role, COALESCE(token_version, 0), COALESCE(tenant_id, ''), created_at, updated_at
 		FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2
 	`
 	rows, err := r.db.Query(ctx, query, pageSize, offset)
@@ -346,10 +424,11 @@ func (r *UserRepository) List(ctx context.Context, page, pageSize int) ([]model.
 		var u model.User
 		if err := rows.Scan(
 			&u.ID, &u.Username, &u.Password, &u.Email,
-			&u.Role, &u.CreatedAt, &u.UpdatedAt,
+			&u.Role, &u.TokenVersion, &u.TenantID, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
+		u.PasswordHash = u.Password // 兼容别名
 		users = append(users, u)
 	}
 

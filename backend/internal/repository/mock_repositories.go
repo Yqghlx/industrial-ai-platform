@@ -31,6 +31,15 @@ func (m *MockDeviceRepository) GetByID(ctx context.Context, id string) (*model.D
 	return args.Get(0).(*model.Device), args.Error(1)
 }
 
+// FIX-022: N+1 查询优化 - 新增带租户隔离的 mock 方法
+func (m *MockDeviceRepository) GetByIDWithTenant(ctx context.Context, id string, tenantID string) (*model.Device, error) {
+	args := m.Called(ctx, id, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Device), args.Error(1)
+}
+
 func (m *MockDeviceRepository) List(ctx context.Context, page, pageSize int) ([]model.Device, int, error) {
 	args := m.Called(ctx, page, pageSize)
 	devices := args.Get(0).([]model.Device)
