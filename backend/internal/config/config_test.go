@@ -2,12 +2,43 @@ package config
 
 import (
 	"bytes"
+	cryptoRand "crypto/rand"
+	"fmt"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
 )
 
+// generateRandomPassword generates a cryptographically secure random password
+// of at least 12 characters for testing purposes
+func generateRandomPassword(t *testing.T, length int) string {
+	t.Helper()
+	if length < 12 {
+		length = 12
+	}
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	result := make([]byte, length)
+	for i := range result {
+		n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			t.Fatalf("Failed to generate random password: %v", err)
+		}
+		result[i] = charset[n.Int64()]
+	}
+	return string(result)
+}
+
+// generateRandomSecret generates a random secret for JWT tokens
+func generateRandomSecret(t *testing.T) string {
+	t.Helper()
+	return generateRandomPassword(t, 32)
+}
+
 func TestConfig_Validate(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+
 	tests := []struct {
 		name      string
 		config    *Config
@@ -17,8 +48,8 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config with all required fields",
 			config: &Config{
-				DatabaseURL: "postgres://user:pass@localhost:5432/db",
-				JWTSecret:   "secret",
+				DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
+				JWTSecret:   randomSecret,
 				Port:        "8080",
 			},
 			wantErr: false,
@@ -26,7 +57,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing DATABASE_URL",
 			config: &Config{
-				JWTSecret: "secret",
+				JWTSecret: randomSecret,
 				Port:      "8080",
 			},
 			wantErr:   true,
@@ -35,7 +66,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing JWT_SECRET in production",
 			config: &Config{
-				DatabaseURL: "postgres://user:pass@localhost:5432/db",
+				DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
 				Environment: "production",
 			},
 			wantErr:   true,
@@ -44,7 +75,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing JWT_SECRET not an error in development",
 			config: &Config{
-				DatabaseURL: "postgres://user:pass@localhost:5432/db",
+				DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
 				Environment: "development",
 			},
 			wantErr: false,
@@ -52,14 +83,14 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "empty config defaults port",
 			config: &Config{
-				DatabaseURL: "postgres://user:pass@localhost:5432/db",
+				DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid port number",
 			config: &Config{
-				DatabaseURL: "postgres://user:pass@localhost:5432/db",
+				DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
 				Port:        "x",
 			},
 			wantErr:   true,
@@ -106,8 +137,9 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestConfig_DefaultPort(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomSecret),
 		Port:        "",
 	}
 
@@ -122,15 +154,20 @@ func TestConfig_DefaultPort(t *testing.T) {
 }
 
 func TestConfig_LoadFromEnv(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomPassword := generateRandomPassword(t, 16)
+	randomDBPassword := generateRandomPassword(t, 12)
+
 	// Set environment variables
-	_ = os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/testdb")
-	_ = os.Setenv("JWT_SECRET", "test-secret")
+	_ = os.Setenv("DATABASE_URL", fmt.Sprintf("postgres://test:%s@localhost:5432/testdb", randomDBPassword))
+	_ = os.Setenv("JWT_SECRET", randomSecret)
 	_ = os.Setenv("PORT", "9090")
 	_ = os.Setenv("LLM_API_KEY", "test-key")
 	_ = os.Setenv("LLM_BASE_URL", "https://api.example.com")
 	_ = os.Setenv("LLM_MODEL", "gpt-4")
 	_ = os.Setenv("CORS_ORIGINS", "http://localhost:3000")
-	_ = os.Setenv("ADMIN_PASSWORD", "admin123")
+	_ = os.Setenv("ADMIN_PASSWORD", randomPassword)
 	_ = os.Setenv("ENV", "development")
 
 	defer func() {
@@ -147,10 +184,10 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 
 	cfg := LoadFromEnv()
 
-	if cfg.DatabaseURL != "postgres://test:test@localhost:5432/testdb" {
+	if cfg.DatabaseURL != fmt.Sprintf("postgres://test:%s@localhost:5432/testdb", randomDBPassword) {
 		t.Errorf("Expected DATABASE_URL, got %s", cfg.DatabaseURL)
 	}
-	if cfg.JWTSecret != "test-secret" {
+	if cfg.JWTSecret != randomSecret {
 		t.Errorf("Expected JWT_SECRET, got %s", cfg.JWTSecret)
 	}
 	if cfg.Port != "9090" {
@@ -168,7 +205,7 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 	if cfg.CORSOrigins != "http://localhost:3000" {
 		t.Errorf("Expected CORS_ORIGINS, got %s", cfg.CORSOrigins)
 	}
-	if cfg.AdminPassword != "admin123" {
+	if cfg.AdminPassword != randomPassword {
 		t.Errorf("Expected ADMIN_PASSWORD, got %s", cfg.AdminPassword)
 	}
 	if cfg.Environment != "development" {
@@ -224,6 +261,10 @@ func TestConfig_GetCORSOrigins(t *testing.T) {
 }
 
 func TestConfig_GetWarnings(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomPassword := generateRandomPassword(t, 16)
+
 	tests := []struct {
 		name          string
 		config        *Config
@@ -232,8 +273,8 @@ func TestConfig_GetWarnings(t *testing.T) {
 		{
 			name: "no warnings when all set",
 			config: &Config{
-				JWTSecret:     "secret",
-				AdminPassword: "admin123",
+				JWTSecret:     randomSecret,
+				AdminPassword: randomPassword,
 				LLMAPIKey:     "key",
 				CORSOrigins:   "http://localhost:3000",
 				Environment:   "development",
@@ -244,7 +285,7 @@ func TestConfig_GetWarnings(t *testing.T) {
 			name: "warnings for missing JWT secret in dev",
 			config: &Config{
 				JWTSecret:     "",
-				AdminPassword: "admin123",
+				AdminPassword: randomPassword,
 				LLMAPIKey:     "key",
 				CORSOrigins:   "http://localhost:3000",
 				Environment:   "development",
@@ -355,9 +396,13 @@ func TestConfig_ValidationErrors(t *testing.T) {
 // --- Tests for LoadAndValidate ---
 
 func TestLoadAndValidate_Success(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
+
 	// Set required environment variables
-	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
-	os.Setenv("JWT_SECRET", "test-secret")
+	os.Setenv("DATABASE_URL", fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword))
+	os.Setenv("JWT_SECRET", randomSecret)
 	defer func() {
 		os.Unsetenv("DATABASE_URL")
 		os.Unsetenv("JWT_SECRET")
@@ -371,8 +416,8 @@ func TestLoadAndValidate_Success(t *testing.T) {
 		t.Error("LoadAndValidate() returned nil config")
 		return
 	}
-	if cfg.DatabaseURL != "postgres://user:pass@localhost:5432/db" {
-		t.Errorf("Expected postgres://user:pass@localhost:5432/db, got %s", cfg.DatabaseURL)
+	if cfg.DatabaseURL != fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword) {
+		t.Errorf("Expected postgres://user:%s@localhost:5432/db, got %s", randomDBPassword, cfg.DatabaseURL)
 	}
 }
 
@@ -408,7 +453,8 @@ func TestLoadAndValidate_MissingDatabaseURL(t *testing.T) {
 }
 
 func TestLoadAndValidate_MissingJWTSecretInProduction(t *testing.T) {
-	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+	randomDBPassword := generateRandomPassword(t, 12)
+	os.Setenv("DATABASE_URL", fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword))
 	os.Setenv("ENV", "production")
 	os.Unsetenv("JWT_SECRET")
 
@@ -429,8 +475,12 @@ func TestLoadAndValidate_MissingJWTSecretInProduction(t *testing.T) {
 // --- Tests for MustLoad ---
 
 func TestMustLoad_Success(t *testing.T) {
-	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
-	os.Setenv("JWT_SECRET", "test-secret")
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
+
+	os.Setenv("DATABASE_URL", fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword))
+	os.Setenv("JWT_SECRET", randomSecret)
 
 	defer func() {
 		os.Unsetenv("DATABASE_URL")
@@ -442,8 +492,8 @@ func TestMustLoad_Success(t *testing.T) {
 		t.Error("MustLoad() returned nil config")
 		return
 	}
-	if cfg.DatabaseURL != "postgres://user:pass@localhost:5432/db" {
-		t.Errorf("Expected postgres://user:pass@localhost:5432/db, got %s", cfg.DatabaseURL)
+	if cfg.DatabaseURL != fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword) {
+		t.Errorf("Expected postgres://user:%s@localhost:5432/db, got %s", randomDBPassword, cfg.DatabaseURL)
 	}
 }
 
@@ -545,14 +595,18 @@ func TestParseSize(t *testing.T) {
 // --- Tests for PrintWarnings ---
 
 func TestPrintWarnings_NoWarnings(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomPassword := generateRandomPassword(t, 16)
+
 	// Capture stderr
 	oldStderr := os.Stderr
 	r, w, _ := os.Pipe()
 	os.Stderr = w
 
 	cfg := &Config{
-		JWTSecret:     "secret",
-		AdminPassword: "admin123",
+		JWTSecret:     randomSecret,
+		AdminPassword: randomPassword,
 		LLMAPIKey:     "key",
 		CORSOrigins:   "http://localhost:3000",
 		Environment:   "development",
@@ -605,14 +659,18 @@ func TestPrintWarnings_WithWarnings(t *testing.T) {
 }
 
 func TestPrintWarnings_CORSWildcardWarning(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomPassword := generateRandomPassword(t, 16)
+
 	// Capture stderr
 	oldStderr := os.Stderr
 	r, w, _ := os.Pipe()
 	os.Stderr = w
 
 	cfg := &Config{
-		JWTSecret:     "secret",
-		AdminPassword: "admin123",
+		JWTSecret:     randomSecret,
+		AdminPassword: randomPassword,
 		LLMAPIKey:     "key",
 		CORSOrigins:   "*",
 		Environment:   "development",
@@ -634,8 +692,12 @@ func TestPrintWarnings_CORSWildcardWarning(t *testing.T) {
 // --- Tests for New ---
 
 func TestNew_Success(t *testing.T) {
-	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
-	os.Setenv("JWT_SECRET", "test-secret")
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
+
+	os.Setenv("DATABASE_URL", fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword))
+	os.Setenv("JWT_SECRET", randomSecret)
 
 	defer func() {
 		os.Unsetenv("DATABASE_URL")
@@ -916,9 +978,11 @@ func TestLoadFromEnv_RequestTimeout(t *testing.T) {
 // --- Tests for ValidateCORS in production ---
 
 func TestValidateCORS_ProductionEmpty(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
-		JWTSecret:   "secret",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword),
+		JWTSecret:   randomSecret,
 		Environment: "production",
 		CORSOrigins: "",
 	}
@@ -930,9 +994,11 @@ func TestValidateCORS_ProductionEmpty(t *testing.T) {
 }
 
 func TestValidateCORS_ProductionWildcard(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
-		JWTSecret:   "secret",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword),
+		JWTSecret:   randomSecret,
 		Environment: "production",
 		CORSOrigins: "*",
 	}
@@ -944,9 +1010,11 @@ func TestValidateCORS_ProductionWildcard(t *testing.T) {
 }
 
 func TestValidateCORS_ProductionInvalidOrigin(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
-		JWTSecret:   "secret",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword),
+		JWTSecret:   randomSecret,
 		Environment: "production",
 		CORSOrigins: "invalid-origin",
 	}
@@ -958,9 +1026,11 @@ func TestValidateCORS_ProductionInvalidOrigin(t *testing.T) {
 }
 
 func TestValidateCORS_ProductionValid(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
-		JWTSecret:   "secret",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword),
+		JWTSecret:   randomSecret,
 		Environment: "production",
 		CORSOrigins: "https://example.com,https://app.example.com",
 	}
@@ -972,9 +1042,11 @@ func TestValidateCORS_ProductionValid(t *testing.T) {
 }
 
 func TestValidateCORS_DevelopmentAllowsEmpty(t *testing.T) {
+	randomSecret := generateRandomSecret(t)
+	randomDBPassword := generateRandomPassword(t, 12)
 	cfg := &Config{
-		DatabaseURL: "postgres://user:pass@localhost:5432/db",
-		JWTSecret:   "secret",
+		DatabaseURL: fmt.Sprintf("postgres://user:%s@localhost:5432/db", randomDBPassword),
+		JWTSecret:   randomSecret,
 		Environment: "development",
 		CORSOrigins: "",
 	}
@@ -1012,9 +1084,13 @@ func TestHasCORSWildcard(t *testing.T) {
 // --- Test for GetWarnings with CORS wildcard in production ---
 
 func TestGetWarnings_ProductionCORSWildcard(t *testing.T) {
+	// Generate random secrets for each test run
+	randomSecret := generateRandomSecret(t)
+	randomPassword := generateRandomPassword(t, 16)
+
 	cfg := &Config{
-		JWTSecret:     "secret",
-		AdminPassword: "admin",
+		JWTSecret:     randomSecret,
+		AdminPassword: randomPassword,
 		LLMAPIKey:     "key",
 		CORSOrigins:   "*",
 		Environment:   "production",
