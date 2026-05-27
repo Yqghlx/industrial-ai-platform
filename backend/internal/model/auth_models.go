@@ -17,47 +17,47 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required,min=12,max=100"`
 }
 
-// PasswordValidationError 密码验证错误
+// PasswordValidationError represents password validation errors
 type PasswordValidationError struct {
 	Errors []string
 }
 
 func (e *PasswordValidationError) Error() string {
-	return "密码验证失败: " + strings.Join(e.Errors, ", ")
+	return "password validation failed: " + strings.Join(e.Errors, ", ")
 }
 
-// ValidatePassword 验证密码复杂度
-// 要求: 至少12位，包含大小写字母、数字和特殊字符
+// ValidatePassword validates password complexity
+// Requirements: at least 12 characters, contains uppercase, lowercase, digits, and special characters
 func ValidatePassword(password string) error {
 	var errors []string
 
-// 检查最小长度
+	// Check minimum length
 	if len(password) < constants.MinPasswordLength {
-		errors = append(errors, fmt.Sprintf("长度不足，至少需要%d个字符", constants.MinPasswordLength))
+		errors = append(errors, fmt.Sprintf("length too short, requires at least %d characters", constants.MinPasswordLength))
 	}
 
-	// 检查大写字母
+	// Check uppercase letter
 	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	if !hasUpper {
-		errors = append(errors, "缺少大写字母")
+		errors = append(errors, "missing uppercase letter")
 	}
 
-	// 检查小写字母
+	// Check lowercase letter
 	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
 	if !hasLower {
-		errors = append(errors, "缺少小写字母")
+		errors = append(errors, "missing lowercase letter")
 	}
 
-	// 检查数字
+	// Check digit
 	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
 	if !hasDigit {
-		errors = append(errors, "缺少数字")
+		errors = append(errors, "missing digit")
 	}
 
-	// 检查特殊字符
+	// Check special character
 	hasSpecial := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?` + "`" + `~]`).MatchString(password)
 	if !hasSpecial {
-		errors = append(errors, "缺少特殊字符（如 !@#$%^&* 等）")
+		errors = append(errors, "missing special character (e.g., !@#$%^&*)")
 	}
 
 	if len(errors) > 0 {
