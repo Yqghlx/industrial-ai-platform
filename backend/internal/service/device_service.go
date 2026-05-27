@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -230,4 +231,97 @@ func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, e
 		"nodes": nodes,
 		"links": links,
 	}, nil
+}
+
+// BatchCreate creates multiple devices in a single database operation
+// FIX-020: 批量操作优化 - 使用批量插入代替逐个插入
+func (s *DeviceService) BatchCreate(ctx context.Context, devices []*model.Device) error {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	// Prepare devices with auto-generated IDs and timestamps
+	now := time.Now()
+	for _, device := range devices {
+		if device.ID == "" {
+			device.ID = uuid.New().String()
+		}
+		device.CreatedAt = now
+		device.UpdatedAt = now
+		if device.Status == "" {
+			device.Status = "online"
+		}
+	}
+
+	// Use batch create for better performance
+	if err := s.deviceRepo.BatchCreate(ctx, devices); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
+}
+
+// BatchUpdate updates multiple devices in a single operation
+// FIX-020: 批量操作优化 - 使用批量更新代替逐个更新
+func (s *DeviceService) BatchUpdate(ctx context.Context, devices []*model.Device) error {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	// Validate all devices exist first
+	for _, device := range devices {
+		_, err := s.deviceRepo.GetByID(ctx, device.ID)
+		if err != nil {
+			return errors.NewDeviceNotFoundError(device.ID)
+		}
+	}
+
+	// Use batch update for better performance
+	if err := s.deviceRepo.BatchUpdate(ctx, devices); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
+}
+
+// BatchUpdateStatus updates status for multiple devices in a single query
+// FIX-020: 批量操作优化 - 减少数据库连接次数
+func (s *DeviceService) BatchUpdateStatus(ctx context.Context, deviceStatuses map[string]string) error {
+	if len(deviceStatuses) == 0 {
+		return nil
+	}
+
+	// Validate all devices exist
+	for deviceID := range deviceStatuses {
+		_, err := s.deviceRepo.GetByID(ctx, deviceID)
+		if err != nil {
+			return errors.NewDeviceNotFoundError(deviceID)
+		}
+	}
+
+	// Use batch status update for better performance
+	if err := s.deviceRepo.BatchUpdateStatus(ctx, deviceStatuses); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+	return nil
+}
+
+// BatchDelete removes multiple devices in a single operation
+// FIX-020: 批量操作优化 - 减少数据库连接次数
+func (s *DeviceService) BatchDelete(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// Delete all devices in a loop - could be optimized with a single query
+	// but keeping individual error handling for now
+	var errs []error
+	for _, id := range ids {
+		if err := s.deviceRepo.Delete(ctx, id); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete device %s: %w", id, err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.NewDatabaseError(fmt.Sprintf("batch delete failed for %d devices: %v", len(errs), errs))
+	}
+	return nil
 }

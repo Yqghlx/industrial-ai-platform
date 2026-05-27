@@ -37,6 +37,10 @@ const (
 	// 默认租户请求超时时间（秒）
 	DefaultTenantTimeoutSec = 30
 
+	// FIX-019: 默认服务层 Context 超时时间（秒）
+	// 用于 Service 层方法，防止数据库操作无限等待
+	DefaultServiceTimeoutSec = 30
+
 	// 默认告警冷却时间（秒）
 	DefaultAlertCooldownSec = 300
 

@@ -58,6 +58,21 @@ func (m *MockDeviceRepository) Count(ctx context.Context) (int, error) {
 	return args.Get(0).(int), args.Error(1)
 }
 
+func (m *MockDeviceRepository) BatchCreate(ctx context.Context, devices []*model.Device) error {
+	args := m.Called(ctx, devices)
+	return args.Error(0)
+}
+
+func (m *MockDeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Device) error {
+	args := m.Called(ctx, devices)
+	return args.Error(0)
+}
+
+func (m *MockDeviceRepository) BatchUpdateStatus(ctx context.Context, deviceStatuses map[string]string) error {
+	args := m.Called(ctx, deviceStatuses)
+	return args.Error(0)
+}
+
 // MockUserRepository implements UserRepositoryInterface for testing
 type MockUserRepository struct {
 	mock.Mock
