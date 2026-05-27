@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -378,8 +379,8 @@ func TestWAFStatsMiddleware(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, int64(1), stats.TotalRequests)
-	assert.Equal(t, int64(0), stats.BlockedRequests)
+	assert.Equal(t, int64(1), atomic.LoadInt64(&stats.TotalRequests))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&stats.BlockedRequests))
 
 	// SQL injection request
 	req2 := httptest.NewRequest("GET", "/test?q=SELECT+something+FROM+users", nil)
@@ -387,7 +388,7 @@ func TestWAFStatsMiddleware(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)
 	assert.Equal(t, 403, w2.Code)
-	assert.Equal(t, int64(2), stats.TotalRequests)
-	assert.Equal(t, int64(1), stats.BlockedRequests)
-	assert.Equal(t, int64(1), stats.SQLInjection)
+	assert.Equal(t, int64(2), atomic.LoadInt64(&stats.TotalRequests))
+	assert.Equal(t, int64(1), atomic.LoadInt64(&stats.BlockedRequests))
+	assert.Equal(t, int64(1), atomic.LoadInt64(&stats.SQLInjection))
 }

@@ -88,12 +88,14 @@ func NewCircuitBreaker(config Config) *CircuitBreaker {
 }
 
 // Call 执行请求 (带熔断保护)
+// 优化: 将状态检查和状态更新分离，用户函数执行不持锁，防止系统阻塞
 func (cb *CircuitBreaker) Call(fn func() error) error {
+	// === 阶段1: 状态检查 - 短暂持锁 ===
 	cb.mutex.Lock()
-	defer cb.mutex.Unlock()
+	currentState := cb.state
+	allowed := true
 
-	// 检查状态
-	switch cb.state {
+	switch currentState {
 	case StateOpen:
 		// 检查是否可以进入半开状态
 		if time.Since(cb.lastStateChange) > cb.config.OpenTimeout {
@@ -103,28 +105,36 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 				zap.String("state", "half-open"),
 			)
 		} else {
-			return ErrCircuitBreakerOpen
+			allowed = false
 		}
 
 	case StateHalfOpen:
 		// 检查半开状态请求限制
 		if cb.halfOpenSuccesses+cb.halfOpenFailures >= cb.config.HalfOpenRequests {
-			return ErrCircuitBreakerOpen
+			allowed = false
 		}
 
 	case StateClosed:
 		// 正常状态，允许请求
 	}
+	cb.mutex.Unlock()
 
-	// 执行请求
+	// 如果不允许请求，直接返回
+	if !allowed {
+		return ErrCircuitBreakerOpen
+	}
+
+	// === 阶段2: 执行用户函数 - 不持锁 ===
 	err := fn()
 
-	// 记录结果
+	// === 阶段3: 更新状态 - 再次短暂持锁 ===
+	cb.mutex.Lock()
 	if err != nil {
 		cb.recordFailure()
 	} else {
 		cb.recordSuccess()
 	}
+	cb.mutex.Unlock()
 
 	return err
 }

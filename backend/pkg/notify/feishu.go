@@ -216,9 +216,7 @@ func (n *FeishuNotifier) send(ctx context.Context, msg interface{}) error {
 		return fmt.Errorf("feishu webhook returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	logger.L().Info("Feishu notification sent successfully",
-		zap.String("webhook", n.webhookURL),
-	)
+	logger.L().Info("Feishu notification sent successfully")
 
 	return nil
 }

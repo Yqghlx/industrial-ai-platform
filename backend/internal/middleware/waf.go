@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -481,36 +482,36 @@ type WAFStats struct {
 func WAFStatsMiddleware(stats *WAFStats) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 增加总请求计数
-		stats.TotalRequests++
+		atomic.AddInt64(&stats.TotalRequests, 1)
 
 		// 处理请求
 		c.Next()
 
 		// 检查是否被 WAF 阻止
 		if blocked, exists := c.Get("waf_blocked"); exists && blocked == true {
-			stats.BlockedRequests++
+			atomic.AddInt64(&stats.BlockedRequests, 1)
 
 			// 根据规则增加对应计数
 			rule := c.GetString("waf_rule")
 			switch rule {
 			case "sql_injection":
-				stats.SQLInjection++
+				atomic.AddInt64(&stats.SQLInjection, 1)
 			case "xss_attack":
-				stats.XSSAttacks++
+				atomic.AddInt64(&stats.XSSAttacks, 1)
 			case "path_traversal":
-				stats.PathTraversal++
+				atomic.AddInt64(&stats.PathTraversal, 1)
 			case "command_injection":
-				stats.CommandInjection++
+				atomic.AddInt64(&stats.CommandInjection, 1)
 			case "ssrf_attack":
-				stats.SSRFAttacks++
+				atomic.AddInt64(&stats.SSRFAttacks, 1)
 			case "dangerous_upload":
-				stats.DangerousUploads++
+				atomic.AddInt64(&stats.DangerousUploads, 1)
 			case "method_not_allowed":
-				stats.MethodNotAllowed++
+				atomic.AddInt64(&stats.MethodNotAllowed, 1)
 			case "blocked_user_agent":
-				stats.BlockedAgents++
+				atomic.AddInt64(&stats.BlockedAgents, 1)
 			case "rate_limit":
-				stats.RateLimitExceeded++
+				atomic.AddInt64(&stats.RateLimitExceeded, 1)
 			}
 		}
 	}
