@@ -1,11 +1,12 @@
 package service
 
 import (
-	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/industrial-ai/platform/pkg/database"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
@@ -344,11 +345,11 @@ func TestTelemetryService_GetROIStats_Success(t *testing.T) {
 	workOrderRepo := repository.NewWorkOrderRepository(database.NewDBWrapper(db))
 
 	telemetryService := &TelemetryService{
-		telemetryRepo:  telemetryRepo,
-		deviceRepo:     deviceRepo,
-		alertRepo:      alertRepo,
-		workOrderRepo:  workOrderRepo,
-		alertSvc:       nil,
+		telemetryRepo: telemetryRepo,
+		deviceRepo:    deviceRepo,
+		alertRepo:     alertRepo,
+		workOrderRepo: workOrderRepo,
+		alertSvc:      nil,
 	}
 	ctx := context.Background()
 

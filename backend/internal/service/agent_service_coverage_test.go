@@ -27,9 +27,9 @@ func TestNewAgentServiceWithClient_Coverage(t *testing.T) {
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
 		IdleConnTimeout:     90 * time.Second,
-		LLMAPIKey:          "test-key",
-		LLMBaseURL:         "https://test-api.example.com",
-		LLMModel:           "test-model",
+		LLMAPIKey:           "test-key",
+		LLMBaseURL:          "https://test-api.example.com",
+		LLMModel:            "test-model",
 	}
 
 	t.Run("WithCustomClient", func(t *testing.T) {
@@ -113,10 +113,10 @@ func TestNewAgentServiceWithConfig_Coverage(t *testing.T) {
 		MaxIdleConns:        50,
 		MaxIdleConnsPerHost: 5,
 		IdleConnTimeout:     60 * time.Second,
-		LLMAPIKey:          "custom-key",
-		LLMBaseURL:         "https://custom-llm.example.com",
-		LLMModel:           "custom-model",
-		HTTPProxy:          "http://proxy.example.com:8080",
+		LLMAPIKey:           "custom-key",
+		LLMBaseURL:          "https://custom-llm.example.com",
+		LLMModel:            "custom-model",
+		HTTPProxy:           "http://proxy.example.com:8080",
 	}
 
 	t.Run("WithCustomConfig", func(t *testing.T) {

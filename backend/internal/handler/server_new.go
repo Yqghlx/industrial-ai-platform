@@ -22,16 +22,16 @@ import (
 	"github.com/industrial-ai/platform/internal/service"
 	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/pkg/cache_service"
-	"github.com/industrial-ai/platform/pkg/logger"
 	dbpkg "github.com/industrial-ai/platform/pkg/database"
+	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/industrial-ai/platform/pkg/wscompression"
 	"go.uber.org/zap"
 
 	_ "github.com/lib/pq" // PostgreSQL driver registration
-	
+
 	// Swagger documentation
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // ============================================
@@ -84,17 +84,17 @@ type HTTPServerNew struct {
 	rbacRepo   repository.RBACRepositoryInterface
 
 	// Services
-	authSvc       service.AuthServiceInterface
-	userSvc       service.UserServiceInterface
-	deviceSvc     service.DeviceServiceInterface
-	alertSvc      service.AlertServiceInterface
-	telemetrySvc  service.TelemetryServiceInterface
-	tenantSvc     *service.TenantService
-	rbacSvc       *service.RBACService
-	exportSvc     *service.ExportService
-	reportSvc     service.ReportServiceInterface
-	cacheSvc      *cache_service.CacheServiceIntegration
-	agentSvc      service.AgentServiceInterface
+	authSvc      service.AuthServiceInterface
+	userSvc      service.UserServiceInterface
+	deviceSvc    service.DeviceServiceInterface
+	alertSvc     service.AlertServiceInterface
+	telemetrySvc service.TelemetryServiceInterface
+	tenantSvc    *service.TenantService
+	rbacSvc      *service.RBACService
+	exportSvc    *service.ExportService
+	reportSvc    service.ReportServiceInterface
+	cacheSvc     *cache_service.CacheServiceIntegration
+	agentSvc     service.AgentServiceInterface
 
 	// Handlers (new architecture)
 	alertHandler     *AlertHandler
@@ -186,7 +186,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
 	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
 	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
-	
+
 	// Initialize AgentService for AI features
 	taskLogRepo := repository.NewAgentTaskLogRepository(dbpkg.NewDBWrapper(db))
 	agentSvc := service.NewAgentService(
@@ -366,11 +366,11 @@ func (s *HTTPServerNew) setupHandlers() {
 
 	// Setup public routes
 	s.router.GET("/health", s.healthCheck)
-	
+
 	// Swagger API Documentation
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	s.router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	
+
 	middleware.SetupPrometheusEndpoint(s.router)
 
 	// SEC-MED-02: Public telemetry endpoint - intentionally public for edge device ingestion
@@ -382,11 +382,11 @@ func (s *HTTPServerNew) setupHandlers() {
 	// SEC-HIGH-02: CSRF Token endpoint for optional additional protection
 	// Note: JWT via Authorization header already provides CSRF-safe authentication
 	authPublic.GET("/auth/csrf-token", s.authHandler.GetCSRFToken)
-	
+
 	// SEC-MED-02: Telemetry endpoint with rate limiting and input validation
 	// Device authentication is optional - see DeviceAuthRequired middleware
 	s.router.POST("/api/v1/devices/telemetry", middleware.TelemetryRateLimit(), s.telemetryHandler.IngestTelemetry)
-	
+
 	// SEC-MED-01: WebSocket endpoint - public with rate limiting
 	// WebSocket authentication is available via ws_auth.go middleware
 	// For authenticated WebSocket, use WSAuthRequired middleware before this route

@@ -62,8 +62,8 @@ func HandleError(c *gin.Context, err error) {
 
 	// Generic error - treat as internal error
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:  err.Error(),
-		Code:   errors.ErrCodeInternal,
+		Error: err.Error(),
+		Code:  errors.ErrCodeInternal,
 	})
 }
 

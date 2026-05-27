@@ -18,21 +18,22 @@ const (
 
 // JWTConfig 封装 JWT 配置和状态
 // BE-P3-04: JWT 配置结构体文档
-// 
+//
 // JWTConfig 提供安全的 JWT 密钥管理，支持:
 //   - 密钥存储与读取
 //   - 并发安全的密钥访问 (使用 RWMutex)
 //   - 密钥轮换功能
 //
 // 使用示例:
-//   config, err := NewJWTConfig("your-secret-key")
-//   if err != nil {
-//       return err
-//   }
-//   token, err := GenerateJWTWithConfig(1, "user", "admin", "tenant-1", config)
+//
+//	config, err := NewJWTConfig("your-secret-key")
+//	if err != nil {
+//	    return err
+//	}
+//	token, err := GenerateJWTWithConfig(1, "user", "admin", "tenant-1", config)
 type JWTConfig struct {
-	secret     []byte
-	mu         sync.RWMutex
+	secret []byte
+	mu     sync.RWMutex
 }
 
 // NewJWTConfig 创建新的 JWT 配置实例

@@ -467,7 +467,7 @@ func TestWebSocketOriginCheck_Production(t *testing.T) {
 	// Simulate production environment CheckOrigin function
 	isProduction := true
 	wsAllowedOrigins := map[string]bool{
-		"https://app.example.com": true,
+		"https://app.example.com":   true,
 		"https://admin.example.com": true,
 	}
 
@@ -521,11 +521,11 @@ func TestWebSocketOriginCheck_Wildcard(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
-		name              string
-		isProduction      bool
-		wsAllowedOrigins  map[string]bool
-		origin            string
-		expected          bool
+		name             string
+		isProduction     bool
+		wsAllowedOrigins map[string]bool
+		origin           string
+		expected         bool
 	}{
 		{
 			name:             "wildcard allows any origin",

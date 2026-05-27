@@ -376,6 +376,7 @@ func (r *AlertRepository) GetRecentByDevice(ctx context.Context, deviceID string
 	}
 	return &a, nil
 }
+
 // GetRecentAlertsByDeviceBatch 批量查询设备最近的告警（用于 cooldown 检查，避免 N+1 查询）
 // FIX-P1-01: N+1 查询优化
 func (r *AlertRepository) GetRecentAlertsByDeviceBatch(ctx context.Context, deviceID string, ruleIDs []int, cooldownSec int) (map[int]*model.Alert, error) {

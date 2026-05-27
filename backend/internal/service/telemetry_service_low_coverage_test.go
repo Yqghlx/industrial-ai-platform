@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"errors"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/industrial-ai/platform/pkg/database"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/websocket"

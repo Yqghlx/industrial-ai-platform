@@ -104,34 +104,34 @@ const (
 const (
 	// 温度告警阈值（单位：摄氏度）
 	// 优化建议：根据工业设备特性分层设置
-	HighTemperatureThreshold      = 80   // 高温警告阈值（从100调整为80，提前预警）
-	CriticalTemperatureThreshold  = 100  // 严重高温阈值（从120调整为100）
-	WarningTemperatureThreshold   = 70   // 温度预警阈值（新增）
-	NormalTemperatureThreshold    = 60   // 正常温度上限（新增）
+	HighTemperatureThreshold     = 80  // 高温警告阈值（从100调整为80，提前预警）
+	CriticalTemperatureThreshold = 100 // 严重高温阈值（从120调整为100）
+	WarningTemperatureThreshold  = 70  // 温度预警阈值（新增）
+	NormalTemperatureThreshold   = 60  // 正常温度上限（新增）
 
 	// 振动告警阈值（单位：mm/s）
 	// 优化建议：符合ISO 10816标准
-	AbnormalVibrationThreshold    = 2.8  // 振动异常阈值（从3.0调整为2.8）
-	CriticalVibrationThreshold    = 4.5  // 严重振动阈值（从5.0调整为4.5）
-	WarningVibrationThreshold     = 1.8  // 振动预警阈值（新增）
-	NormalVibrationThreshold      = 1.0  // 正常振动上限（新增）
+	AbnormalVibrationThreshold = 2.8 // 振动异常阈值（从3.0调整为2.8）
+	CriticalVibrationThreshold = 4.5 // 严重振动阈值（从5.0调整为4.5）
+	WarningVibrationThreshold  = 1.8 // 振动预警阈值（新增）
+	NormalVibrationThreshold   = 1.0 // 正常振动上限（新增）
 
 	// 压力告警阈值（单位：kPa）
 	// 优化建议：根据设备压力等级分层
-	AbnormalPressureThreshold     = 120  // 压力异常阈值（从150调整为120）
-	CriticalPressureThreshold     = 150  // 严重压力阈值（新增）
-	WarningPressureThreshold      = 100  // 压力预警阈值（新增）
-	NormalPressureThreshold       = 80   // 正常压力上限（新增）
+	AbnormalPressureThreshold = 120 // 压力异常阈值（从150调整为120）
+	CriticalPressureThreshold = 150 // 严重压力阈值（新增）
+	WarningPressureThreshold  = 100 // 压力预警阈值（新增）
+	NormalPressureThreshold   = 80  // 正常压力上限（新增）
 
 	// 湿度告警阈值（单位：%）
-	HighHumidityThreshold         = 85   // 高湿度警告阈值（新增）
-	CriticalHumidityThreshold     = 95   // 严重湿度阈值（新增）
-	LowHumidityThreshold          = 30   // 低湿度警告阈值（新增）
+	HighHumidityThreshold     = 85 // 高湿度警告阈值（新增）
+	CriticalHumidityThreshold = 95 // 严重湿度阈值（新增）
+	LowHumidityThreshold      = 30 // 低湿度警告阈值（新增）
 
 	// 功率告警阈值（单位：W）
-	HighPowerThreshold            = 5000 // 高功率警告阈值（新增）
-	CriticalPowerThreshold        = 8000 // 严重功率阈值（新增）
-	LowPowerThreshold             = 100  // 低功率警告阈值（新增）
+	HighPowerThreshold     = 5000 // 高功率警告阈值（新增）
+	CriticalPowerThreshold = 8000 // 严重功率阈值（新增）
+	LowPowerThreshold      = 100  // 低功率警告阈值（新增）
 )
 
 // ============================================
@@ -186,18 +186,6 @@ const (
 
 	// 分页最小大小
 	MinPageSize = 1
-)
-
-// ============================================
-// 密码常量
-// ============================================
-
-const (
-	// 密码最小长度
-	PasswordMinLength = 8
-
-	// 密码最大长度
-	PasswordMaxLength = 128
 )
 
 // ============================================

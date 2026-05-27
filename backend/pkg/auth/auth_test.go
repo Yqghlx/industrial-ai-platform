@@ -358,8 +358,8 @@ func TestParseClaims_DifferentHMACAlgorithms(t *testing.T) {
 	secret := []byte("test-secret")
 
 	testCases := []struct {
-		name    string
-		method  jwt.SigningMethod
+		name   string
+		method jwt.SigningMethod
 	}{
 		{"HS256", jwt.SigningMethodHS256},
 		{"HS384", jwt.SigningMethodHS384},

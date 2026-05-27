@@ -461,7 +461,7 @@ func TestTenantIsolation_CrossTenantAccess(t *testing.T) {
 
 func TestTenantIsolation_DifferentTenantSlugs(t *testing.T) {
 	tests := []struct {
-		name      string
+		name       string
 		tenantSlug string
 	}{
 		{"tenant-1", "tenant-1"},

@@ -60,9 +60,9 @@ func TestDingTalkNotifier_SendAlert_Success(t *testing.T) {
 	ctx := context.Background()
 
 	alert := &model.Alert{
-		ID:         1,
-		Severity:   "high",
-		Message:    "Test alert",
+		ID:          1,
+		Severity:    "high",
+		Message:     "Test alert",
 		TriggeredAt: time.Now(),
 	}
 	device := &model.Device{ID: "dev-1", Name: "Test Device"}
@@ -83,9 +83,9 @@ func TestDingTalkNotifier_SendAlert_Critical(t *testing.T) {
 	ctx := context.Background()
 
 	alert := &model.Alert{
-		ID:         1,
-		Severity:   "critical",
-		Message:    "Critical alert",
+		ID:          1,
+		Severity:    "critical",
+		Message:     "Critical alert",
 		TriggeredAt: time.Now(),
 	}
 	device := &model.Device{ID: "dev-1", Name: "Critical Device"}
@@ -204,9 +204,9 @@ func TestDingTalkNotifier_SendAlert_AllSeverities(t *testing.T) {
 			ctx := context.Background()
 
 			alert := &model.Alert{
-				ID:         1,
-				Severity:   severity,
-				Message:    "Test alert",
+				ID:          1,
+				Severity:    severity,
+				Message:     "Test alert",
 				TriggeredAt: time.Now(),
 			}
 			device := &model.Device{ID: "dev-1", Name: "Test Device"}

@@ -17,11 +17,11 @@ import (
 
 // TelemetryService handles telemetry data
 type TelemetryService struct {
-	telemetryRepo  *repository.TelemetryRepository
-	deviceRepo     *repository.DeviceRepository
-	alertRepo      *repository.AlertRepository
-	workOrderRepo  *repository.WorkOrderRepository
-	alertSvc       *AlertService
+	telemetryRepo *repository.TelemetryRepository
+	deviceRepo    *repository.DeviceRepository
+	alertRepo     *repository.AlertRepository
+	workOrderRepo *repository.WorkOrderRepository
+	alertSvc      *AlertService
 }
 
 // NewTelemetryService creates a new telemetry service
@@ -33,11 +33,11 @@ func NewTelemetryService(
 	alertSvc *AlertService,
 ) *TelemetryService {
 	return &TelemetryService{
-		telemetryRepo:  telemetryRepo,
-		deviceRepo:     deviceRepo,
-		alertRepo:      alertRepo,
-		workOrderRepo:  workOrderRepo,
-		alertSvc:       alertSvc,
+		telemetryRepo: telemetryRepo,
+		deviceRepo:    deviceRepo,
+		alertRepo:     alertRepo,
+		workOrderRepo: workOrderRepo,
+		alertSvc:      alertSvc,
 	}
 }
 
@@ -88,7 +88,7 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 		// Check if alertSvc is available before calling
 		if s.alertSvc != nil {
 			// 创建带超时的 context，防止异步调用无限等待
-			ctx, cancel := context.WithTimeout(context.Background(), 
+			ctx, cancel := context.WithTimeout(context.Background(),
 				time.Duration(constants.AlertEvaluationTimeoutSec)*time.Second)
 			defer cancel()
 
@@ -427,13 +427,13 @@ func ValidateTelemetryData(data *model.TelemetryData) error {
 	if data.DeviceID == "" {
 		return fmt.Errorf("device_id is required")
 	}
-	
+
 	// SEC-MED-04: Validate device_id format
 	// Device ID must be UUID format or safe alphanumeric ID
 	if len(data.DeviceID) > 100 {
 		return fmt.Errorf("device_id too long (max 100 characters)")
 	}
-	
+
 	// Basic format validation - alphanumeric, dash, underscore allowed
 	for _, c := range data.DeviceID {
 		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
@@ -441,11 +441,11 @@ func ValidateTelemetryData(data *model.TelemetryData) error {
 			return fmt.Errorf("device_id contains invalid characters (only alphanumeric, dash, underscore allowed)")
 		}
 	}
-	
+
 	if data.Timestamp.IsZero() {
 		data.Timestamp = time.Now()
 	}
-	
+
 	// Validate numerical ranges for sensor data
 	if data.Temperature < -100 || data.Temperature > 1000 {
 		return fmt.Errorf("temperature value out of valid range")
@@ -462,6 +462,6 @@ func ValidateTelemetryData(data *model.TelemetryData) error {
 	if data.Power < 0 || data.Power > 10000 {
 		return fmt.Errorf("power value out of valid range")
 	}
-	
+
 	return nil
 }

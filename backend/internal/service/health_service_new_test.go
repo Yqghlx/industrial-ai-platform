@@ -21,7 +21,7 @@ func TestHealthService_InitHealthService(t *testing.T) {
 
 	config := HealthServiceConfig{
 		LLMAPIKey:    "test-key",
-		LLMBseURL:   "https://test-url",
+		LLMBseURL:    "https://test-url",
 		LLMModel:     "test-model",
 		CheckTimeout: 5 * time.Second,
 	}

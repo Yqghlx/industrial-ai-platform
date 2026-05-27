@@ -34,10 +34,10 @@ func TestNewJWTConfig_EmptySecret(t *testing.T) {
 
 func TestNewJWTConfig_TableDriven(t *testing.T) {
 	tests := []struct {
-		name      string
-		secret    string
-		wantErr   bool
-		errMsg    string
+		name    string
+		secret  string
+		wantErr bool
+		errMsg  string
 	}{
 		{
 			name:    "valid secret",
@@ -379,10 +379,10 @@ func TestParseJWTWithConfig_TableDriven(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name     string
-		token    string
-		config   *JWTConfig
-		wantErr  bool
+		name    string
+		token   string
+		config  *JWTConfig
+		wantErr bool
 	}{
 		{
 			name:    "valid token and config",
@@ -913,13 +913,13 @@ func TestParseJWT_WrongSigningMethod(t *testing.T) {
 	// Create a token with a different signing method (not HMAC)
 	// This should trigger the signature method validation error branch
 	claims := jwt.MapClaims{
-		"user_id":  1,
-		"username": "testuser",
-		"role":     "admin",
+		"user_id":   1,
+		"username":  "testuser",
+		"role":      "admin",
 		"tenant_id": "tenant-1",
-		"exp":      time.Now().Add(15 * time.Minute).Unix(),
-		"iat":      time.Now().Unix(),
-		"iss":      "industrial-ai-platform",
+		"exp":       time.Now().Add(15 * time.Minute).Unix(),
+		"iat":       time.Now().Unix(),
+		"iss":       "industrial-ai-platform",
 	}
 
 	// Use a non-HMAC signing method (this will fail parsing)

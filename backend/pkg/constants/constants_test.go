@@ -154,10 +154,15 @@ func TestTokenDurationConstants(t *testing.T) {
 }
 
 func TestPasswordConstants(t *testing.T) {
-	if PasswordMinLength < 8 {
-		t.Error("PasswordMinLength should be at least 8")
+	// P3-04: 统一使用 MinPasswordLength 和 MaxPasswordLength
+	// 符合 NIST 推荐的最低 12 位密码要求
+	if MinPasswordLength < 8 {
+		t.Error("MinPasswordLength should be at least 8")
 	}
-	if PasswordMaxLength < PasswordMinLength {
-		t.Error("PasswordMaxLength should be greater than PasswordMinLength")
+	if MinPasswordLength < 12 {
+		t.Error("MinPasswordLength should be at least 12 (NIST recommendation)")
+	}
+	if MaxPasswordLength < MinPasswordLength {
+		t.Error("MaxPasswordLength should be greater than MinPasswordLength")
 	}
 }

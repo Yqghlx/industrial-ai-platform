@@ -290,7 +290,7 @@ func TestRepositoryFactory_MultipleCalls(t *testing.T) {
 	// Multiple calls should return different instances (not cached)
 	repo1 := factory.GetDeviceRepository()
 	repo2 := factory.GetDeviceRepository()
-	
+
 	assert.NotNil(t, repo1)
 	assert.NotNil(t, repo2)
 	// Each call creates a new repository instance
@@ -377,7 +377,7 @@ func TestNewRepositoryFactory_NilDatabase(t *testing.T) {
 			t.Log("NewRepositoryFactory correctly panics with nil database")
 		}
 	}()
-	
+
 	factory := NewRepositoryFactory(nil)
 	// If we reach here without panic, the factory was created
 	assert.NotNil(t, factory, "Factory should still be created")

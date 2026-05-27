@@ -629,7 +629,7 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 		); err != nil {
 			return nil, 0, err
 		}
-if deviceID.Valid {
+		if deviceID.Valid {
 			r.DeviceID = &deviceID.String
 		}
 		reports = append(reports, r)

@@ -116,7 +116,7 @@ func NewMemoryTokenBlacklistWithLimit(maxEntries int) *MemoryTokenBlacklist {
 func (b *MemoryTokenBlacklist) Add(ctx context.Context, tokenID string, duration time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	// SEC-MEDIUM-02: 检查大小限制，超过时淘汰最旧条目
 	if len(b.entries) >= b.maxEntries {
 		// 找到并删除最旧的条目
@@ -137,7 +137,7 @@ func (b *MemoryTokenBlacklist) Add(ctx context.Context, tokenID string, duration
 				zap.Int("max_entries", b.maxEntries))
 		}
 	}
-	
+
 	b.entries[BlacklistPrefix+tokenID] = time.Now().Add(duration)
 	return nil
 }
@@ -211,7 +211,7 @@ func (b *MemoryTokenBlacklist) cleanupExpiredEntries() {
 type HybridTokenBlacklist struct {
 	redisBlacklist  *RedisTokenBlacklist
 	memoryBlacklist *MemoryTokenBlacklist
-	useRedis        bool          // protected by mu
+	useRedis        bool // protected by mu
 	checkInterval   time.Duration
 	shutdown        chan struct{}
 	mu              sync.RWMutex // protects useRedis field

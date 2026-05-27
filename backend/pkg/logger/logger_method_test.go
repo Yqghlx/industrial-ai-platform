@@ -2,6 +2,7 @@ package logger
 
 import (
 	"testing"
+
 	"go.uber.org/zap/zapcore"
 )
 
@@ -12,7 +13,7 @@ func TestLogger_SetLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	// Test setting different levels
 	levels := []string{"debug", "info", "warn", "error"}
 	for _, level := range levels {
@@ -35,7 +36,7 @@ func TestLogger_GetLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	level := logger.GetLevel()
 	if level != "info" {
 		t.Errorf("GetLevel failed, expected 'info', got '%s'", level)
@@ -50,7 +51,7 @@ func TestLogger_GetLevelZap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	zapLevel := logger.GetLevelZap()
 	if zapLevel != zapcore.WarnLevel {
 		t.Errorf("GetLevelZap failed, expected zapcore.WarnLevel, got %v", zapLevel)
@@ -64,7 +65,7 @@ func TestLogger_SetFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	// Test setting different formats
 	formats := []string{"json", "console"}
 	for _, format := range formats {
@@ -84,7 +85,7 @@ func TestLogger_GetFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	format := logger.GetFormat()
 	if format != "json" {
 		t.Errorf("GetFormat failed, expected 'json', got '%s'", format)
@@ -100,7 +101,7 @@ func TestLogger_GetConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger failed: %v", err)
 	}
-	
+
 	config := logger.GetConfig()
 	if config.Level != "info" {
 		t.Errorf("GetConfig level failed, expected 'info', got '%s'", config.Level)
@@ -115,13 +116,13 @@ func TestSetGlobalLevel(t *testing.T) {
 	// Initialize global logger
 	cfg := DefaultConfig()
 	InitGlobalLogger(cfg)
-	
+
 	// Test setting global level
 	err := SetGlobalLevel("error")
 	if err != nil {
 		t.Errorf("SetGlobalLevel failed: %v", err)
 	}
-	
+
 	level := GetGlobalLevel()
 	if level != "error" {
 		t.Errorf("SetGlobalLevel failed, expected 'error', got '%s'", level)
@@ -133,7 +134,7 @@ func TestGetGlobalLevel(t *testing.T) {
 	// Initialize global logger
 	cfg := DefaultConfig()
 	InitGlobalLogger(cfg)
-	
+
 	SetGlobalLevel("warn")
 	level := GetGlobalLevel()
 	if level != "warn" {
@@ -147,17 +148,17 @@ func TestReloadGlobalLogger(t *testing.T) {
 	cfg1 := DefaultConfig()
 	cfg1.Level = "info"
 	InitGlobalLogger(cfg1)
-	
+
 	// Reload with new config
 	cfg2 := DefaultConfig()
 	cfg2.Level = "debug"
 	cfg2.Format = "console"
-	
+
 	err := ReloadGlobalLogger(cfg2)
 	if err != nil {
 		t.Errorf("ReloadGlobalLogger failed: %v", err)
 	}
-	
+
 	// Verify new config
 	level := GetGlobalLevel()
 	if level != "debug" {

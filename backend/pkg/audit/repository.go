@@ -66,7 +66,7 @@ func (r *PostgresRepository) Create(ctx context.Context, log *AuditLog) error {
 		)
 	`
 
-_, err = r.db.ExecContext(ctx, query,
+	_, err = r.db.ExecContext(ctx, query,
 		log.AuditID, log.Timestamp, log.EventType, log.EventCategory, log.Severity,
 		log.UserID, log.TenantID, log.SessionID, log.IPAddress, log.UserAgent,
 		log.ResourceType, log.ResourceID, log.Action, log.Operation, log.RequestID, log.TraceID,

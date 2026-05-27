@@ -48,53 +48,53 @@ var (
 		{"quote_and", regexp.MustCompile(`(?i)'\s*AND\s*`)},
 		{"or_condition", regexp.MustCompile(`(?i)\bOR\s+\d+\s*=\s*\d+`)},
 		{"and_condition", regexp.MustCompile(`(?i)\bAND\s+\d+\s*=\s*\d+`)},
-		
+
 		// Comment injection
 		{"comment_dash", regexp.MustCompile(`--`)},
 		{"comment_block", regexp.MustCompile(`(?i)/\*`)},
 		{"comment_block_end", regexp.MustCompile(`(?i)\*/`)},
 		{"comment_mysql", regexp.MustCompile(`(?i)#\s*$`)},
-		
+
 		// Union injection
 		{"union_select", regexp.MustCompile(`(?i)\bUNION\b.*\bSELECT\b`)},
 		{"union_all", regexp.MustCompile(`(?i)\bUNION\b.*\bALL\b`)},
-		
+
 		// Stacked queries
 		{"stacked_query", regexp.MustCompile(`;\s*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|EXEC)`)},
-		
+
 		// Time-based injection
 		{"sleep_injection", regexp.MustCompile(`(?i)\bSLEEP\b\s*\(`)},
 		{"benchmark_injection", regexp.MustCompile(`(?i)\bBENCHMARK\b\s*\(`)},
 		{"waitfor_injection", regexp.MustCompile(`(?i)\bWAITFOR\b\s+DELAY`)},
 		{"pg_sleep", regexp.MustCompile(`(?i)\bPG_SLEEP\b\s*\(`)},
-		
+
 		// Function-based injection
 		{"load_file", regexp.MustCompile(`(?i)\bLOAD_FILE\b\s*\(`)},
 		{"into_outfile", regexp.MustCompile(`(?i)\bINTO\b\s+(?i)OUTFILE\b`)},
 		{"into_dumpfile", regexp.MustCompile(`(?i)\bINTO\b\s+(?i)DUMPFILE\b`)},
 		{"xp_cmdshell", regexp.MustCompile(`(?i)xp_cmdshell`)},
-		
+
 		// Data manipulation
 		{"drop_table", regexp.MustCompile(`(?i)\bDROP\b\s+(?i)TABLE\b`)},
 		{"drop_database", regexp.MustCompile(`(?i)\bDROP\b\s+(?i)DATABASE\b`)},
 		{"truncate_table", regexp.MustCompile(`(?i)\bTRUNCATE\b\s+(?i)TABLE\b`)},
 		{"alter_table", regexp.MustCompile(`(?i)\bALTER\b\s+(?i)TABLE\b`)},
-		
+
 		// Hex/Char encoding attempts
 		{"hex_encoding", regexp.MustCompile(`(?i)0x[0-9a-f]+`)},
 		{"char_function", regexp.MustCompile(`(?i)\bCHAR\b\s*\(\s*\d+`)},
-		
+
 		// Information schema access
 		{"information_schema", regexp.MustCompile(`(?i)information_schema`)},
 		{"sys_tables", regexp.MustCompile(`(?i)sys\.(?:tables|columns|objects)`)},
-		
+
 		// Boolean-based injection
 		{"boolean_injection", regexp.MustCompile(`(?i)\b(?:TRUE|FALSE)\b.*\b(?:OR|AND)\b`)},
-		
+
 		// String concatenation injection
 		{"concat_function", regexp.MustCompile(`(?i)\bCONCAT\b\s*\(`)},
 		{"concat_ws", regexp.MustCompile(`(?i)\bCONCAT_WS\b\s*\(`)},
-		
+
 		// Quote-based patterns
 		{"quote_escape", regexp.MustCompile(`(?i)\\'`)},
 		{"double_quote_escape", regexp.MustCompile(`(?i)\\"`)},
@@ -241,7 +241,7 @@ func hasSuspiciousCharCombo(input string) bool {
 // isFalsePositive checks if the detected pattern is likely a false positive
 func isFalsePositive(input, pattern string) bool {
 	lowerInput := strings.ToLower(input)
-	
+
 	// Common safe words to check
 	safeWords := []string{
 		"selective", "selection", "selected",
@@ -250,7 +250,7 @@ func isFalsePositive(input, pattern string) bool {
 		"deleted", "deleting",
 		"executive", "executed", "execution",
 	}
-	
+
 	for _, word := range safeWords {
 		if strings.Contains(lowerInput, word) {
 			// Check if the pattern appears as part of a safe word
@@ -260,7 +260,7 @@ func isFalsePositive(input, pattern string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 

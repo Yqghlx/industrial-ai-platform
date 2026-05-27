@@ -217,7 +217,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 	}
 
 	now := time.Now()
-	
+
 	// Build batch update query using CASE statements for each field
 	// This reduces N queries to 1 query
 	var args []interface{}
@@ -240,7 +240,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 		placeholderIdx++
 	}
 	query += "ELSE name END, "
-	
+
 	// Build CASE for type
 	query += "type = CASE id "
 	for i := 0; i < idCount; i++ {
@@ -249,7 +249,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 		placeholderIdx++
 	}
 	query += "ELSE type END, "
-	
+
 	// Build CASE for location
 	query += "location = CASE id "
 	for i := 0; i < idCount; i++ {
@@ -258,7 +258,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 		placeholderIdx++
 	}
 	query += "ELSE location END, "
-	
+
 	// Build CASE for status
 	query += "status = CASE id "
 	for i := 0; i < idCount; i++ {
@@ -267,7 +267,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 		placeholderIdx++
 	}
 	query += "ELSE status END, "
-	
+
 	// Build CASE for description
 	query += "description = CASE id "
 	for i := 0; i < idCount; i++ {
@@ -276,7 +276,7 @@ func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Dev
 		placeholderIdx++
 	}
 	query += "ELSE description END, "
-	
+
 	// Add updated_at and WHERE clause
 	query += "updated_at = $1 WHERE id IN ("
 	for i := 0; i < idCount; i++ {

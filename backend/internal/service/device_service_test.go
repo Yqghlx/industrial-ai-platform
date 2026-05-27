@@ -1,11 +1,12 @@
 package service
 
 import (
-	"github.com/industrial-ai/platform/pkg/database"
 	"context"
 	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/industrial-ai/platform/pkg/database"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"

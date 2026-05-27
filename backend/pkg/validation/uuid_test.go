@@ -532,3 +532,111 @@ func makeComplexString(length int) string {
 	}
 	return result
 }
+
+// Tests for short alias functions
+func TestValidatePWDComplexity(t *testing.T) {
+	// Test that alias delegates correctly
+	tests := []struct {
+		name     string
+		password string
+		wantErr  bool
+	}{
+		{"valid password", "Admin@123456!", false},
+		{"too short", "Abc@1", true},
+		{"missing uppercase", "admin@123456!", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePWDComplexity(tt.password)
+			if tt.wantErr && err == nil {
+				t.Errorf("ValidatePWDComplexity(%s) expected error, got nil", tt.password)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("ValidatePWDComplexity(%s) unexpected error: %v", tt.password, err)
+			}
+		})
+	}
+}
+
+func TestValidatePWDWithComplexity(t *testing.T) {
+	// Test that alias delegates correctly
+	tests := []struct {
+		name     string
+		password string
+		minLen   int
+		maxLen   int
+		wantErr  bool
+	}{
+		{"valid", "Admin@123456!", 8, 128, false},
+		{"too short", "Abc@1", 1, 128, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePWDWithComplexity(tt.password, tt.minLen, tt.maxLen)
+			if tt.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateDeviceDesc(t *testing.T) {
+	// Test that alias delegates correctly
+	tests := []struct {
+		description string
+		hasError    bool
+	}{
+		{"This is a valid description", false},
+		{"", false},
+		{makeString(1001), true},
+	}
+
+	for _, tt := range tests {
+		err := ValidateDeviceDesc(tt.description)
+		if tt.hasError && err == nil {
+			t.Errorf("ValidateDeviceDesc(length=%d) should return error", len(tt.description))
+		}
+		if !tt.hasError && err != nil {
+			t.Errorf("ValidateDeviceDesc(length=%d) should not return error: %v", len(tt.description), err)
+		}
+	}
+}
+
+// TestAliasEquivalence verifies that aliases produce identical results to original functions
+func TestAliasEquivalence(t *testing.T) {
+	testPasswords := []string{
+		"Admin@123456!",
+		"short",
+		"missinguppercase123!",
+		"MISSINGLOWERCASE123!",
+		"MissingDigit!@#",
+		"MissingSpecial123",
+	}
+
+	for _, pw := range testPasswords {
+		origErr := ValidatePasswordComplexity(pw)
+		aliasErr := ValidatePWDComplexity(pw)
+
+		if (origErr == nil) != (aliasErr == nil) {
+			t.Errorf("ValidatePasswordComplexity and ValidatePWDComplexity differ for %q: orig=%v, alias=%v", pw, origErr, aliasErr)
+		}
+		if origErr != nil && aliasErr != nil && origErr.Error() != aliasErr.Error() {
+			t.Errorf("Error messages differ for %q: orig=%q, alias=%q", pw, origErr.Error(), aliasErr.Error())
+		}
+	}
+
+	testDescriptions := []string{"", "valid", makeString(1001)}
+	for _, desc := range testDescriptions {
+		origErr := ValidateDeviceDescription(desc)
+		aliasErr := ValidateDeviceDesc(desc)
+
+		if (origErr == nil) != (aliasErr == nil) {
+			t.Errorf("ValidateDeviceDescription and ValidateDeviceDesc differ for length %d", len(desc))
+		}
+	}
+}

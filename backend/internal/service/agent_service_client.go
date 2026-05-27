@@ -10,7 +10,7 @@ import (
 // 用于测试场景，注入 Mock HTTP Client
 func NewAgentServiceWithClient(
 	taskLogRepo repository.AgentTaskLogRepositoryInterface,
-	deviceRepo    repository.DeviceRepositoryInterface,
+	deviceRepo repository.DeviceRepositoryInterface,
 	telemetryRepo repository.TelemetryRepositoryInterface,
 	config *AgentServiceConfig,
 	client HTTPClientInterface,

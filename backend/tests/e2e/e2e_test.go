@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/industrial-ai/platform/internal/handler"
-	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/mocks"
+	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 

@@ -226,12 +226,12 @@ func (l *Logger) SetLevel(level string) error {
 	if err != nil {
 		return fmt.Errorf("invalid log level: %s", level)
 	}
-	
+
 	// 更新配置
 	// 注意: zap.Logger 的 Core 通常是不可变的
 	// 保存新的配置，下次重建 Logger 时会使用新级别
 	l.config.Level = level
-	
+
 	return nil
 }
 
@@ -262,14 +262,14 @@ func (l *Logger) ReloadConfig(cfg Config) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 关闭旧 Logger
 	l.Sync()
-	
+
 	// 替换 Logger
 	l.Logger = newLogger.Logger
 	l.config = cfg
-	
+
 	return nil
 }
 

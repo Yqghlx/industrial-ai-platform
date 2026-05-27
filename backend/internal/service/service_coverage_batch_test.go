@@ -404,7 +404,6 @@ func TestWorkOrderService_GetByID(t *testing.T) {
 	assert.Equal(t, order, result)
 }
 
-
 func TestWorkOrderService_UpdateStatus(t *testing.T) {
 	mockWorkOrderRepo := &repository.MockWorkOrderRepository{}
 	svc := NewWorkOrderService(mockWorkOrderRepo)
@@ -418,7 +417,6 @@ func TestWorkOrderService_UpdateStatus(t *testing.T) {
 
 	mockWorkOrderRepo.AssertExpectations(t)
 }
-
 
 func TestWorkOrderService_List(t *testing.T) {
 	mockWorkOrderRepo := &repository.MockWorkOrderRepository{}

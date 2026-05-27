@@ -21,12 +21,12 @@ import (
 // compiledPatterns 预编译的正则表达式
 // P1-11: 预编译正则表达式以提升性能
 var compiledPatterns struct {
-	sqlInjection      []*regexp.Regexp
-	xss               []*regexp.Regexp
-	pathTraversal     []*regexp.Regexp
-	commandInjection  []*regexp.Regexp
-	ssrf              []*regexp.Regexp
-	initialized       bool
+	sqlInjection     []*regexp.Regexp
+	xss              []*regexp.Regexp
+	pathTraversal    []*regexp.Regexp
+	commandInjection []*regexp.Regexp
+	ssrf             []*regexp.Regexp
+	initialized      bool
 }
 
 // WAFConfig WAF 配置

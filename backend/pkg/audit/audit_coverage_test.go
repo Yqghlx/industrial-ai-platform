@@ -164,12 +164,12 @@ func TestLog_WithCompleteAuditLog(t *testing.T) {
 
 // ErrorRepository 支持各种错误场景的 Mock
 type ErrorRepository struct {
-	mu             sync.Mutex
-	logs           []*AuditLog
-	createErr      error
-	queryErr       error
-	getByIDErr     error
-	deleteOldErr   error
+	mu              sync.Mutex
+	logs            []*AuditLog
+	createErr       error
+	queryErr        error
+	getByIDErr      error
+	deleteOldErr    error
 	createCallCount int
 }
 
@@ -321,12 +321,12 @@ func TestLogAuthEvent_AllScenarios(t *testing.T) {
 	config := &Config{Enabled: true, LogLevel: LogLevelAll, AsyncEnabled: false}
 
 	scenarios := []struct {
-		name        string
-		eventType   string
-		success     bool
-		expectSev   string
-		expectRes   string
-		metadata    map[string]interface{}
+		name      string
+		eventType string
+		success   bool
+		expectSev string
+		expectRes string
+		metadata  map[string]interface{}
 	}{
 		{"Login success", EventAuthLogin, true, SeverityInfo, ResultSuccess, nil},
 		{"Login failure", EventAuthLogin, false, SeverityWarning, ResultFailure, map[string]interface{}{"reason": "invalid_password"}},
@@ -359,11 +359,11 @@ func TestLogDataAccess_AllScenarios(t *testing.T) {
 	logger := zap.NewNop()
 
 	scenarios := []struct {
-		name        string
-		action      string
+		name         string
+		action       string
 		resourceType string
-		resourceID  string
-		metadata    map[string]interface{}
+		resourceID   string
+		metadata     map[string]interface{}
 	}{
 		{"Read device", ActionRead, "device", "device-001", map[string]interface{}{"fields": "all"}},
 		{"Write device", ActionWrite, "device", "device-002", map[string]interface{}{"changes": 5}},
@@ -394,12 +394,12 @@ func TestLogAdminAction_AllScenarios(t *testing.T) {
 	logger := zap.NewNop()
 
 	scenarios := []struct {
-		name         string
-		eventType    string
-		beforeState  map[string]interface{}
-		afterState   map[string]interface{}
-		changes      map[string]interface{}
-		metadata     map[string]interface{}
+		name        string
+		eventType   string
+		beforeState map[string]interface{}
+		afterState  map[string]interface{}
+		changes     map[string]interface{}
+		metadata    map[string]interface{}
 	}{
 		{"Create user", EventAdminUserCreate, nil, map[string]interface{}{"username": "newuser"}, map[string]interface{}{"username": "newuser"}, nil},
 		{"Update user", EventAdminUserUpdate, map[string]interface{}{"role": "user"}, map[string]interface{}{"role": "admin"}, map[string]interface{}{"role": "user -> admin"}, nil},
@@ -428,10 +428,10 @@ func TestLogSecurityEvent_AllScenarios(t *testing.T) {
 	logger := zap.NewNop()
 
 	scenarios := []struct {
-		name        string
-		eventType   string
-		severity    string
-		metadata    map[string]interface{}
+		name      string
+		eventType string
+		severity  string
+		metadata  map[string]interface{}
 	}{
 		{"Security alert", EventSecurityAlert, SeverityWarning, map[string]interface{}{"alert_id": "alert-001"}},
 		{"Security violation", EventSecurityViolation, SeverityCritical, map[string]interface{}{"violation": "unauthorized"}},
@@ -1212,10 +1212,10 @@ func TestPostgresRepository_GetByID_WithAllFields(t *testing.T) {
 		"audit-complete", now, EventAdminUserUpdate, CategoryAdmin, SeverityWarning,
 		"admin-001", "tenant-456", "session-admin", "10.0.0.1", "AdminClient",
 		"user", "user-123", ActionUpdate, "Admin: Update user", "req-admin", "trace-admin",
-		[]byte(`{"role":"user"}`), // before_state JSON
-		[]byte(`{"role":"admin"}`), // after_state JSON
+		[]byte(`{"role":"user"}`),          // before_state JSON
+		[]byte(`{"role":"admin"}`),         // after_state JSON
 		[]byte(`{"role":"user -> admin"}`), // changes JSON
-		ResultSuccess, "", // result, error_message
+		ResultSuccess, "",                  // result, error_message
 		250.0, []byte(`{"approved_by":"super-admin"}`), now,
 	)
 
@@ -1455,16 +1455,16 @@ func TestQuery_AllFilterCombinations(t *testing.T) {
 		{"Multiple filters", &QueryRequest{TenantID: "tenant-456", UserID: "user-0", EventType: EventAuthLogin}},
 		{"With pagination", &QueryRequest{Page: 1, PageSize: 5}},
 		{"All filters", &QueryRequest{
-			TenantID:     "tenant-456",
-			UserID:       "user-0",
-			EventType:    EventAuthLogin,
-			Category:     CategoryAuth,
-			Result:       ResultSuccess,
-			IPAddress:    "192.168.1.0",
-			StartTime:    &startTime,
-			EndTime:      &endTime,
-			Page:         1,
-			PageSize:     10,
+			TenantID:  "tenant-456",
+			UserID:    "user-0",
+			EventType: EventAuthLogin,
+			Category:  CategoryAuth,
+			Result:    ResultSuccess,
+			IPAddress: "192.168.1.0",
+			StartTime: &startTime,
+			EndTime:   &endTime,
+			Page:      1,
+			PageSize:  10,
 		}},
 	}
 
@@ -1499,11 +1499,19 @@ func TestConcurrentLog_DifferentMethods(t *testing.T) {
 
 	var wg sync.WaitGroup
 	methods := []func(){
-		func() { _ = auditLogger.LogLogin(context.Background(), "user-1", "tenant-1", "sess-1", "10.0.0.1", "Mozilla", true) },
+		func() {
+			_ = auditLogger.LogLogin(context.Background(), "user-1", "tenant-1", "sess-1", "10.0.0.1", "Mozilla", true)
+		},
 		func() { _ = auditLogger.LogLogout(context.Background(), "user-2", "tenant-1", "sess-2", "10.0.0.2") },
-		func() { _ = auditLogger.LogDataAccess(context.Background(), "user-3", "tenant-1", "10.0.0.3", "device", "d-1", ActionRead, "Read", nil) },
-		func() { _ = auditLogger.LogAdminAction(context.Background(), "admin-1", "tenant-1", "10.0.0.4", EventAdminUserCreate, "user", "u-1", "Create", nil, nil, nil, nil) },
-		func() { _ = auditLogger.LogSecurityEvent(context.Background(), "user-4", "tenant-1", "10.0.0.5", EventSecurityAlert, "Alert", SeverityWarning, nil) },
+		func() {
+			_ = auditLogger.LogDataAccess(context.Background(), "user-3", "tenant-1", "10.0.0.3", "device", "d-1", ActionRead, "Read", nil)
+		},
+		func() {
+			_ = auditLogger.LogAdminAction(context.Background(), "admin-1", "tenant-1", "10.0.0.4", EventAdminUserCreate, "user", "u-1", "Create", nil, nil, nil, nil)
+		},
+		func() {
+			_ = auditLogger.LogSecurityEvent(context.Background(), "user-4", "tenant-1", "10.0.0.5", EventSecurityAlert, "Alert", SeverityWarning, nil)
+		},
 	}
 
 	for i := 0; i < 100; i++ {

@@ -154,7 +154,7 @@ func TestWriteDegradedResponse_ComplexFallback(t *testing.T) {
 			{"id": "1", "name": "Device 1"},
 			{"id": "2", "name": "Device 2"},
 		},
-		"total":   2,
+		"total":  2,
 		"source": "cache",
 	}
 

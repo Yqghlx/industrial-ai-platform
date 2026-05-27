@@ -20,10 +20,10 @@ func TestInitPrometheus(t *testing.T) {
 	// InitPrometheus should not panic when registering metrics
 	// Since metrics are already registered at package init time,
 	// we verify it can be called (metrics registered globally)
-	
+
 	// Create a new registry for testing registry behavior
 	registry := prometheus.NewRegistry()
-	
+
 	// Create new metric instances for this test
 	testHTTPRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -32,11 +32,11 @@ func TestInitPrometheus(t *testing.T) {
 		},
 		[]string{"method", "path", "status"},
 	)
-	
+
 	// Register should work
 	err := registry.Register(testHTTPRequestsTotal)
 	assert.NoError(t, err)
-	
+
 	// Duplicate registration should fail
 	err = registry.Register(testHTTPRequestsTotal)
 	assert.Error(t, err, "Duplicate registration should fail")
@@ -58,24 +58,24 @@ func TestInitPrometheus_NoPanic(t *testing.T) {
 func TestInitPrometheus_MetricsRegistration(t *testing.T) {
 	// Create a fresh registry to test metric registration logic
 	registry := prometheus.NewRegistry()
-	
+
 	// Create sample metrics
 	counter := prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "test_counter",
 		Help: "A test counter",
 	})
-	
+
 	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "test_gauge",
 		Help: "A test gauge",
 	})
-	
+
 	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "test_histogram",
 		Help:    "A test histogram",
 		Buckets: []float64{0.1, 0.5, 1.0},
 	})
-	
+
 	// All should register successfully
 	assert.NoError(t, registry.Register(counter))
 	assert.NoError(t, registry.Register(gauge))
@@ -122,7 +122,7 @@ func TestPrometheusMiddleware_MultipleMethods(t *testing.T) {
 
 			router := gin.New()
 			router.Use(PrometheusMiddleware())
-			
+
 			switch tt.method {
 			case "GET":
 				router.GET(tt.path, func(c *gin.Context) { c.JSON(tt.statusCode, gin.H{"ok": true}) })
@@ -143,7 +143,7 @@ func TestPrometheusMiddleware_MultipleMethods(t *testing.T) {
 			} else {
 				req = httptest.NewRequest(tt.method, tt.path, nil)
 			}
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -171,8 +171,8 @@ func TestPrometheusMiddleware_SkipsMetricsEndpoint(t *testing.T) {
 
 func TestPrometheusMiddleware_DifferentStatusCodes(t *testing.T) {
 	tests := []struct {
-		name           string
-		statusCode     int
+		name       string
+		statusCode int
 	}{
 		{"status 200", 200},
 		{"status 201", 201},
@@ -304,7 +304,7 @@ func TestRecordWSDisconnection(t *testing.T) {
 	// First connect to have active connections
 	RecordWSConnection()
 	RecordWSConnection()
-	
+
 	// This should not panic
 	RecordWSDisconnection()
 	RecordWSDisconnection()
@@ -381,7 +381,7 @@ func TestUpdateDeviceMetrics_ZeroValues(t *testing.T) {
 func TestDeviceMetrics_MultipleTenants(t *testing.T) {
 	tenants := []string{"tenant-1", "tenant-2", "tenant-3"}
 	deviceTypes := []string{"CNC", "PLC", "Robot", "Sensor"}
-	
+
 	for _, tenant := range tenants {
 		for _, deviceType := range deviceTypes {
 			UpdateDeviceMetrics(tenant, deviceType, 10, 5)
@@ -687,7 +687,7 @@ func TestPrometheusMiddleware_WithMetricsRecording(t *testing.T) {
 		RecordDBQuery("SELECT", "devices", 0.01)
 		RecordRedisCommand("GET")
 		RecordCacheHit()
-		
+
 		c.JSON(200, gin.H{"processed": true})
 	})
 

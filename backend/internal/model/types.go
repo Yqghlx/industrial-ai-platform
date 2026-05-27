@@ -86,15 +86,15 @@ type AlertRule struct {
 
 // AlertRuleCreateRequest 告警规则创建请求
 type AlertRuleCreateRequest struct {
-	Name        string `json:"name" binding:"required,min=1,max=200"`
-	DeviceType  string `json:"device_type" binding:"omitempty"`
-	Metric      string `json:"metric" binding:"required,oneof=temperature pressure vibration humidity power"`
-	Operator    string `json:"operator" binding:"required,oneof=> >= < <= == !="`
+	Name        string  `json:"name" binding:"required,min=1,max=200"`
+	DeviceType  string  `json:"device_type" binding:"omitempty"`
+	Metric      string  `json:"metric" binding:"required,oneof=temperature pressure vibration humidity power"`
+	Operator    string  `json:"operator" binding:"required,oneof=> >= < <= == !="`
 	Threshold   float64 `json:"threshold" binding:"required"`
-	Severity    string `json:"severity" binding:"required,oneof=low medium high critical"`
-	Actions     string `json:"actions" binding:"omitempty"`
+	Severity    string  `json:"severity" binding:"required,oneof=low medium high critical"`
+	Actions     string  `json:"actions" binding:"omitempty"`
 	Enabled     bool    `json:"enabled"`
-	CooldownSec int    `json:"cooldown_sec" binding:"omitempty,min=60,max=3600"`
+	CooldownSec int     `json:"cooldown_sec" binding:"omitempty,min=60,max=3600"`
 }
 
 // AlertRuleUpdateRequest 告警规则更新请求

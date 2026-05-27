@@ -284,9 +284,9 @@ func TestFeishuNotifier_SendAlert_AllSeverities(t *testing.T) {
 			ctx := context.Background()
 
 			alert := &model.Alert{
-				ID:         1,
-				Severity:   severity,
-				Message:   "Test alert",
+				ID:          1,
+				Severity:    severity,
+				Message:     "Test alert",
 				TriggeredAt: time.Now(),
 			}
 			device := &model.Device{ID: "dev-1", Name: "Test Device"}

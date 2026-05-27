@@ -22,8 +22,8 @@ import (
 
 // AlertServiceConfig holds configuration for AlertService
 type AlertServiceConfig struct {
-	FeishuWebhook  string
-	NotifyEnabled  bool
+	FeishuWebhook string
+	NotifyEnabled bool
 }
 
 // AlertService handles alert evaluation and actions
@@ -426,7 +426,7 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
 		},
-		
+
 		// 振动告警 - ISO 10816标准分层
 		{
 			Name:        "振动预警",
@@ -461,7 +461,7 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
 		},
-		
+
 		// 压力告警 - 分层预警
 		{
 			Name:        "压力预警",
@@ -496,7 +496,7 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
 		},
-		
+
 		// 湿度告警 - P2-002新增
 		{
 			Name:        "低湿度警告",
@@ -531,7 +531,7 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 			Enabled:     true,
 			CooldownSec: constants.ShortAlertCooldownSec,
 		},
-		
+
 		// 功率告警 - P2-002新增
 		{
 			Name:        "低功率警告",

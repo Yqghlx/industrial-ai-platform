@@ -66,7 +66,7 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userMessage},
 		},
-		"max_tokens":  512,  // Reduced for faster response
+		"max_tokens":  512, // Reduced for faster response
 		"temperature": 0.7,
 	}
 

@@ -32,10 +32,10 @@ func NewDingTalkNotifier(webhookURL string) *DingTalkNotifier {
 
 // DingTalkMessage represents a DingTalk webhook message
 type DingTalkMessage struct {
-	MsgType  string                 `json:"msgtype"`
-	Markdown DingTalkMarkdown       `json:"markdown,omitempty"`
-	Text     DingTalkTextContent    `json:"text,omitempty"`
-	At       DingTalkAt             `json:"at,omitempty"`
+	MsgType  string              `json:"msgtype"`
+	Markdown DingTalkMarkdown    `json:"markdown,omitempty"`
+	Text     DingTalkTextContent `json:"text,omitempty"`
+	At       DingTalkAt          `json:"at,omitempty"`
 }
 
 // DingTalkMarkdown represents markdown content

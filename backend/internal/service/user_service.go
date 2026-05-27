@@ -24,7 +24,7 @@ func NewUserService(userRepo repository.UserRepositoryInterface) *UserService {
 // FIX-019: 添加 Context 超时设置
 func (s *UserService) Authenticate(username, password string) (*model.User, error) {
 	// FIX-019: 使用带超时的 context，防止数据库操作无限等待
-	ctx, cancel := context.WithTimeout(context.Background(), 
+	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(constants.DefaultServiceTimeoutSec)*time.Second)
 	defer cancel()
 

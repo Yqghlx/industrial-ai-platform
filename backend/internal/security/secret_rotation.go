@@ -28,23 +28,23 @@ type SecretRotationConfig struct {
 // DefaultSecretRotationConfig returns default configuration
 func DefaultSecretRotationConfig() *SecretRotationConfig {
 	return &SecretRotationConfig{
-		RotationInterval:  24 * time.Hour,
-		WarningPeriod:     1 * time.Hour,
-		SecretsToKeep:     3,
-		RotationEnabled:   true,
-		CurrentSecret:     "",
+		RotationInterval: 24 * time.Hour,
+		WarningPeriod:    1 * time.Hour,
+		SecretsToKeep:    3,
+		RotationEnabled:  true,
+		CurrentSecret:    "",
 	}
 }
 
 // SecretRotationManager manages JWT secret rotation
 type SecretRotationManager struct {
-	config       *SecretRotationConfig
+	config        *SecretRotationConfig
 	currentSecret string
-	oldSecrets   []string // Keep old secrets for token validation during transition
-	mu           sync.RWMutex
-	stopChan     chan struct{}
-	warningChan  chan time.Time // Channel to send rotation warnings
-	rotationChan chan string    // Channel to notify of new secrets
+	oldSecrets    []string // Keep old secrets for token validation during transition
+	mu            sync.RWMutex
+	stopChan      chan struct{}
+	warningChan   chan time.Time // Channel to send rotation warnings
+	rotationChan  chan string    // Channel to notify of new secrets
 }
 
 // NewSecretRotationManager creates a new secret rotation manager
@@ -52,21 +52,21 @@ func NewSecretRotationManager(config *SecretRotationConfig) *SecretRotationManag
 	if config == nil {
 		config = DefaultSecretRotationConfig()
 	}
-	
+
 	mgr := &SecretRotationManager{
-		config:       config,
+		config:        config,
 		currentSecret: config.CurrentSecret,
-		oldSecrets:   make([]string, 0, config.SecretsToKeep),
-		stopChan:     make(chan struct{}),
-		warningChan:  make(chan time.Time, 1),
+		oldSecrets:    make([]string, 0, config.SecretsToKeep),
+		stopChan:      make(chan struct{}),
+		warningChan:   make(chan time.Time, 1),
 		rotationChan:  make(chan string, 1),
 	}
-	
+
 	// Generate initial secret if not provided
 	if mgr.currentSecret == "" {
 		mgr.currentSecret = generateSecureSecret(32)
 	}
-	
+
 	return mgr
 }
 
@@ -76,7 +76,7 @@ func (m *SecretRotationManager) Start() {
 		log.Println("[SecretRotation] Automatic rotation is disabled")
 		return
 	}
-	
+
 	go m.rotationLoop()
 	log.Printf("[SecretRotation] Started with interval: %v", m.config.RotationInterval)
 }
@@ -105,19 +105,19 @@ func (m *SecretRotationManager) GetOldSecrets() []string {
 func (m *SecretRotationManager) ValidateWithAnySecret(token string, validator func(token, secret string) bool) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Try current secret first
 	if validator(token, m.currentSecret) {
 		return true
 	}
-	
+
 	// Try old secrets
 	for _, secret := range m.oldSecrets {
 		if validator(token, secret) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -125,9 +125,9 @@ func (m *SecretRotationManager) ValidateWithAnySecret(token string, validator fu
 func (m *SecretRotationManager) RotateSecret() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	newSecret := generateSecureSecret(32)
-	
+
 	// Add current secret to old secrets list
 	if m.currentSecret != "" {
 		m.oldSecrets = append(m.oldSecrets, m.currentSecret)
@@ -136,15 +136,15 @@ func (m *SecretRotationManager) RotateSecret() string {
 			m.oldSecrets = m.oldSecrets[len(m.oldSecrets)-m.config.SecretsToKeep:]
 		}
 	}
-	
+
 	m.currentSecret = newSecret
-	
+
 	// Notify rotation
 	select {
 	case m.rotationChan <- newSecret:
 	default:
 	}
-	
+
 	log.Printf("[SecretRotation] Secret rotated successfully. Old secrets count: %d", len(m.oldSecrets))
 	return newSecret
 }
@@ -163,15 +163,15 @@ func (m *SecretRotationManager) GetRotationChannel() <-chan string {
 func (m *SecretRotationManager) rotationLoop() {
 	ticker := time.NewTicker(m.config.RotationInterval)
 	warningTicker := time.NewTicker(m.config.RotationInterval - m.config.WarningPeriod)
-	
+
 	defer ticker.Stop()
 	defer warningTicker.Stop()
-	
+
 	for {
 		select {
 		case <-m.stopChan:
 			return
-			
+
 		case <-warningTicker.C:
 			// Send rotation warning
 			nextRotation := time.Now().Add(m.config.WarningPeriod)
@@ -180,7 +180,7 @@ func (m *SecretRotationManager) rotationLoop() {
 				log.Printf("[SecretRotation] Warning: Secret rotation in %v", m.config.WarningPeriod)
 			default:
 			}
-			
+
 		case <-ticker.C:
 			// Perform rotation
 			m.RotateSecret()
@@ -203,13 +203,13 @@ func generateSecureSecret(length int) string {
 func (m *SecretRotationManager) GetRotationStatus() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"enabled":           m.config.RotationEnabled,
-		"interval_hours":    m.config.RotationInterval.Hours(),
+		"enabled":                m.config.RotationEnabled,
+		"interval_hours":         m.config.RotationInterval.Hours(),
 		"warning_period_minutes": m.config.WarningPeriod.Minutes(),
-		"old_secrets_count": len(m.oldSecrets),
-		"secrets_to_keep":   m.config.SecretsToKeep,
+		"old_secrets_count":      len(m.oldSecrets),
+		"secrets_to_keep":        m.config.SecretsToKeep,
 	}
 }
 

@@ -142,12 +142,12 @@ func TestAdminHandlerNew_GetSystemStatus(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
 	mockTelemetrySvc.On("GetSystemStatus", mock.Anything).Return(&model.SystemStatus{
-		Database:     "healthy",
-		Version:      "1.0.0",
-		Uptime:       "running",
-		DBLatency:    0,
-		DeviceCount:  0,
-		UserCount:    0,
+		Database:    "healthy",
+		Version:     "1.0.0",
+		Uptime:      "running",
+		DBLatency:   0,
+		DeviceCount: 0,
+		UserCount:   0,
 	}, nil)
 
 	handler := NewAdminHandlerNew(mockAuthSvc, mockTelemetrySvc)

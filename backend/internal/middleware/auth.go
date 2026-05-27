@@ -142,7 +142,7 @@ func AuthRequiredWithConfig(config *AuthConfig) gin.HandlerFunc {
 func AuthRequired(jwtSecret string) gin.HandlerFunc {
 	// Use AuthRequiredWithConfig with empty public endpoints for backward compatibility
 	config := &AuthConfig{
-		JWTSecret:      jwtSecret,
+		JWTSecret:       jwtSecret,
 		PublicEndpoints: []string{}, // No public endpoints for backward compatibility
 	}
 	return AuthRequiredWithConfig(config)

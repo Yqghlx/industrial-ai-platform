@@ -78,9 +78,9 @@ func TestLogger_WithErrors(t *testing.T) {
 
 func TestLogger_StatusCodes(t *testing.T) {
 	tests := []struct {
-		name           string
-		statusCode     int
-		expectedColor  string
+		name          string
+		statusCode    int
+		expectedColor string
 	}{
 		{"status 200 OK", 200, Green},
 		{"status 201 Created", 201, Green},

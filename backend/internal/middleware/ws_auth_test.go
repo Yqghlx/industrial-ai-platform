@@ -386,9 +386,9 @@ func TestWSAuthRequired_SkipsNonWebSocketRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -411,10 +411,10 @@ func TestWSAuthRequired_WebSocketNoToken_Unauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
-		AllowPublic:    false,
+		TokenHeader:     "Authorization",
+		AllowPublic:     false,
 	}
 
 	router := gin.New()
@@ -446,9 +446,9 @@ func TestWSAuthRequired_WebSocketWithValidToken_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := &WSAuthConfig{
-		JWTSecret:      secret,
+		JWTSecret:       secret,
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -475,9 +475,9 @@ func TestWSAuthRequired_WebSocketWithInvalidToken_Unauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	router := gin.New()
@@ -508,9 +508,9 @@ func TestWSAuthRequired_WebSocketWithBearerToken_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := &WSAuthConfig{
-		JWTSecret:      secret,
+		JWTSecret:       secret,
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -537,11 +537,11 @@ func TestWSAuthRequired_PublicAllowed_NoToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
-		AllowPublic:    true,
-		PublicPolicy:   "Public dashboard WebSocket",
+		TokenHeader:     "Authorization",
+		AllowPublic:     true,
+		PublicPolicy:    "Public dashboard WebSocket",
 	}
 
 	handlerCalled := false
@@ -588,9 +588,9 @@ func TestWSAuthRequired_EmptyJWTSecret_SkipsValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "", // Empty secret
+		JWTSecret:       "", // Empty secret
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -617,9 +617,9 @@ func TestWSAuthRequired_ConfigDefaults(t *testing.T) {
 
 	// Test that empty TokenQueryParam and TokenHeader use defaults
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "",
-		TokenHeader:    "",
+		TokenHeader:     "",
 	}
 
 	secret := "test-secret"
@@ -657,9 +657,9 @@ func TestWSAuthOptional_NoToken_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	config := &WSAuthConfig{
-		JWTSecret:      "test-secret",
+		JWTSecret:       "test-secret",
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -694,9 +694,9 @@ func TestWSAuthOptional_WithValidToken_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	config := &WSAuthConfig{
-		JWTSecret:      secret,
+		JWTSecret:       secret,
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	handlerCalled := false
@@ -873,10 +873,10 @@ func TestWSAuthIntegration_FullFlow(t *testing.T) {
 	secret := "integration-test-secret"
 
 	config := &WSAuthConfig{
-		JWTSecret:      secret,
+		JWTSecret:       secret,
 		TokenQueryParam: "auth_token",
-		TokenHeader:    "X-WS-Auth",
-		AllowPublic:    false,
+		TokenHeader:     "X-WS-Auth",
+		AllowPublic:     false,
 	}
 
 	// Create a valid token
@@ -918,9 +918,9 @@ func TestWSAuthIntegration_ExpiredTokenFails(t *testing.T) {
 	secret := "expiry-test-secret"
 
 	config := &WSAuthConfig{
-		JWTSecret:      secret,
+		JWTSecret:       secret,
 		TokenQueryParam: "token",
-		TokenHeader:    "Authorization",
+		TokenHeader:     "Authorization",
 	}
 
 	// Create an expired token

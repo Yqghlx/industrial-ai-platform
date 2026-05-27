@@ -60,7 +60,7 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 			ID:          1,
 			Name:        "High Temperature",
 			DeviceType:  "*",
-			Metric:       "temperature",
+			Metric:      "temperature",
 			Operator:    ">",
 			Threshold:   100.0,
 			Severity:    "high",
@@ -97,9 +97,9 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 	// Test case 3: In cooldown period
 	t.Run("InCooldown", func(t *testing.T) {
 		recentAlert := &model.Alert{
-			ID:         100,
-			RuleID:     1,
-			DeviceID:   "device-1",
+			ID:          100,
+			RuleID:      1,
+			DeviceID:    "device-1",
 			TriggeredAt: time.Now().Add(-1 * time.Minute),
 		}
 
@@ -118,7 +118,7 @@ func TestAlertService_EvaluateRules_Coverage(t *testing.T) {
 				ID:          3,
 				Name:        "Motor Vibration",
 				DeviceType:  "motor",
-				Metric:       "vibration",
+				Metric:      "vibration",
 				Operator:    ">",
 				Threshold:   4.0,
 				Severity:    "medium",
@@ -140,63 +140,63 @@ func TestAlertService_evaluateCondition_Coverage(t *testing.T) {
 	service := &AlertService{}
 
 	tests := []struct {
-		name      string
-		data      *model.TelemetryData
-		rule      model.AlertRule
-		expected  bool
+		name     string
+		data     *model.TelemetryData
+		rule     model.AlertRule
+		expected bool
 	}{
 		{
-			name: "TemperatureGreaterThanThreshold",
-			data: &model.TelemetryData{Temperature: 90.0},
-			rule: model.AlertRule{Metric: "temperature", Operator: ">", Threshold: 80.0},
+			name:     "TemperatureGreaterThanThreshold",
+			data:     &model.TelemetryData{Temperature: 90.0},
+			rule:     model.AlertRule{Metric: "temperature", Operator: ">", Threshold: 80.0},
 			expected: true,
 		},
 		{
-			name: "TemperatureLessThanThreshold",
-			data: &model.TelemetryData{Temperature: 70.0},
-			rule: model.AlertRule{Metric: "temperature", Operator: "<", Threshold: 80.0},
+			name:     "TemperatureLessThanThreshold",
+			data:     &model.TelemetryData{Temperature: 70.0},
+			rule:     model.AlertRule{Metric: "temperature", Operator: "<", Threshold: 80.0},
 			expected: true,
 		},
 		{
-			name: "PressureGreaterOrEqual",
-			data: &model.TelemetryData{Pressure: 100.0},
-			rule: model.AlertRule{Metric: "pressure", Operator: ">=", Threshold: 100.0},
+			name:     "PressureGreaterOrEqual",
+			data:     &model.TelemetryData{Pressure: 100.0},
+			rule:     model.AlertRule{Metric: "pressure", Operator: ">=", Threshold: 100.0},
 			expected: true,
 		},
 		{
-			name: "VibrationLessOrEqual",
-			data: &model.TelemetryData{Vibration: 3.0},
-			rule: model.AlertRule{Metric: "vibration", Operator: "<=", Threshold: 3.0},
+			name:     "VibrationLessOrEqual",
+			data:     &model.TelemetryData{Vibration: 3.0},
+			rule:     model.AlertRule{Metric: "vibration", Operator: "<=", Threshold: 3.0},
 			expected: true,
 		},
 		{
-			name: "HumidityEqual",
-			data: &model.TelemetryData{Humidity: 50.0},
-			rule: model.AlertRule{Metric: "humidity", Operator: "==", Threshold: 50.0},
+			name:     "HumidityEqual",
+			data:     &model.TelemetryData{Humidity: 50.0},
+			rule:     model.AlertRule{Metric: "humidity", Operator: "==", Threshold: 50.0},
 			expected: true,
 		},
 		{
-			name: "PowerNotEqual",
-			data: &model.TelemetryData{Power: 200.0},
-			rule: model.AlertRule{Metric: "power", Operator: "!=", Threshold: 100.0},
+			name:     "PowerNotEqual",
+			data:     &model.TelemetryData{Power: 200.0},
+			rule:     model.AlertRule{Metric: "power", Operator: "!=", Threshold: 100.0},
 			expected: true,
 		},
 		{
-			name: "ConditionNotMet",
-			data: &model.TelemetryData{Temperature: 70.0},
-			rule: model.AlertRule{Metric: "temperature", Operator: ">", Threshold: 80.0},
+			name:     "ConditionNotMet",
+			data:     &model.TelemetryData{Temperature: 70.0},
+			rule:     model.AlertRule{Metric: "temperature", Operator: ">", Threshold: 80.0},
 			expected: false,
 		},
 		{
-			name: "UnknownMetric",
-			data: &model.TelemetryData{Temperature: 90.0},
-			rule: model.AlertRule{Metric: "unknown", Operator: ">", Threshold: 80.0},
+			name:     "UnknownMetric",
+			data:     &model.TelemetryData{Temperature: 90.0},
+			rule:     model.AlertRule{Metric: "unknown", Operator: ">", Threshold: 80.0},
 			expected: false,
 		},
 		{
-			name: "InvalidOperator",
-			data: &model.TelemetryData{Temperature: 90.0},
-			rule: model.AlertRule{Metric: "temperature", Operator: "invalid", Threshold: 80.0},
+			name:     "InvalidOperator",
+			data:     &model.TelemetryData{Temperature: 90.0},
+			rule:     model.AlertRule{Metric: "temperature", Operator: "invalid", Threshold: 80.0},
 			expected: false,
 		},
 	}
@@ -339,12 +339,12 @@ func TestAlertService_getMetricValue_Coverage(t *testing.T) {
 		Pressure:    120.3,
 		Vibration:   3.2,
 		Humidity:    45.0,
-		Power:      200.0,
+		Power:       200.0,
 	}
 
 	tests := []struct {
-		metric    string
-		expected  float64
+		metric   string
+		expected float64
 	}{
 		{"temperature", 75.5},
 		{"pressure", 120.3},
@@ -366,8 +366,8 @@ func TestAlertService_severityToPriority_Coverage(t *testing.T) {
 	service := &AlertService{}
 
 	tests := []struct {
-		severity  string
-		expected  string
+		severity string
+		expected string
 	}{
 		{"critical", "urgent"},
 		{"high", "high"},

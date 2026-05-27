@@ -270,8 +270,8 @@ func RateLimitWithContext(_ context.Context, capacity int, refillRate float64, n
 // SEC-MEDIUM-04: 添加全局默认限流，防止未配置限流的端点被滥用
 func DefaultRateLimit() gin.HandlerFunc {
 	return RateLimitWithConfig(RateLimitConfig{
-		Capacity:   60,  // 每分钟 60 次
-		RefillRate: 1,   // 每秒补充 1 个令牌
+		Capacity:   60, // 每分钟 60 次
+		RefillRate: 1,  // 每秒补充 1 个令牌
 		Name:       "default_global",
 	})
 }

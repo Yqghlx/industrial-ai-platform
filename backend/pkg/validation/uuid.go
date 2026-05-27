@@ -1,5 +1,11 @@
 // Package validation provides input validation utilities
 // FIX-027: 输入验证UUID
+//
+// Naming Conventions:
+//   - Primary functions use full descriptive names (e.g., ValidatePasswordComplexity)
+//   - Short aliases are provided for frequently used long functions (e.g., ValidatePWDComplexity)
+//   - Aliases delegate to primary functions to ensure consistency
+//   - Both names work identically - choose based on context and readability
 package validation
 
 import (
@@ -149,6 +155,12 @@ func ValidatePasswordComplexity(password string) error {
 	return nil
 }
 
+// ValidatePWDComplexity is a short alias for ValidatePasswordComplexity.
+// Provided for convenience in contexts where brevity is preferred.
+func ValidatePWDComplexity(password string) error {
+	return ValidatePasswordComplexity(password)
+}
+
 // ValidatePasswordWithComplexity validates password with both length and complexity requirements
 // FIX-P2: 组合长度和复杂度验证
 func ValidatePasswordWithComplexity(password string, minLen, maxLen int) error {
@@ -158,6 +170,12 @@ func ValidatePasswordWithComplexity(password string, minLen, maxLen int) error {
 	}
 	// Then validate complexity
 	return ValidatePasswordComplexity(password)
+}
+
+// ValidatePWDWithComplexity is a short alias for ValidatePasswordWithComplexity.
+// Provided for convenience in contexts where brevity is preferred.
+func ValidatePWDWithComplexity(password string, minLen, maxLen int) error {
+	return ValidatePasswordWithComplexity(password, minLen, maxLen)
 }
 
 // ValidateLength validates string length
@@ -347,6 +365,12 @@ func ValidateDeviceDescription(description string) error {
 		return errors.New("device description is too long (max 1000 characters)")
 	}
 	return nil
+}
+
+// ValidateDeviceDesc is a short alias for ValidateDeviceDescription.
+// Provided for convenience in contexts where brevity is preferred.
+func ValidateDeviceDesc(description string) error {
+	return ValidateDeviceDescription(description)
 }
 
 // ValidateDevice validates all device fields

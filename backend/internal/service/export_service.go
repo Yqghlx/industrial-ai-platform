@@ -523,4 +523,3 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 		MonthlyTrend:  monthlyTrend,
 	}
 }
-

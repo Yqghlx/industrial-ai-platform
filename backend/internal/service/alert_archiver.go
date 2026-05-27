@@ -24,9 +24,9 @@ type AlertArchiverConfig struct {
 // DefaultAlertArchiverConfig 默认配置
 func DefaultAlertArchiverConfig() AlertArchiverConfig {
 	return AlertArchiverConfig{
-		ArchiveDaysOld:        30,  // 30天后归档
-		DeleteDaysOld:         90,  // 90天后删除归档
-		ScheduleIntervalHours: 24,  // 每天执行一次
+		ArchiveDaysOld:        30, // 30天后归档
+		DeleteDaysOld:         90, // 90天后删除归档
+		ScheduleIntervalHours: 24, // 每天执行一次
 		EnableArchiving:       true,
 	}
 }
@@ -56,7 +56,7 @@ func (a *AlertArchiver) Start() {
 
 	// 启动调度器
 	go a.runScheduler()
-	
+
 	logger.L().Info("Alert archiver started",
 		zap.Int("archive_days", a.config.ArchiveDaysOld),
 		zap.Int("delete_days", a.config.DeleteDaysOld),
@@ -74,11 +74,11 @@ func (a *AlertArchiver) Stop() {
 func (a *AlertArchiver) runScheduler() {
 	// 立即执行一次归档
 	a.runArchiveCycle()
-	
+
 	// 定时执行
 	ticker := time.NewTicker(time.Duration(a.config.ScheduleIntervalHours) * time.Hour)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -93,7 +93,7 @@ func (a *AlertArchiver) runScheduler() {
 func (a *AlertArchiver) runArchiveCycle() {
 	ctx := context.Background()
 	startTime := time.Now()
-	
+
 	// 1. 归档旧告警
 	archivedCount, err := a.archiveOldAlerts(ctx)
 	if err != nil {
@@ -106,7 +106,7 @@ func (a *AlertArchiver) runArchiveCycle() {
 			zap.Int("days_old", a.config.ArchiveDaysOld),
 		)
 	}
-	
+
 	// 2. 删除过期归档
 	if a.config.DeleteDaysOld > a.config.ArchiveDaysOld {
 		deletedCount, err := a.deleteArchivedAlerts(ctx)
@@ -121,7 +121,7 @@ func (a *AlertArchiver) runArchiveCycle() {
 			)
 		}
 	}
-	
+
 	// 3. 记录统计信息
 	stats, err := a.alertRepo.GetAlertStatistics(ctx)
 	if err != nil {
@@ -137,7 +137,7 @@ func (a *AlertArchiver) runArchiveCycle() {
 			zap.Int("today_resolved", stats.TodayResolved),
 		)
 	}
-	
+
 	duration := time.Since(startTime)
 	logger.L().Info("Archive cycle completed",
 		zap.Duration("duration", duration),
@@ -160,12 +160,12 @@ func (a *AlertArchiver) RunManualArchive(ctx context.Context) (int, int, error) 
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	deletedCount, err := a.alertRepo.DeleteArchivedAlerts(ctx, a.config.DeleteDaysOld)
 	if err != nil {
 		return archivedCount, 0, err
 	}
-	
+
 	return archivedCount, deletedCount, nil
 }
 

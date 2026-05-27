@@ -36,11 +36,11 @@ type HealthCheckResponse struct {
 
 // HealthService provides health checking capabilities
 type HealthService struct {
-	db           *sql.DB
-	httpClient   HTTPClientInterface
-	startTime    time.Time
-	version      string
-	config       HealthServiceConfig
+	db         *sql.DB
+	httpClient HTTPClientInterface
+	startTime  time.Time
+	version    string
+	config     HealthServiceConfig
 }
 
 // InitHealthService initializes the health service instance

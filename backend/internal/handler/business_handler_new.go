@@ -233,7 +233,7 @@ func (h *BusinessHandlerNew) GetROIStats(c *gin.Context) {
 			"resolved_issues":   0,
 			"predicted_savings": 0,
 			"uptime_percentage": 99.5,
-			"avg_response_time":  2.5,
+			"avg_response_time": 2.5,
 		})
 		return
 	}
@@ -252,14 +252,14 @@ func (h *BusinessHandlerNew) GetROIStats(c *gin.Context) {
 				return
 			}
 		}
-		
+
 		// 缓存未命中，查询数据库
 		stats, err = h.reportSvc.GetROIStats(ctx)
 		if err != nil {
 			response.HandleError(c, err)
 			return
 		}
-		
+
 		// 写入缓存
 		if data, err := json.Marshal(stats); err == nil {
 			_ = h.cache.Set(ctx, cacheKey, data, 5*time.Minute)

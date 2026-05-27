@@ -15,10 +15,10 @@ import (
 // AgentOptimizer provides LLM call optimization
 // P2-3: Queue mechanism + Answer caching
 type AgentOptimizer struct {
-	cache      cache.CacheService
-	semaphore  *semaphore.Weighted // Max concurrent LLM calls
-	cacheTTL   time.Duration       // Cache TTL for answers
-	maxConcurrent int64            // Max concurrent LLM calls
+	cache         cache.CacheService
+	semaphore     *semaphore.Weighted // Max concurrent LLM calls
+	cacheTTL      time.Duration       // Cache TTL for answers
+	maxConcurrent int64               // Max concurrent LLM calls
 }
 
 // NewAgentOptimizer creates a new optimizer

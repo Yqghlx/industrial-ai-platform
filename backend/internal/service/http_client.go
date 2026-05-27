@@ -13,7 +13,7 @@ type HTTPClientInterface interface {
 // HealthServiceConfig holds configuration for HealthService
 type HealthServiceConfig struct {
 	LLMAPIKey    string
-	LLMBseURL   string
+	LLMBseURL    string
 	LLMModel     string
 	CheckTimeout time.Duration
 }

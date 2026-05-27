@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-// Password validation constants
-const (
-	MinPasswordLength = 12
-)
+// P3-04: 使用 pkg/constants 中的统一常量，避免重复定义
+// MinPasswordLength 和 MaxPasswordLength 定义在 pkg/constants/constants.go
 
 // LoginRequest 登录请求
 type LoginRequest struct {

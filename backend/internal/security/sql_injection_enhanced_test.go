@@ -37,8 +37,8 @@ func TestContainsSQLInjection(t *testing.T) {
 		// Union injection - detected by union_select and union_all patterns
 		// Note: ContainsSQLInjection removes "union" from AllowCommonWords first
 		// so we use patterns that are still detected after removal
-		{"union_select_with_quote_or", "' UNION SELECT ' OR '1'='1", true},  // quote_or pattern
-		{"union_with_comment", "' UNION SELECT * --", true},                 // comment pattern
+		{"union_select_with_quote_or", "' UNION SELECT ' OR '1'='1", true}, // quote_or pattern
+		{"union_with_comment", "' UNION SELECT * --", true},                // comment pattern
 
 		// Comment injection
 		{"dash_comment", "' --", true},
@@ -228,26 +228,26 @@ func TestHasSuspiciousCharCombo(t *testing.T) {
 	// The function requires:
 	// For semicolon: len > idx+10 AND semicolon within 10 chars from quote
 	// For equals: len > idx+5 AND equals within 5 chars from quote
-	
+
 	tests := []struct {
 		name     string
 		input    string
 		expected bool
 	}{
 		// Suspicious combinations - correct length and position
-		{"quote_semicolon_close", "'1234;567890abc", true},     // len=15>11, semicolon at pos 4 from quote
-		{"quote_equals_close", "'=1234567890abc", true},        // len=15>6, equals at pos 1 from quote
-		{"quote_equals_at_pos3", "'123=567890abc", true},       // len=14>6, equals at pos 3 from quote
+		{"quote_semicolon_close", "'1234;567890abc", true}, // len=15>11, semicolon at pos 4 from quote
+		{"quote_equals_close", "'=1234567890abc", true},    // len=15>6, equals at pos 1 from quote
+		{"quote_equals_at_pos3", "'123=567890abc", true},   // len=14>6, equals at pos 3 from quote
 
 		// Not suspicious - conditions not met
 		{"no_special_chars", "normal text", false},
 		{"only_quote", "test'value only", false},
 		{"only_semicolon", "test;value only", false},
 		{"only_equals", "test=value only", false},
-		{"semicolon_too_far", "'1234567890;abc", false},       // semicolon at pos 10, not within 10 chars
-		{"equals_too_far", "'12345=67890abc", false},          // equals at pos 5, not within 5 chars
-		{"too_short_semicolon", "'1234;5678", false},          // len=10, not > idx+10=11
-		{"too_short_equals", "'1234=567", false},              // len=9, not > idx+6=6
+		{"semicolon_too_far", "'1234567890;abc", false}, // semicolon at pos 10, not within 10 chars
+		{"equals_too_far", "'12345=67890abc", false},    // equals at pos 5, not within 5 chars
+		{"too_short_semicolon", "'1234;5678", false},    // len=10, not > idx+10=11
+		{"too_short_equals", "'1234=567", false},        // len=9, not > idx+6=6
 	}
 
 	for _, tt := range tests {

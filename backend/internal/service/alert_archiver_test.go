@@ -7,7 +7,7 @@ import (
 // TestDefaultAlertArchiverConfig tests DefaultAlertArchiverConfig function
 func TestDefaultAlertArchiverConfig(t *testing.T) {
 	cfg := DefaultAlertArchiverConfig()
-	
+
 	if cfg.ArchiveDaysOld <= 0 {
 		t.Error("ArchiveDaysOld should be positive")
 	}
