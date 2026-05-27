@@ -22,7 +22,12 @@ func NewAuthService(userRepo repository.UserRepositoryInterface) *AuthService {
 }
 
 // Login authenticates a user
+// FIX-019: 添加 Context 超时设置
 func (s *AuthService) Login(ctx context.Context, username, password string) (*model.User, string, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Get user by username
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
@@ -68,7 +73,12 @@ func GenerateTokenWithVersion(userID int, username, role, tenantID string, token
 }
 
 // Register creates a new user
+// FIX-019: 添加 Context 超时设置
 func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) (*model.User, string, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Check if username exists
 	if _, err := s.userRepo.GetByUsername(ctx, req.Username); err == nil {
 		return nil, "", errors.NewAppError(errors.ErrCodeConflict, "Username already exists", req.Username)
@@ -113,7 +123,11 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 }
 
 // GetUserByID retrieves a user by ID
+// FIX-019: 添加 Context 超时设置
 func (s *AuthService) GetUserByID(ctx context.Context, id int) (*model.User, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, errors.NewUserNotFoundError(fmt.Sprintf("%d", id))
@@ -136,7 +150,12 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*T
 }
 
 // ChangePassword changes a user's password
+// FIX-019: 添加 Context 超时设置
 func (s *AuthService) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Get user by ID
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -192,6 +211,10 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*Claims,
 }
 
 // ListUsers 列出所有用户
+// FIX-019: 添加 Context 超时设置
 func (s *AuthService) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	return s.userRepo.List(ctx, page, pageSize)
 }

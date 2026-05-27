@@ -115,7 +115,11 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 
 // GetByDeviceID retrieves telemetry history for a device
 // BE-P2-02: 使用常量替换魔法数字
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetByDeviceID(ctx context.Context, deviceID string, start, end time.Time, limit int) ([]model.TelemetryData, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	if limit <= 0 {
 		limit = constants.MaxTelemetryLimit
 	}
@@ -127,7 +131,11 @@ func (s *TelemetryService) GetByDeviceID(ctx context.Context, deviceID string, s
 }
 
 // GetLatest retrieves latest telemetry for all devices
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetLatest(ctx context.Context) ([]model.TelemetryData, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	data, err := s.telemetryRepo.GetLatest(ctx)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
@@ -136,7 +144,11 @@ func (s *TelemetryService) GetLatest(ctx context.Context) ([]model.TelemetryData
 }
 
 // GetStats retrieves statistics for a device
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetStats(ctx context.Context, deviceID string, start, end time.Time) (*model.DeviceStats, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	stats, err := s.telemetryRepo.GetStats(ctx, deviceID, start, end)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
@@ -278,7 +290,12 @@ func InitTelemetryService(alertSvc *AlertService, telemetryRepo *repository.Tele
 }
 
 // GetROIStats calculates ROI statistics from real database data
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetROIStats(ctx context.Context) (*model.ROIStats, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Get device count
 	deviceCount, err := s.deviceRepo.Count(ctx)
 	if err != nil {
@@ -351,7 +368,12 @@ func (s *TelemetryService) GetROIStats(ctx context.Context) (*model.ROIStats, er
 }
 
 // GetSystemStatus returns system status
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetSystemStatus(ctx context.Context) (*model.SystemStatus, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	start := time.Now()
 
 	// Simple DB ping
@@ -378,7 +400,11 @@ func (s *TelemetryService) GetSystemStatus(ctx context.Context) (*model.SystemSt
 
 // GetHistoricalData retrieves historical telemetry with time range
 // BE-P2-02: 使用常量替换魔法数字
+// FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetHistoricalData(ctx context.Context, deviceID string, timeRange string, limit int) ([]model.TelemetryData, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	start, end := ParseTimeRange(timeRange)
 	if limit <= 0 {
 		limit = constants.MaxTelemetryLimit

@@ -13,6 +13,17 @@ import (
 	"github.com/industrial-ai/platform/pkg/errors"
 )
 
+// FIX-019: ensureContextTimeout 确保 context 有超时设置
+// 如果 context 没有 deadline，则添加默认超时
+func ensureContextTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		// Context 已经有 deadline，返回原始 context 和空 cancel
+		return ctx, func() {}
+	}
+	// Context 没有 deadline，添加默认超时
+	return context.WithTimeout(ctx, time.Duration(constants.DefaultServiceTimeoutSec)*time.Second)
+}
+
 // DeviceService handles device business logic
 type DeviceService struct {
 	deviceRepo repository.DeviceRepositoryInterface
@@ -38,7 +49,12 @@ func NewDeviceServiceWithDB(deviceRepo repository.DeviceRepositoryInterface, use
 }
 
 // Create creates a new device
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) Create(ctx context.Context, device *model.Device) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// 自动生成 UUID 作为设备 ID（如果前端未提供）
 	if device.ID == "" {
 		device.ID = uuid.New().String()
@@ -55,7 +71,12 @@ func (s *DeviceService) Create(ctx context.Context, device *model.Device) error 
 }
 
 // GetByID retrieves a device by ID
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) GetByID(ctx context.Context, id string) (*model.Device, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	device, err := s.deviceRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, errors.NewDeviceNotFoundError(id)
@@ -64,7 +85,12 @@ func (s *DeviceService) GetByID(ctx context.Context, id string) (*model.Device, 
 }
 
 // List retrieves devices with pagination
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) List(ctx context.Context, page, pageSize int) ([]model.Device, int, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	devices, total, err := s.deviceRepo.List(ctx, page, pageSize)
 	if err != nil {
 		return nil, 0, errors.NewDatabaseError(err.Error())
@@ -73,7 +99,12 @@ func (s *DeviceService) List(ctx context.Context, page, pageSize int) ([]model.D
 }
 
 // Update updates a device
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) Update(ctx context.Context, device *model.Device) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Check if device exists
 	_, err := s.deviceRepo.GetByID(ctx, device.ID)
 	if err != nil {
@@ -83,7 +114,12 @@ func (s *DeviceService) Update(ctx context.Context, device *model.Device) error 
 }
 
 // Delete removes a device
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) Delete(ctx context.Context, id string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if err := s.deviceRepo.Delete(ctx, id); err != nil {
 		return errors.NewDatabaseError(err.Error())
 	}
@@ -91,7 +127,12 @@ func (s *DeviceService) Delete(ctx context.Context, id string) error {
 }
 
 // UpdateStatus updates device status
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) UpdateStatus(ctx context.Context, id, status string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if err := s.deviceRepo.UpdateStatus(ctx, id, status); err != nil {
 		return errors.NewDatabaseError(err.Error())
 	}
@@ -139,7 +180,12 @@ func GetDeviceNameFromType(deviceType string) string {
 }
 
 // AutoRegisterDevice creates a device if it doesn't exist
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) AutoRegisterDevice(ctx context.Context, deviceID string) (*model.Device, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Check if device exists
 	device, err := s.deviceRepo.GetByID(ctx, deviceID)
 	if err == nil {
@@ -195,7 +241,12 @@ func (s *DeviceService) CreateDeviceWithUser(ctx context.Context, device *model.
 
 // GetGraph returns device relationship graph
 // BE-P2-02: 使用常量替换魔法数字
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	devices, _, err := s.deviceRepo.List(ctx, 1, constants.MaxPageSize)
 	if err != nil {
 		return nil, errors.NewDatabaseError(err.Error())
@@ -235,7 +286,12 @@ func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, e
 
 // BatchCreate creates multiple devices in a single database operation
 // FIX-020: 批量操作优化 - 使用批量插入代替逐个插入
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) BatchCreate(ctx context.Context, devices []*model.Device) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if len(devices) == 0 {
 		return nil
 	}
@@ -262,7 +318,12 @@ func (s *DeviceService) BatchCreate(ctx context.Context, devices []*model.Device
 
 // BatchUpdate updates multiple devices in a single operation
 // FIX-020: 批量操作优化 - 使用批量更新代替逐个更新
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) BatchUpdate(ctx context.Context, devices []*model.Device) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if len(devices) == 0 {
 		return nil
 	}
@@ -284,7 +345,12 @@ func (s *DeviceService) BatchUpdate(ctx context.Context, devices []*model.Device
 
 // BatchUpdateStatus updates status for multiple devices in a single query
 // FIX-020: 批量操作优化 - 减少数据库连接次数
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) BatchUpdateStatus(ctx context.Context, deviceStatuses map[string]string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if len(deviceStatuses) == 0 {
 		return nil
 	}
@@ -306,7 +372,12 @@ func (s *DeviceService) BatchUpdateStatus(ctx context.Context, deviceStatuses ma
 
 // BatchDelete removes multiple devices in a single operation
 // FIX-020: 批量操作优化 - 减少数据库连接次数
+// FIX-019: 添加 Context 超时设置
 func (s *DeviceService) BatchDelete(ctx context.Context, ids []string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	if len(ids) == 0 {
 		return nil
 	}

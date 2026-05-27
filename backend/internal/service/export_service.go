@@ -69,7 +69,12 @@ type ExportResult struct {
 }
 
 // Export exports a report in the specified format
+// FIX-019: 添加 Context 超时设置
 func (s *ExportService) Export(ctx context.Context, req *ExportRequest) (*ExportResult, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Set default date range if not provided
 	if req.StartDate.IsZero() {
 		req.StartDate = time.Now().Add(-24 * time.Hour)
@@ -173,7 +178,12 @@ type MonthlyMetric struct {
 }
 
 // generateDeviceReportData generates device report data
+// FIX-019: 添加 Context 超时设置
 func (s *ExportService) generateDeviceReportData(ctx context.Context, req *ExportRequest) *DeviceReportData {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	devices, total, err := s.deviceRepo.List(ctx, 1, 100)
 	if err != nil {
 		logger.L().Warn("Failed to get devices for report",
@@ -242,7 +252,12 @@ func (s *ExportService) generateDeviceReportData(ctx context.Context, req *Expor
 }
 
 // generateAlertReportData generates alert report data
+// FIX-019: 添加 Context 超时设置
 func (s *ExportService) generateAlertReportData(ctx context.Context, req *ExportRequest) *AlertReportData {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	alerts, total, err := s.alertRepo.List(ctx, "", 1, 100)
 	if err != nil {
 		logger.L().Warn("Failed to get alerts for report",
@@ -313,7 +328,12 @@ func (s *ExportService) generateAlertReportData(ctx context.Context, req *Export
 }
 
 // generateROIReportData generates ROI report data from real data
+// FIX-019: 添加 Context 超时设置
 func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportData {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	roiStats, err := s.reportSvc.GetROIStats(ctx)
 	if err != nil {
 		logger.L().Warn("Failed to get ROI stats for report",

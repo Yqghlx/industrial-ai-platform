@@ -36,7 +36,12 @@ func (s *TenantService) getDefaultMaxDevices(plan string) int {
 
 // FIX-003: 添加 context 参数
 // BE-P2-02: 使用常量替换魔法数字
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan string, maxDevices int) (*model.Tenant, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Check if slug exists
 	existing, err := s.repo.GetBySlug(ctx, slug)
 	if err == nil && existing != nil {
@@ -73,12 +78,20 @@ func (s *TenantService) CreateTenant(ctx context.Context, name, slug, plan strin
 }
 
 // FIX-003: 添加 context 参数
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) GetTenant(ctx context.Context, id string) (*model.Tenant, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	return s.repo.GetByID(ctx, id)
 }
 
 // FIX-003: 添加 context 参数
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	tenant, err := s.repo.GetBySlug(ctx, slug)
 	if err != nil {
 		return nil, errors.NewTenantNotFoundError(slug)
@@ -88,7 +101,11 @@ func (s *TenantService) GetTenantBySlug(ctx context.Context, slug string) (*mode
 
 // FIX-003: 添加 context 参数
 // BE-P2-02: 使用常量替换魔法数字
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	if limit <= 0 {
 		limit = constants.MaxPageSize
 	}
@@ -103,7 +120,11 @@ func (s *TenantService) ListTenants(ctx context.Context, limit, offset int) ([]m
 }
 
 // FIX-003: 添加 context 参数
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	tenant, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, errors.NewTenantNotFoundError(id)
@@ -142,7 +163,11 @@ func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates map
 }
 
 // FIX-003: 添加 context 参数
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) DeleteTenant(ctx context.Context, id string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return errors.NewDatabaseError(err.Error())
 	}
@@ -150,7 +175,11 @@ func (s *TenantService) DeleteTenant(ctx context.Context, id string) error {
 }
 
 // FIX-003: 添加 context 参数
+// FIX-019: 添加 Context 超时设置
 func (s *TenantService) CountTenants(ctx context.Context) (int, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	count, err := s.repo.Count(ctx)
 	if err != nil {
 		return 0, errors.NewDatabaseError(err.Error())

@@ -45,7 +45,7 @@ func TestAlertService_InitializeDefaultRules(t *testing.T) {
 	ctx := context.Background()
 
 	for i := 0; i < 6; i++ {
-		mockRuleRepo.On("Create", ctx, mock.Anything).Return(nil)
+		mockRuleRepo.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), mock.Anything).Return(nil)
 	}
 
 	err := svc.InitializeDefaultRules(ctx)
@@ -59,7 +59,7 @@ func TestAlertService_GetTrendReport(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	mockAlertRepo.On("List", ctx, "", 1, 100).Return([]model.Alert{
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{
 		{ID: 1, Severity: "high", TriggeredAt: now},
 		{ID: 2, Severity: "medium", TriggeredAt: now.Add(-24 * time.Hour)},
 	}, 2, nil)
@@ -75,7 +75,7 @@ func TestAlertService_GetDeviceRanking(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockAlertRepo.On("List", ctx, "", 1, 100).Return([]model.Alert{
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{
 		{ID: 1, DeviceID: "CNC-001", Severity: "high"},
 		{ID: 2, DeviceID: "CNC-002", Severity: "low"},
 	}, 2, nil)
@@ -91,8 +91,8 @@ func TestAlertService_GetEfficiencyReport(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockAlertRepo.On("CountActive", ctx).Return(5, nil)
-	mockAlertRepo.On("List", ctx, "", 1, 100).Return([]model.Alert{}, 0, nil)
+	mockAlertRepo.On("CountActive", mock.MatchedBy(func(ctx context.Context) bool { return true })).Return(5, nil)
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{}, 0, nil)
 
 	report, err := svc.GetEfficiencyReport(ctx)
 	assert.NoError(t, err)
@@ -109,7 +109,7 @@ func TestAlertService_CreateRule(t *testing.T) {
 		Severity: "high",
 	}
 
-	mockRuleRepo.On("Create", ctx, rule).Return(nil)
+	mockRuleRepo.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), rule).Return(nil)
 
 	err := svc.CreateRule(ctx, rule)
 	assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestAlertService_GetAlerts(t *testing.T) {
 		{ID: 2, Severity: "medium"},
 	}
 
-	mockAlertRepo.On("List", ctx, "active", 1, 10).Return(alerts, 2, nil)
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "active", 1, 10).Return(alerts, 2, nil)
 
 	result, total, err := svc.GetAlerts(ctx, "active", 1, 10)
 	assert.NoError(t, err)
@@ -157,7 +157,7 @@ func TestAlertService_GetAlertByID(t *testing.T) {
 	ctx := context.Background()
 	alert := &model.Alert{ID: 1, Severity: "high"}
 
-	mockAlertRepo.On("List", ctx, "all", 1, 1000).Return([]model.Alert{*alert}, 1, nil)
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "all", 1, 1000).Return([]model.Alert{*alert}, 1, nil)
 
 	result, err := svc.GetAlertByID(ctx, 1)
 	assert.NoError(t, err)
@@ -195,7 +195,7 @@ func TestAlertService_GetRuleByID(t *testing.T) {
 	ctx := context.Background()
 	rule := &model.AlertRule{ID: 1, Name: "温度告警"}
 
-	mockRuleRepo.On("GetByID", ctx, 1).Return(rule, nil)
+	mockRuleRepo.On("GetByID", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(rule, nil)
 
 	result, err := svc.GetRuleByID(ctx, 1)
 	assert.NoError(t, err)
@@ -208,7 +208,7 @@ func TestAlertService_DeleteRule(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockRuleRepo.On("Delete", ctx, 1).Return(nil)
+	mockRuleRepo.On("Delete", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(nil)
 
 	err := svc.DeleteRule(ctx, 1)
 	assert.NoError(t, err)
@@ -225,7 +225,8 @@ func TestDeviceService_Delete(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockDeviceRepo.On("Delete", ctx, "CNC-001").Return(nil)
+	// Use mock.MatchedBy to handle context wrapping by ensureContextTimeout
+	mockDeviceRepo.On("Delete", mock.MatchedBy(func(ctx context.Context) bool { return true }), "CNC-001").Return(nil)
 
 	err := svc.Delete(ctx, "CNC-001")
 	assert.NoError(t, err)
@@ -238,7 +239,8 @@ func TestDeviceService_UpdateStatus(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockDeviceRepo.On("UpdateStatus", ctx, "CNC-001", "offline").Return(nil)
+	// Use mock.MatchedBy to handle context wrapping by ensureContextTimeout
+	mockDeviceRepo.On("UpdateStatus", mock.MatchedBy(func(ctx context.Context) bool { return true }), "CNC-001", "offline").Return(nil)
 
 	err := svc.UpdateStatus(ctx, "CNC-001", "offline")
 	assert.NoError(t, err)
@@ -334,9 +336,9 @@ func TestExportService_GenerateDeviceReportData(t *testing.T) {
 		{ID: "CNC-002", Name: "数控机床2", Status: "offline"},
 	}
 
-	mockDeviceRepo.On("List", ctx, 1, 100).Return(devices, 2, nil)
+	mockDeviceRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1, 100).Return(devices, 2, nil)
 	// Performance optimization: use batch query mock instead of individual GetStats calls
-	mockTelemetryRepo.On("GetStatsBatch", ctx, []string{"CNC-001", "CNC-002"}, mock.Anything, mock.Anything).
+	mockTelemetryRepo.On("GetStatsBatch", mock.MatchedBy(func(ctx context.Context) bool { return true }), []string{"CNC-001", "CNC-002"}, mock.Anything, mock.Anything).
 		Return(map[string]*model.DeviceStats{
 			"CNC-001": &model.DeviceStats{DeviceID: "CNC-001"},
 			"CNC-002": &model.DeviceStats{DeviceID: "CNC-002"},
@@ -359,7 +361,8 @@ func TestExportService_GenerateAlertReportData(t *testing.T) {
 		{ID: 2, DeviceID: "CNC-002", Severity: "low", Status: "resolved"},
 	}
 
-	mockAlertRepo.On("List", ctx, "", 1, 100).Return(alerts, 2, nil)
+	// Use mock.MatchedBy to handle context wrapping by ensureContextTimeout
+	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return(alerts, 2, nil)
 
 	data := svc.generateAlertReportData(ctx, req)
 	assert.NotNil(t, data)
@@ -381,7 +384,7 @@ func TestWorkOrderService_Create(t *testing.T) {
 		Priority: "high",
 	}
 
-	mockWorkOrderRepo.On("Create", ctx, order).Return(nil)
+	mockWorkOrderRepo.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), order).Return(nil)
 
 	err := svc.Create(ctx, order)
 	assert.NoError(t, err)
@@ -394,7 +397,7 @@ func TestWorkOrderService_GetByID(t *testing.T) {
 	ctx := context.Background()
 	order := &model.WorkOrder{ID: 1, Title: "维修工单"}
 
-	mockWorkOrderRepo.On("GetByID", ctx, 1).Return(order, nil)
+	mockWorkOrderRepo.On("GetByID", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(order, nil)
 
 	result, err := svc.GetByID(ctx, 1)
 	assert.NoError(t, err)
@@ -423,7 +426,7 @@ func TestWorkOrderService_List(t *testing.T) {
 		{ID: 2, Title: "工单2"},
 	}
 
-	mockWorkOrderRepo.On("List", ctx, "", "", 1, 10).Return(orders, 2, nil)
+	mockWorkOrderRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", "", 1, 10).Return(orders, 2, nil)
 
 	result, total, err := svc.List(ctx, "", "", 1, 10)
 	assert.NoError(t, err)
@@ -445,7 +448,7 @@ func TestNotificationService_Create(t *testing.T) {
 		Message: "设备温度过高",
 	}
 
-	mockNotificationRepo.On("Create", ctx, notification).Return(nil)
+	mockNotificationRepo.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), notification).Return(nil)
 
 	err := svc.Create(ctx, notification)
 	assert.NoError(t, err)
@@ -473,7 +476,7 @@ func TestNotificationService_List(t *testing.T) {
 		{ID: 2, Title: "通知2"},
 	}
 
-	mockNotificationRepo.On("List", ctx, "", true, 1, 10).Return(notifications, 2, nil)
+	mockNotificationRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", true, 1, 10).Return(notifications, 2, nil)
 
 	result, total, err := svc.List(ctx, "unread", 1, 10)
 	assert.NoError(t, err)
@@ -494,7 +497,7 @@ func TestBlackBoxService_Create(t *testing.T) {
 		DeviceID: "CNC-001",
 	}
 
-	mockBlackBoxRepo.On("Create", ctx, record).Return(nil)
+	mockBlackBoxRepo.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), record).Return(nil)
 
 	err := svc.Create(ctx, record)
 	assert.NoError(t, err)
@@ -510,7 +513,7 @@ func TestBlackBoxService_List(t *testing.T) {
 		{ID: 2, DeviceID: "CNC-002"},
 	}
 
-	mockBlackBoxRepo.On("List", ctx, "CNC-001", 1, 10).Return(records, 2, nil)
+	mockBlackBoxRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "CNC-001", 1, 10).Return(records, 2, nil)
 
 	result, total, err := svc.List(ctx, "CNC-001", 1, 10)
 	assert.NoError(t, err)
@@ -538,7 +541,7 @@ func TestReportService_ListReports(t *testing.T) {
 		{ID: 2, Title: "报告2"},
 	}
 
-	mockReportRepo.On("List", ctx, "daily", 1, 10).Return(reports, 2, nil)
+	mockReportRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "daily", 1, 10).Return(reports, 2, nil)
 
 	result, total, err := svc.ListReports(ctx, "daily", 1, 10)
 	assert.NoError(t, err)
@@ -553,7 +556,7 @@ func TestReportService_GetReportByID(t *testing.T) {
 	ctx := context.Background()
 	report := &model.Report{ID: 1, Title: "测试报告"}
 
-	mockReportRepo.On("GetByID", ctx, 1).Return(report, nil)
+	mockReportRepo.On("GetByID", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(report, nil)
 
 	result, err := svc.GetReportByID(ctx, 1)
 	assert.NoError(t, err)
@@ -566,7 +569,7 @@ func TestReportService_DeleteReport_Coverage(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockReportRepo.On("Delete", ctx, 1).Return(nil)
+	mockReportRepo.On("Delete", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(nil)
 
 	err := svc.DeleteReport(ctx, 1)
 	assert.NoError(t, err)
@@ -600,7 +603,7 @@ func TestAgentService_GetTaskLogs(t *testing.T) {
 		{SessionID: "session-2", Query: "故障预测"},
 	}
 
-	mockTaskLogRepo.On("List", ctx, 10).Return(logs, nil)
+	mockTaskLogRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), 10).Return(logs, nil)
 
 	result, err := svc.GetTaskLogs(ctx, 10)
 	assert.NoError(t, err)
@@ -624,7 +627,7 @@ func TestUserService_GetByID_Simple(t *testing.T) {
 	ctx := context.Background()
 	user := &model.User{ID: 1, Username: "testuser"}
 
-	mockUserRepo.On("GetByID", ctx, 1).Return(user, nil)
+	mockUserRepo.On("GetByID", mock.MatchedBy(func(ctx context.Context) bool { return true }), 1).Return(user, nil)
 
 	result, err := svc.GetByID(1)
 	assert.NoError(t, err)

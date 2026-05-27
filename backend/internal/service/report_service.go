@@ -47,7 +47,12 @@ func NewReportService(
 }
 
 // GenerateReport generates a report
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) GenerateReport(ctx context.Context, reportType string, deviceID string) (*model.Report, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var content strings.Builder
 	var title string
 
@@ -93,7 +98,12 @@ func (s *ReportService) GenerateReport(ctx context.Context, reportType string, d
 }
 
 // generateDailyReport generates a daily operations report
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) generateDailyReport(ctx context.Context) string {
+	// FIX-019: 确保 context 有超时（generateDailyReport 可能被外部调用）
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var content strings.Builder
 
 	content.WriteString("# 每日运营报告\n\n")
@@ -133,7 +143,12 @@ func (s *ReportService) generateDailyReport(ctx context.Context) string {
 }
 
 // generateDeviceReport generates a device-specific report
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) generateDeviceReport(ctx context.Context, deviceID string) string {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var content strings.Builder
 
 	device, err := s.deviceRepo.GetByID(ctx, deviceID)
@@ -243,22 +258,38 @@ func (s *ReportService) generateComprehensiveReport(ctx context.Context) string 
 }
 
 // ListReports lists reports with pagination
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) ListReports(ctx context.Context, reportType string, page, pageSize int) ([]model.Report, int, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	return s.reportRepo.List(ctx, reportType, page, pageSize)
 }
 
 // GetReportByID retrieves a report by ID
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) GetReportByID(ctx context.Context, id int) (*model.Report, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	return s.reportRepo.GetByID(ctx, id)
 }
 
 // DeleteReport deletes a report
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) DeleteReport(ctx context.Context, id int) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	return s.reportRepo.Delete(ctx, id)
 }
 
 // GetROIStats calculates ROI statistics
+// FIX-019: 添加 Context 超时设置
 func (s *ReportService) GetROIStats(ctx context.Context) (*model.ROIStats, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
 	deviceCount, _ := s.deviceRepo.Count(ctx)
 
 	// Calculate estimated savings (mock calculation)

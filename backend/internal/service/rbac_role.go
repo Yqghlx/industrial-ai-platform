@@ -49,7 +49,12 @@ func NewRBACServiceWithRBACRepo(
 }
 
 // CreateRole creates a new role
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayName, description string) (*model.Role, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Check if role already exists
 	if s.roleRepo != nil {
 		existing, err := s.roleRepo.GetByName(tenantID, name)
@@ -87,7 +92,12 @@ func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayNam
 }
 
 // GetRole retrieves a role by ID
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var role *model.Role
 	var err error
 
@@ -107,7 +117,12 @@ func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) 
 }
 
 // GetRoleWithPermissions retrieves a role with its permissions
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) GetRoleWithPermissions(ctx context.Context, id int) (*model.RoleResponse, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var result *model.RoleResponse
 	var err error
 
@@ -138,7 +153,12 @@ func (s *RBACService) GetRoleWithPermissions(ctx context.Context, id int) (*mode
 }
 
 // ListRoles retrieves all roles for a tenant
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) ListRoles(ctx context.Context, tenantID string) ([]model.Role, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var roles []model.Role
 	var err error
 
@@ -155,7 +175,12 @@ func (s *RBACService) ListRoles(ctx context.Context, tenantID string) ([]model.R
 }
 
 // UpdateRole updates a role
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string]interface{}) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var role *model.Role
 	var err error
 
@@ -195,7 +220,12 @@ func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string
 }
 
 // DeleteRole deletes a role by ID
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var role *model.Role
 	var err error
 
@@ -230,7 +260,12 @@ func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
 }
 
 // AssignRole assigns a role to a user
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenantID string) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// Verify role exists
 	var err error
 	if s.roleRepo != nil {
@@ -260,7 +295,12 @@ func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenant
 }
 
 // RemoveRoleFromUser removes a role from a user
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) RemoveRoleFromUser(ctx context.Context, userID, roleID int) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var err error
 	if s.roleRepo != nil {
 		err = s.roleRepo.RemoveRoleFromUser(userID, roleID)
@@ -275,7 +315,12 @@ func (s *RBACService) RemoveRoleFromUser(ctx context.Context, userID, roleID int
 }
 
 // GetUserRoles retrieves all roles for a user
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) GetUserRoles(ctx context.Context, userID int) ([]model.Role, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var roles []model.Role
 	var err error
 
@@ -292,7 +337,12 @@ func (s *RBACService) GetUserRoles(ctx context.Context, userID int) ([]model.Rol
 }
 
 // GetUserPermissions retrieves all permissions for a user
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var permissions []model.Permission
 	var err error
 
@@ -309,7 +359,12 @@ func (s *RBACService) GetUserPermissions(ctx context.Context, userID int) ([]mod
 }
 
 // CheckPermission checks if a user has a specific permission
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	var hasPermission bool
 	var err error
 
@@ -326,10 +381,15 @@ func (s *RBACService) CheckPermission(ctx context.Context, userID int, resource,
 }
 
 // HasAnyPermission checks if a user has any of the specified permissions
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) HasAnyPermission(ctx context.Context, userID int, permissions []struct {
 	Resource string
 	Action   string
 }) (bool, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// FIX-008: N+1 查询优化 - 批量获取所有用户权限
 	allPermissions, err := s.GetUserPermissions(ctx, userID)
 	if err != nil {
@@ -354,10 +414,15 @@ func (s *RBACService) HasAnyPermission(ctx context.Context, userID int, permissi
 }
 
 // HasAllPermissions checks if a user has all of the specified permissions
+// FIX-019: 添加 Context 超时设置
 func (s *RBACService) HasAllPermissions(ctx context.Context, userID int, permissions []struct {
 	Resource string
 	Action   string
 }) (bool, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
 	// FIX-008: N+1 查询优化 - 批量获取所有用户权限
 	allPermissions, err := s.GetUserPermissions(ctx, userID)
 	if err != nil {
