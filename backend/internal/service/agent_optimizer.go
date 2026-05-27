@@ -79,9 +79,11 @@ func (o *AgentOptimizer) ReleaseSlot() {
 }
 
 // generateCacheKey creates a unique cache key for query
+// Uses standard cache key naming convention: agent:answer:<query_hash>
+// This provides namespace isolation and follows the project's cache key standards
 func (o *AgentOptimizer) generateCacheKey(query string) string {
 	hash := sha256.Sum256([]byte(query))
-	return "agent:answer:" + hex.EncodeToString(hash[:])
+	return cache.AgentCachePrefix.Build("answer", hex.EncodeToString(hash[:]))
 }
 
 // QueueStats returns current queue statistics

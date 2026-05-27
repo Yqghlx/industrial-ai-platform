@@ -82,6 +82,10 @@ var (
 	AlertCachePrefix = NewCacheKeyBuilder("alert")
 	// TelemetryCachePrefix for telemetry cache
 	TelemetryCachePrefix = NewCacheKeyBuilder("telemetry")
+	// AgentCachePrefix for agent-related cache (LLM answers, etc.)
+	// Naming convention: agent:<type>:<identifier>
+	// Example: agent:answer:sha256_hash
+	AgentCachePrefix = NewCacheKeyBuilder("agent")
 )
 
 // Config holds cache configuration

@@ -19,6 +19,10 @@ type DeviceRepositoryInterface interface {
 	UpdateStatus(ctx context.Context, id, status string) error
 	Count(ctx context.Context) (int, error)
 	WithTx(tx database.TransactionInterface) DeviceRepositoryInterface
+	// Batch operations for performance optimization
+	BatchCreate(ctx context.Context, devices []*model.Device) error
+	BatchUpdate(ctx context.Context, devices []*model.Device) error
+	BatchUpdateStatus(ctx context.Context, deviceStatuses map[string]string) error
 }
 
 // DeviceRepository handles device data access
@@ -149,6 +153,90 @@ func (r *DeviceRepository) Count(ctx context.Context) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM devices").Scan(&count)
 	return count, err
+}
+
+// BatchCreate inserts multiple devices in a single query for better performance
+func (r *DeviceRepository) BatchCreate(ctx context.Context, devices []*model.Device) error {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	// Build batch insert query with ON CONFLICT for upsert behavior
+	query := `
+		INSERT INTO devices (id, name, type, location, status, description, created_at, updated_at)
+		VALUES 
+	`
+	var values []interface{}
+	var placeholders []string
+	placeholderIdx := 1
+
+	for _, device := range devices {
+		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			placeholderIdx, placeholderIdx+1, placeholderIdx+2, placeholderIdx+3,
+			placeholderIdx+4, placeholderIdx+5, placeholderIdx+6, placeholderIdx+7))
+		values = append(values,
+			device.ID, device.Name, device.Type, device.Location,
+			device.Status, device.Description, device.CreatedAt, device.UpdatedAt,
+		)
+		placeholderIdx += 8
+	}
+
+	query += fmt.Sprintf("%s\nON CONFLICT (id) DO UPDATE SET\n\t\tname = EXCLUDED.name,\n\t\ttype = EXCLUDED.type,\n\t\tlocation = EXCLUDED.location,\n\t\tstatus = EXCLUDED.status,\n\t\tdescription = EXCLUDED.description,\n\t\tupdated_at = EXCLUDED.updated_at", strings.Join(placeholders, ", "))
+
+	_, err := r.db.Exec(ctx, query, values...)
+	return err
+}
+
+// BatchUpdate updates multiple devices in a single transaction for better performance
+func (r *DeviceRepository) BatchUpdate(ctx context.Context, devices []*model.Device) error {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	// Use a single transaction for all updates
+	for _, device := range devices {
+		device.UpdatedAt = time.Now()
+		query := `
+			UPDATE devices SET
+				name = $1, type = $2, location = $3, status = $4,
+				description = $5, updated_at = $6
+			WHERE id = $7
+		`
+		_, err := r.db.Exec(ctx, query,
+			device.Name, device.Type, device.Location, device.Status,
+			device.Description, device.UpdatedAt, device.ID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update device %s: %w", device.ID, err)
+		}
+	}
+	return nil
+}
+
+// BatchUpdateStatus updates status for multiple devices in a single query
+func (r *DeviceRepository) BatchUpdateStatus(ctx context.Context, deviceStatuses map[string]string) error {
+	if len(deviceStatuses) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	// Use CASE statement for batch update
+	query := `UPDATE devices SET status = CASE id `
+	var args []interface{}
+	args = append(args, now)
+	placeholderIdx := 2
+
+	var ids []string
+	for id, status := range deviceStatuses {
+		query += fmt.Sprintf("WHEN $%d THEN $%d ", placeholderIdx, placeholderIdx+1)
+		args = append(args, id, status)
+		ids = append(ids, fmt.Sprintf("$%d", placeholderIdx))
+		placeholderIdx += 2
+	}
+	query += fmt.Sprintf("ELSE status END, updated_at = $1 WHERE id IN (%s)", strings.Join(ids, ", "))
+
+	_, err := r.db.Exec(ctx, query, args...)
+	return err
 }
 
 // UserRepository handles user data access
