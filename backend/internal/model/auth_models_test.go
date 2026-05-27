@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"industrial-ai-platform/pkg/constants"
 )
 
 // TestValidatePassword tests password validation
@@ -348,9 +350,9 @@ func TestRegisterRequest_JSON(t *testing.T) {
 	}
 }
 
-// TestMinPasswordLength tests the constant
+// TestMinPasswordLength tests the constant (P3-04: 使用 pkg/constants 中的统一常量)
 func TestMinPasswordLength(t *testing.T) {
-	if MinPasswordLength != 12 {
-		t.Errorf("MinPasswordLength = %d, want 12", MinPasswordLength)
+	if constants.MinPasswordLength != 12 {
+		t.Errorf("MinPasswordLength = %d, want 12", constants.MinPasswordLength)
 	}
 }

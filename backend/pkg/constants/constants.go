@@ -267,3 +267,21 @@ func GetRoleLevel(role string) int {
 func HasPermission(role, required string) bool {
 	return GetRoleLevel(role) >= GetRoleLevel(required)
 }
+
+// ============================================
+// 常量命名规范 (P3-04)
+// ============================================
+//
+// 命名约定:
+// 1. 使用 Min/Max 前缀表示范围限制 (如 MinPasswordLength, MaxPasswordLength)
+// 2. 避免使用重复或相似的命名，保持一致性
+// 3. 避免在其他包重复定义相同语义的常量
+//
+// 已解决的重复定义:
+// - MinPasswordLength (原在 auth_models.go) -> 统一使用 pkg/constants.MinPasswordLength
+// - PasswordMinLength (已删除) -> 使用 MinPasswordLength
+// - PasswordMaxLength (已删除) -> 使用 MaxPasswordLength
+//
+// 密码常量规范:
+// - MinPasswordLength = 12 (NIST 推荐的最低密码长度)
+// - MaxPasswordLength = 100 (数据库字段限制)
