@@ -347,3 +347,244 @@ func TestHTTPServerNew_getCacheStatus(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 }
+
+// ============================================
+// FIX-015: WebSocket Origin Validation Tests
+// ============================================
+
+func TestIsLocalhostOrigin(t *testing.T) {
+	tests := []struct {
+		name     string
+		origin   string
+		expected bool
+	}{
+		// HTTP localhost
+		{"http localhost", "http://localhost", true},
+		{"http localhost with port 3000", "http://localhost:3000", true},
+		{"http localhost with port 8080", "http://localhost:8080", true},
+		{"http localhost with port 5173", "http://localhost:5173", true},
+		{"http localhost with path", "http://localhost/app", true},
+
+		// HTTPS localhost
+		{"https localhost", "https://localhost", true},
+		{"https localhost with port", "https://localhost:443", true},
+
+		// HTTP 127.0.0.1
+		{"http 127.0.0.1", "http://127.0.0.1", true},
+		{"http 127.0.0.1 with port", "http://127.0.0.1:3000", true},
+		{"http 127.0.0.1 with port 8080", "http://127.0.0.1:8080", true},
+
+		// HTTPS 127.0.0.1
+		{"https 127.0.0.1", "https://127.0.0.1", true},
+		{"https 127.0.0.1 with port", "https://127.0.0.1:443", true},
+
+		// IPv6 localhost
+		{"http [::1]", "http://[::1]", true},
+		{"http [::1] with port", "http://[::1]:3000", true},
+		{"https [::1]", "https://[::1]", true},
+
+		// Non-localhost origins (should be false)
+		{"external domain", "https://example.com", false},
+		{"external domain with port", "https://example.com:443", false},
+		{"http external", "http://external.host", false},
+		{"empty origin", "", false},
+		{"malformed origin", "not-a-url", false},
+		{"partial localhost match", "http://localhost.example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isLocalhostOrigin(tt.origin)
+			assert.Equal(t, tt.expected, result, "isLocalhostOrigin(%q) = %v, want %v", tt.origin, result, tt.expected)
+		})
+	}
+}
+
+func TestWebSocketOriginCheck_Development(t *testing.T) {
+	// Test that development environment allows localhost origins
+	gin.SetMode(gin.TestMode)
+
+	// Simulate development environment CheckOrigin function
+	isProduction := false
+	wsAllowedOrigins := map[string]bool{
+		"http://localhost:3000": true,
+		"http://127.0.0.1:8080": true,
+	}
+
+	// Add default localhost origins for dev
+	wsAllowedOrigins["http://localhost"] = true
+	wsAllowedOrigins["http://127.0.0.1"] = true
+
+	checkOrigin := func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			if !isProduction {
+				return true
+			}
+			return false
+		}
+		if wsAllowedOrigins[origin] {
+			return true
+		}
+		if wsAllowedOrigins["*"] {
+			return true
+		}
+		if !isProduction {
+			return isLocalhostOrigin(origin)
+		}
+		return false
+	}
+
+	tests := []struct {
+		name     string
+		origin   string
+		expected bool
+	}{
+		{"no origin - dev allows", "", true},
+		{"localhost in allowed", "http://localhost:3000", true},
+		{"127.0.0.1 in allowed", "http://127.0.0.1:8080", true},
+		{"localhost not in allowed but isLocalhost", "http://localhost:5173", true},
+		{"127.0.0.1 not in allowed but isLocalhost", "http://127.0.0.1:3001", true},
+		{"external domain should fail", "https://example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			result := checkOrigin(req)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebSocketOriginCheck_Production(t *testing.T) {
+	// Test that production environment strictly checks origins
+	gin.SetMode(gin.TestMode)
+
+	// Simulate production environment CheckOrigin function
+	isProduction := true
+	wsAllowedOrigins := map[string]bool{
+		"https://app.example.com": true,
+		"https://admin.example.com": true,
+	}
+
+	checkOrigin := func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			if !isProduction {
+				return true
+			}
+			return false
+		}
+		if wsAllowedOrigins[origin] {
+			return true
+		}
+		if wsAllowedOrigins["*"] {
+			return true
+		}
+		if !isProduction {
+			return isLocalhostOrigin(origin)
+		}
+		return false
+	}
+
+	tests := []struct {
+		name     string
+		origin   string
+		expected bool
+	}{
+		{"no origin - prod denies", "", false},
+		{"allowed origin 1", "https://app.example.com", true},
+		{"allowed origin 2", "https://admin.example.com", true},
+		{"localhost should fail in prod", "http://localhost:3000", false},
+		{"external domain not allowed", "https://evil.com", false},
+		{"http variant not allowed", "http://app.example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			result := checkOrigin(req)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebSocketOriginCheck_Wildcard(t *testing.T) {
+	// Test wildcard origin handling (not recommended for production)
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name              string
+		isProduction      bool
+		wsAllowedOrigins  map[string]bool
+		origin            string
+		expected          bool
+	}{
+		{
+			name:             "wildcard allows any origin",
+			isProduction:     false,
+			wsAllowedOrigins: map[string]bool{"*": true},
+			origin:           "https://any-domain.com",
+			expected:         true,
+		},
+		{
+			name:             "wildcard in production allows external",
+			isProduction:     true,
+			wsAllowedOrigins: map[string]bool{"*": true},
+			origin:           "https://external.com",
+			expected:         true,
+		},
+		{
+			name:             "no wildcard and not in allowed - dev localhost",
+			isProduction:     false,
+			wsAllowedOrigins: map[string]bool{},
+			origin:           "http://localhost:9999",
+			expected:         true, // localhost allowed in dev
+		},
+		{
+			name:             "no wildcard and not in allowed - dev external",
+			isProduction:     false,
+			wsAllowedOrigins: map[string]bool{},
+			origin:           "https://external.com",
+			expected:         false, // external not allowed even in dev
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkOrigin := func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					if !tt.isProduction {
+						return true
+					}
+					return false
+				}
+				if tt.wsAllowedOrigins[origin] {
+					return true
+				}
+				if tt.wsAllowedOrigins["*"] {
+					return true
+				}
+				if !tt.isProduction {
+					return isLocalhostOrigin(origin)
+				}
+				return false
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			result := checkOrigin(req)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

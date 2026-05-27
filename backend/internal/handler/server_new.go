@@ -52,6 +52,10 @@ type ServerConfig struct {
 	WSCompressionEnabled bool
 	WSCompressionLevel   int
 	WSCompressionMinSize int
+	// AllowedOrigins specifies allowed origins for WebSocket connections
+	// In production: must be explicitly configured
+	// In development: defaults to localhost if not set
+	AllowedOrigins []string
 }
 
 // Server is alias for HTTPServerNew for backward compatibility
@@ -201,11 +205,34 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		corsOrigins = strings.Split(cfg.CORSOrigins, ",")
 	}
 
-	// WebSocket upgrader
+	// WebSocket upgrader with secure origin checking
+	// FIX-015: WebSocket Origin environment-based restriction
 	isProduction := strings.ToLower(cfg.Environment) == "production"
+
+	// Build allowed origins map for WebSocket
 	wsAllowedOrigins := make(map[string]bool)
+
+	// Add configured allowed origins
+	for _, o := range cfg.AllowedOrigins {
+		wsAllowedOrigins[strings.TrimSpace(o)] = true
+	}
+
+	// Also add CORS origins as allowed for WebSocket
 	for _, o := range corsOrigins {
 		wsAllowedOrigins[strings.TrimSpace(o)] = true
+	}
+
+	// Development environment: add default localhost origins
+	if !isProduction {
+		// Allow common development origins
+		wsAllowedOrigins["http://localhost"] = true
+		wsAllowedOrigins["http://localhost:3000"] = true
+		wsAllowedOrigins["http://localhost:8080"] = true
+		wsAllowedOrigins["http://localhost:5173"] = true
+		wsAllowedOrigins["http://127.0.0.1"] = true
+		wsAllowedOrigins["http://127.0.0.1:3000"] = true
+		wsAllowedOrigins["http://127.0.0.1:8080"] = true
+		wsAllowedOrigins["http://127.0.0.1:5173"] = true
 	}
 
 	wsUpgrader := websocket.Upgrader{
@@ -213,15 +240,32 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			// 开发环境允许所有 origin
-			if !isProduction {
-				return true
-			}
-			// 生产环境严格检查
+
+			// No origin header (e.g., same-origin requests, mobile apps, curl)
+			// Allow in development, deny in production unless explicitly configured
 			if origin == "" {
+				if !isProduction {
+					return true
+				}
 				return false
 			}
-			return wsAllowedOrigins[origin] || wsAllowedOrigins["*"]
+
+			// Check against allowed origins map
+			if wsAllowedOrigins[origin] {
+				return true
+			}
+
+			// Check for wildcard (not recommended for production)
+			if wsAllowedOrigins["*"] {
+				return true
+			}
+
+			// Development: allow localhost origins even if not explicitly configured
+			if !isProduction {
+				return isLocalhostOrigin(origin)
+			}
+
+			return false
 		},
 	}
 
@@ -681,4 +725,28 @@ func (s *HTTPServerNew) exportROI(c *gin.Context) {
 // P0: Closes stopTicker channel to stop heartbeat ticker goroutine
 func (s *HTTPServerNew) Stop() {
 	close(s.stopTicker)
+}
+
+// isLocalhostOrigin checks if the origin is a localhost address
+// FIX-015: Helper for WebSocket origin validation in development
+func isLocalhostOrigin(origin string) bool {
+	// Patterns to match - must be followed by port (:), path (/), or end of string
+	localhostPatterns := []string{
+		"http://localhost",
+		"https://localhost",
+		"http://127.0.0.1",
+		"https://127.0.0.1",
+		"http://[::1]",
+		"https://[::1]",
+	}
+	for _, pattern := range localhostPatterns {
+		if strings.HasPrefix(origin, pattern) {
+			// Check that the next character is valid (port, path, or end)
+			rest := origin[len(pattern):]
+			if len(rest) == 0 || rest[0] == ':' || rest[0] == '/' {
+				return true
+			}
+		}
+	}
+	return false
 }
