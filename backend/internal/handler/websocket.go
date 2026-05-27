@@ -21,20 +21,22 @@ import (
 // WebSocketManager manages WebSocket connections
 // FIX-058: 封装 WebSocket 管理逻辑
 type WebSocketManager struct {
-	clients    map[*websocket.Conn]bool
-	clientsMu  sync.RWMutex
-	broadcast  chan model.WSMessage
-	heartbeat  chan struct{}
-	compressor *wscompression.Compressor
+	clients       map[*websocket.Conn]bool
+	clientsMu     sync.RWMutex
+	broadcast     chan model.WSMessage
+	heartbeat     chan struct{}
+	compressor    *wscompression.Compressor
+	stopHeartbeat chan struct{} // P0: stop channel for ticker goroutine
 }
 
 // NewWebSocketManager creates a new WebSocket manager
 func NewWebSocketManager(compressor *wscompression.Compressor) *WebSocketManager {
 	return &WebSocketManager{
-		clients:    make(map[*websocket.Conn]bool),
-		broadcast:  make(chan model.WSMessage, 100),
-		heartbeat:  make(chan struct{}),
-		compressor: compressor,
+		clients:       make(map[*websocket.Conn]bool),
+		broadcast:     make(chan model.WSMessage, 100),
+		heartbeat:     make(chan struct{}),
+		compressor:    compressor,
+		stopHeartbeat: make(chan struct{}), // P0: initialize stop channel
 	}
 }
 
@@ -98,11 +100,17 @@ func (m *WebSocketManager) Start() {
 		}
 	}()
 
-	// Heartbeat ticker
+	// Heartbeat ticker - P0: use select with stop channel to prevent goroutine leak
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
-		for range ticker.C {
-			m.heartbeat <- struct{}{}
+		defer ticker.Stop() // Ensure ticker resources are released
+		for {
+			select {
+			case <-ticker.C:
+				m.heartbeat <- struct{}{}
+			case <-m.stopHeartbeat:
+				return // Exit goroutine when stop signal received
+			}
 		}
 	}()
 }
@@ -112,6 +120,12 @@ func (m *WebSocketManager) ClientCount() int {
 	m.clientsMu.RLock()
 	defer m.clientsMu.RUnlock()
 	return len(m.clients)
+}
+
+// Stop gracefully stops the WebSocket manager and releases resources
+// P0: Added to prevent goroutine leak
+func (m *WebSocketManager) Stop() {
+	close(m.stopHeartbeat)
 }
 
 // handleWebSocket handles WebSocket connections
@@ -194,8 +208,14 @@ func (s *Server) startBroadcaster() {
 	// Start heartbeat ticker
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
-		for range ticker.C {
-			s.heartbeatChan <- struct{}{}
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				s.heartbeatChan <- struct{}{}
+			case <-s.stopTicker:
+				return
+			}
 		}
 	}()
 }

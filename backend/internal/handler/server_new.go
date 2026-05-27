@@ -110,6 +110,7 @@ type HTTPServerNew struct {
 	broadcastChan chan model.WSMessage
 	heartbeatChan chan struct{}
 	wsCompressor  *wscompression.Compressor
+	stopTicker    chan struct{} // P0: Stop channel for heartbeat ticker goroutine
 
 	// Cache
 	cache cache.CacheService
@@ -269,6 +270,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		broadcastChan: make(chan model.WSMessage, 100),
 		heartbeatChan: make(chan struct{}),
 		wsCompressor:  wsCompressor,
+		stopTicker:    make(chan struct{}),
 	}
 
 	// Setup middleware
@@ -673,4 +675,10 @@ func (s *HTTPServerNew) exportAlerts(c *gin.Context) {
 // exportROI wrapper for backward compat
 func (s *HTTPServerNew) exportROI(c *gin.Context) {
 	s.exportHandler.ExportROI(c)
+}
+
+// Stop gracefully stops the server and cleans up resources
+// P0: Closes stopTicker channel to stop heartbeat ticker goroutine
+func (s *HTTPServerNew) Stop() {
+	close(s.stopTicker)
 }
