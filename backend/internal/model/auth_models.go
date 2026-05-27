@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/industrial-ai/platform/pkg/constants"
 )
 
 // P3-04: 使用 pkg/constants 中的统一常量，避免重复定义
@@ -29,9 +31,9 @@ func (e *PasswordValidationError) Error() string {
 func ValidatePassword(password string) error {
 	var errors []string
 
-	// 检查最小长度
-	if len(password) < MinPasswordLength {
-		errors = append(errors, fmt.Sprintf("长度不足，至少需要%d个字符", MinPasswordLength))
+// 检查最小长度
+	if len(password) < constants.MinPasswordLength {
+		errors = append(errors, fmt.Sprintf("长度不足，至少需要%d个字符", constants.MinPasswordLength))
 	}
 
 	// 检查大写字母
