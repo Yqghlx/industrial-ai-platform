@@ -464,7 +464,7 @@ func TestNotificationService_MarkRead(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockNotificationRepo.On("MarkRead", ctx, 1).Return(nil)
+	mockNotificationRepo.On("MarkRead", mock.Anything, 1).Return(nil)
 
 	err := svc.MarkRead(ctx, 1)
 	assert.NoError(t, err)
