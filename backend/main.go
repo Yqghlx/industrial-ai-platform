@@ -53,6 +53,9 @@ func main() {
 		WSCompressionMinSize: appCfg.WSCompressionMinSize,
 	}
 
+	// P2-01: Get server host from config for logging
+	serverHost := appCfg.ServerHost
+
 	// Create server (using new architecture)
 	server, err := handler.NewHTTPServerNew(serverCfg)
 	if err != nil {
@@ -73,10 +76,10 @@ func main() {
 		cancel()
 	}()
 
-	log.Printf("Server running on http://localhost:%s", serverCfg.Port)
-	log.Printf("Health check: http://localhost:%s/health", serverCfg.Port)
-	log.Printf("API docs: http://localhost:%s/docs/", serverCfg.Port)
-	log.Printf("WebSocket: ws://localhost:%s/ws", serverCfg.Port)
+	log.Printf("Server running on http://%s:%s", serverHost, serverCfg.Port)
+	log.Printf("Health check: http://%s:%s/health", serverHost, serverCfg.Port)
+	log.Printf("API docs: http://%s:%s/docs/", serverHost, serverCfg.Port)
+	log.Printf("WebSocket: ws://%s:%s/ws", serverHost, serverCfg.Port)
 	log.Println("Press Ctrl+C to stop")
 
 	// Wait for shutdown signal

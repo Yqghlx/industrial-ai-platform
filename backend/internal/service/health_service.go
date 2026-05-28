@@ -165,7 +165,12 @@ func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
 	// Determine the base URL
 	baseURL := s.config.LLMBseURL
 	if baseURL == "" {
-		baseURL = "https://coding.dashscope.aliyuncs.com/v1"
+		// P2-04: Use configurable fallback URL instead of hardcoded one
+		baseURL = s.config.LLMFallbackURL
+		if baseURL == "" {
+			// Final fallback if not configured
+			baseURL = "https://open.bigmodel.cn/api/paas/v4"
+		}
 	}
 
 	// Check API endpoint (just a simple connectivity check)

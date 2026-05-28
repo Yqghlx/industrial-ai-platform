@@ -433,7 +433,7 @@ export default {
     connected: '已连接',
     postgresql: 'PostgreSQL',
   },
-  user: {
+user: {
     title: '用户管理',
     role: '角色',
     admin: '管理员',
@@ -447,7 +447,9 @@ export default {
    confirmDeleteTitle: '删除用户',
    adminRequired: '需要管理员权限',
    noPermission: '您没有权限访问此页面',
- },
+   createSuccess: '用户已创建',
+   createFailed: '创建失败',
+},
   dashboard: {
     overview: '概览',
     fleetStatus: '设备状态',

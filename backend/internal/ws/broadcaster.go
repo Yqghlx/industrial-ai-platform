@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 )
 
 // FIX-020: 统一 WebSocket 广播器 - 单例模式
+// BE-P2-07: 添加 Context 生命周期管理
 
 // Message represents a WebSocket message
 type Message struct {
@@ -26,6 +28,11 @@ type Broadcaster struct {
 	broadcast   chan Message
 	mu          sync.RWMutex
 	stopChan    chan struct{}
+
+	// BE-P2-07: Context 生命周期管理
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 var (
@@ -37,20 +44,27 @@ var (
 // GetBroadcaster returns the singleton broadcaster instance
 func GetBroadcaster() *Broadcaster {
 	once.Do(func() {
+		ctx, cancel := context.WithCancel(context.Background())
 		instance = &Broadcaster{
 			connections: make(map[*websocket.Conn]bool),
 			register:    make(chan *websocket.Conn, 100),
 			unregister:  make(chan *websocket.Conn, 100),
 			broadcast:   make(chan Message, 1000),
 			stopChan:    make(chan struct{}),
+			ctx:         ctx,
+			cancel:      cancel,
 		}
+		instance.wg.Add(1)
 		go instance.run()
 	})
 	return instance
 }
 
 // run handles the broadcast loop
+// BE-P2-07: 使用 Context 控制生命周期
 func (b *Broadcaster) run() {
+	defer b.wg.Done()
+
 	for {
 		select {
 		case conn := <-b.register:
@@ -91,16 +105,28 @@ func (b *Broadcaster) run() {
 			b.mu.RUnlock()
 
 		case <-b.stopChan:
-			logger.L().Info("Stopping broadcast loop")
-			b.mu.Lock()
-			for conn := range b.connections {
-				conn.Close()
-			}
-			b.connections = make(map[*websocket.Conn]bool)
-			b.mu.Unlock()
+			logger.L().Info("Stopping broadcast loop via stopChan")
+			b.closeAllConnections()
+			return
+
+		case <-b.ctx.Done():
+			// BE-P2-07: Context 取消时优雅退出
+			logger.L().Info("Stopping broadcast loop via context")
+			b.closeAllConnections()
 			return
 		}
 	}
+}
+
+// closeAllConnections 关闭所有连接
+// BE-P2-07: 提取公共逻辑
+func (b *Broadcaster) closeAllConnections() {
+	b.mu.Lock()
+	for conn := range b.connections {
+		conn.Close()
+	}
+	b.connections = make(map[*websocket.Conn]bool)
+	b.mu.Unlock()
 }
 
 // Register adds a new WebSocket connection
@@ -162,8 +188,40 @@ func (b *Broadcaster) ConnectionCount() int {
 }
 
 // Stop stops the broadcaster
+// BE-P2-07: 添加 Context 取消确保优雅退出
 func (b *Broadcaster) Stop() {
+	// 先取消 context
+	if b.cancel != nil {
+		b.cancel()
+	}
 	close(b.stopChan)
+	b.wg.Wait()
+}
+
+// Shutdown 优雅关闭（带超时）
+// BE-P2-07: 新增带超时的关闭方法
+func (b *Broadcaster) Shutdown(ctx context.Context) error {
+	// 取消 context
+	if b.cancel != nil {
+		b.cancel()
+	}
+	close(b.stopChan)
+
+	// 等待 goroutine 退出或超时
+	done := make(chan struct{})
+	go func() {
+		b.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.L().Info("Broadcaster shutdown completed")
+		return nil
+	case <-ctx.Done():
+		logger.L().Warn("Broadcaster shutdown timeout")
+		return ctx.Err()
+	}
 }
 
 // Reset resets the singleton (for testing)

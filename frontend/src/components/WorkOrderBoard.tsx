@@ -8,6 +8,46 @@ import { WorkOrder } from '../types/api';
 import { asWorkOrderArraySafe } from '../types/typeGuards';
 import { getWorkOrderStatusColor, getWorkOrderPriorityColor } from '../lib/colorUtils';
 
+// FE-P2: React.memo 优化工单行渲染
+interface WorkOrderRowProps {
+  order: WorkOrder;
+  t: (key: string) => string;
+  onUpdateStatus: (id: number, status: string) => void;
+}
+
+const WorkOrderRow = React.memo(function WorkOrderRow({ order, t, onUpdateStatus }: WorkOrderRowProps) {
+  return (
+    <tr>
+      <td className="font-mono">#{order.id}</td>
+      <td>{order.title}</td>
+      <td className="font-mono text-sm">{order.device_id || '--'}</td>
+      <td>
+        <span className={`status-badge ${getWorkOrderPriorityColor(order.priority)}`}>
+          {t(`workOrder.${order.priority}`)}
+        </span>
+      </td>
+      <td>
+        <span className={`status-badge ${getWorkOrderStatusColor(order.status)}`}>
+          {t(`workOrder.${order.status === 'in_progress' ? 'inProgress' : order.status}`)}
+        </span>
+      </td>
+      <td>{new Date(order.created_at).toLocaleDateString()}</td>
+      <td>
+        <select
+          value={order.status}
+          onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+          className="input text-sm py-1"
+        >
+          <option value="pending">{t('workOrder.pending')}</option>
+          <option value="in_progress">{t('workOrder.inProgress')}</option>
+          <option value="completed">{t('workOrder.completed')}</option>
+          <option value="cancelled">{t('workOrder.cancelled')}</option>
+        </select>
+      </td>
+    </tr>
+  );
+});
+
 export default function WorkOrderBoard() {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -103,36 +143,14 @@ export default function WorkOrderBoard() {
                     <th>{t('workOrder.updateStatus')}</th>
                   </tr>
                 </thead>
-                <tbody>
+<tbody>
                   {orders.map((order) => (
-                    <tr key={order.id}>
-                      <td className="font-mono">#${order.id}</td>
-                      <td>{order.title}</td>
-                      <td className="font-mono text-sm">{order.device_id || '--'}</td>
-                      <td>
-                        <span className={`status-badge ${getWorkOrderPriorityColor(order.priority)}`}>
-                          {t(`workOrder.${order.priority}`)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${getWorkOrderStatusColor(order.status)}`}>
-                          {t(`workOrder.${order.status === 'in_progress' ? 'inProgress' : order.status}`)}
-                        </span>
-                      </td>
-                      <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                          className="input text-sm py-1"
-                        >
-                          <option value="pending">{t('workOrder.pending')}</option>
-                          <option value="in_progress">{t('workOrder.inProgress')}</option>
-                          <option value="completed">{t('workOrder.completed')}</option>
-                          <option value="cancelled">{t('workOrder.cancelled')}</option>
-                        </select>
-                      </td>
-                    </tr>
+                    <WorkOrderRow
+                      key={order.id}
+                      order={order}
+                      t={t}
+                      onUpdateStatus={handleUpdateStatus}
+                    />
                   ))}
                 </tbody>
               </table>

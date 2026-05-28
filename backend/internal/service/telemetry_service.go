@@ -339,23 +339,21 @@ func (s *TelemetryService) GetROIStats(ctx context.Context) (*model.ROIStats, er
 	}
 
 	// Calculate predicted savings
-	// Base savings: $1000 per device per month for monitoring
-	// Bonus savings: $500 per resolved issue (preventive maintenance value)
-	// Penalty: $100 per active alert (operational disruption cost)
-	baseSavings := float64(deviceCount) * 1000.0
-	resolvedSavings := float64(resolvedAlerts) * 500.0
-	alertCost := float64(activeAlerts) * 100.0
+	// BE-P2-05: 使用常量替换魔法数字
+	baseSavings := float64(deviceCount) * constants.ROIBaseSavingsPerDeviceMonthly
+	resolvedSavings := float64(resolvedAlerts) * constants.ROIResolvedIssueSavings
+	alertCost := float64(activeAlerts) * constants.ROIActiveAlertCost
 	savings := baseSavings + resolvedSavings - alertCost
 	if savings < 0 {
 		savings = 0
 	}
 
 	// Calculate average response time (hours)
-	// Estimated based on resolved vs active alerts ratio
-	avgResponseTime := 2.5 // Default 2.5 hours
+	// BE-P2-05: 使用常量替换魔法数字
+	avgResponseTime := constants.ROIDefaultAvgResponseTimeHours
 	if resolvedAlerts > 0 {
 		// If we have resolved alerts, estimate better response time
-		avgResponseTime = 1.5 + (float64(activeAlerts) / float64(resolvedAlerts+1) * 2)
+		avgResponseTime = constants.ROIBaseResponseTimeHours + (float64(activeAlerts) / float64(resolvedAlerts+1) * constants.ROIResponseTimeMultiplier)
 	}
 
 	return &model.ROIStats{

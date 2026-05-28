@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +14,22 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 )
+
+// P2-02: getTestPort returns a random available port for testing
+// This avoids hardcoded port :8080 which can cause conflicts
+func getTestPort() string {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		// Fallback to a common test port if random port fails
+		return ":18080"
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+	return ":" + strings.TrimPrefix(listener.Addr().String(), "127.0.0.1:")
+}
+
+// testPort is a cached test port used across all tests in this file
+var testPort = getTestPort()
 
 // MockStateSaver 实现 StateSaver 接口的模拟
 type MockStateSaver struct {
@@ -57,7 +74,7 @@ func (m *MockStateSaver) GetLastShutdownState() ShutdownState {
 // TestNewGracefulShutdownManager 测试创建优雅关闭管理器
 func TestNewGracefulShutdownManager(t *testing.T) {
 	// 创建测试服务器
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	db := &sql.DB{}
 	redis := &redis.Client{}
 	timeout := 30 * time.Second
@@ -89,7 +106,7 @@ func TestNewGracefulShutdownManager(t *testing.T) {
 
 // TestNewGracefulShutdownManagerWithNilDependencies 测试使用 nil 依赖创建管理器
 func TestNewGracefulShutdownManagerWithNilDependencies(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	timeout := 30 * time.Second
 
 	// 测试 nil db
@@ -107,7 +124,7 @@ func TestNewGracefulShutdownManagerWithNilDependencies(t *testing.T) {
 
 // TestSetAndGetShuttingDown 测试设置和获取关闭标志
 func TestSetAndGetShuttingDown(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 初始状态应该是 false
@@ -130,7 +147,7 @@ func TestSetAndGetShuttingDown(t *testing.T) {
 
 // TestSetShuttingDownConcurrent 测试并发设置关闭标志
 func TestSetShuttingDownConcurrent(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	var wg sync.WaitGroup
@@ -149,7 +166,7 @@ func TestSetShuttingDownConcurrent(t *testing.T) {
 
 // TestRegisterBackgroundTask 测试注册后台任务
 func TestRegisterBackgroundTask(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	_, cancel := context.WithCancel(context.Background())
@@ -181,7 +198,7 @@ func TestRegisterBackgroundTask(t *testing.T) {
 
 // TestUnregisterBackgroundTask 测试取消注册后台任务
 func TestUnregisterBackgroundTask(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	_, cancel := context.WithCancel(context.Background())
@@ -203,7 +220,7 @@ func TestUnregisterBackgroundTask(t *testing.T) {
 
 // TestRegisterMultipleBackgroundTasks 测试注册多个后台任务
 func TestRegisterMultipleBackgroundTasks(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	for i := 0; i < 5; i++ {
@@ -219,7 +236,7 @@ func TestRegisterMultipleBackgroundTasks(t *testing.T) {
 
 // TestAddShutdownHook 测试添加关闭钩子
 func TestAddShutdownHook(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	hookCalled := false
@@ -243,7 +260,7 @@ func TestAddShutdownHook(t *testing.T) {
 
 // TestAddMultipleShutdownHooks 测试添加多个关闭钩子
 func TestAddMultipleShutdownHooks(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	callOrder := []int{}
@@ -331,7 +348,7 @@ func TestGenerateTaskID(t *testing.T) {
 
 // TestRegisterTask 测试注册任务便捷方法
 func TestRegisterTask(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	ctx, cancel := RegisterTask(manager, "Test Task")
@@ -400,7 +417,7 @@ func TestShutdownStateStruct(t *testing.T) {
 
 // TestCloseDatabaseWithNil 测试关闭 nil 数据库连接
 func TestCloseDatabaseWithNil(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 应该不会 panic
@@ -409,7 +426,7 @@ func TestCloseDatabaseWithNil(t *testing.T) {
 
 // TestCloseRedisWithNil 测试关闭 nil Redis 连接
 func TestCloseRedisWithNil(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 应该不会 panic
@@ -430,7 +447,7 @@ func TestCloseRedisWithConnection(t *testing.T) {
 		Addr: mr.Addr(),
 	})
 
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, rdb, 30*time.Second)
 
 	// 应该不会 panic
@@ -439,7 +456,7 @@ func TestCloseRedisWithConnection(t *testing.T) {
 
 // TestSaveApplicationStateWithoutStateSaver 测试无状态保存器时保存状态
 func TestSaveApplicationStateWithoutStateSaver(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 应该不会 panic
@@ -448,7 +465,7 @@ func TestSaveApplicationStateWithoutStateSaver(t *testing.T) {
 
 // TestSaveApplicationStateWithStateSaver 测试有状态保存器时保存状态
 func TestSaveApplicationStateWithStateSaver(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 	manager.stateSaver = NewMockStateSaver()
 
@@ -472,7 +489,7 @@ func TestSaveApplicationStateWithRedis(t *testing.T) {
 		Addr: mr.Addr(),
 	})
 
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, rdb, 30*time.Second)
 
 	// 注册任务
@@ -485,7 +502,7 @@ func TestSaveApplicationStateWithRedis(t *testing.T) {
 
 // TestWaitForBackgroundTasksEmpty 测试等待空的后台任务列表
 func TestWaitForBackgroundTasksEmpty(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 应该立即返回
@@ -504,7 +521,7 @@ func TestWaitForBackgroundTasksEmpty(t *testing.T) {
 
 // TestWaitForBackgroundTasksWithTasks 测试等待有后台任务
 func TestWaitForBackgroundTasksWithTasks(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 注册任务并立即取消
@@ -533,7 +550,7 @@ func TestWaitForBackgroundTasksWithTasks(t *testing.T) {
 
 // TestWaitForBackgroundTasksTimeout 测试等待后台任务超时
 func TestWaitForBackgroundTasksTimeout(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	// 注册一个永不完成的任务
@@ -681,7 +698,7 @@ func TestStartupRecoveryWithRedisError(t *testing.T) {
 
 // TestConcurrentTaskRegistration 测试并发任务注册
 func TestConcurrentTaskRegistration(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	var wg sync.WaitGroup
@@ -703,7 +720,7 @@ func TestConcurrentTaskRegistration(t *testing.T) {
 
 // TestShutdownHookError 测试关闭钩子返回错误
 func TestShutdownHookError(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	hook := func(ctx context.Context) error {
@@ -725,7 +742,7 @@ func TestShutdownHookError(t *testing.T) {
 
 // TestBackgroundTaskCancellation 测试后台任务取消
 func TestBackgroundTaskCancellation(t *testing.T) {
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: testPort}
 	manager := NewGracefulShutdownManager(server, nil, nil, 30*time.Second)
 
 	_, cancel := context.WithCancel(context.Background())

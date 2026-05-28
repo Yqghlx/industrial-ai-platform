@@ -433,7 +433,7 @@ export default {
     connected: 'Connected',
     postgresql: 'PostgreSQL',
   },
-  user: {
+user: {
     title: 'User Management',
     role: 'Role',
     admin: 'Admin',
@@ -447,7 +447,9 @@ export default {
    confirmDeleteTitle: 'Delete User',
    adminRequired: 'Admin Permission Required',
    noPermission: 'You do not have permission to access this page',
- },
+   createSuccess: 'User created',
+   createFailed: 'Creation failed',
+},
   dashboard: {
     overview: 'Overview',
     fleetStatus: 'Fleet Status',

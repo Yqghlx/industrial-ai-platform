@@ -230,6 +230,10 @@ type AuditLogger struct {
 	closeChan chan struct{}
 	waitGroup sync.WaitGroup
 
+	// BE-P2-06: Context 生命周期管理
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	// 统计信息
 	stats      *AuditStats
 	statsMutex sync.RWMutex
@@ -251,12 +255,17 @@ func NewAuditLogger(repo Repository, logger *zap.Logger, config *Config) *AuditL
 		config = DefaultConfig()
 	}
 
+	// BE-P2-06: 创建可取消的 context
+	ctx, cancel := context.WithCancel(context.Background())
+
 	auditLogger := &AuditLogger{
 		repo:        repo,
 		logger:      logger,
 		config:      config,
 		batchBuffer: make([]*AuditLog, 0, config.BatchSize),
 		closeChan:   make(chan struct{}),
+		ctx:         ctx,
+		cancel:      cancel,
 		stats:       &AuditStats{},
 	}
 
@@ -291,6 +300,7 @@ func (a *AuditLogger) startWorkers() {
 }
 
 // worker 工作协程
+// BE-P2-06: 使用 context 控制生命周期
 func (a *AuditLogger) worker(id int) {
 	defer a.waitGroup.Done()
 
@@ -320,11 +330,17 @@ func (a *AuditLogger) worker(id int) {
 			// 关闭前刷新剩余日志
 			a.flushRemaining()
 			return
+
+		case <-a.ctx.Done():
+			// BE-P2-06: Context 取消时也优雅退出
+			a.flushRemaining()
+			return
 		}
 	}
 }
 
 // batchTimer 批量写入定时器
+// BE-P2-06: 使用 context 控制生命周期
 func (a *AuditLogger) batchTimer() {
 	defer a.waitGroup.Done()
 
@@ -336,6 +352,9 @@ func (a *AuditLogger) batchTimer() {
 		case <-ticker.C:
 			a.flushBatch()
 		case <-a.closeChan:
+			return
+		case <-a.ctx.Done():
+			// BE-P2-06: Context 取消时也优雅退出
 			return
 		}
 	}
@@ -421,8 +440,13 @@ func (a *AuditLogger) updateStats(success bool) {
 }
 
 // Close 关闭审计日志服务
+// BE-P2-06: 添加 Context 取消确保所有 goroutine 优雅退出
 func (a *AuditLogger) Close() error {
 	if a.auditQueue != nil {
+		// 先取消 context，让所有 goroutine 知道需要退出
+		if a.cancel != nil {
+			a.cancel()
+		}
 		close(a.closeChan)
 		a.waitGroup.Wait()
 		close(a.auditQueue)
@@ -430,6 +454,37 @@ func (a *AuditLogger) Close() error {
 
 	a.logger.Info("Audit logger closed")
 	return nil
+}
+
+// Shutdown 优雅关闭（带超时）
+// BE-P2-06: 新增带超时的关闭方法
+func (a *AuditLogger) Shutdown(ctx context.Context) error {
+	if a.auditQueue == nil {
+		return nil
+	}
+
+	// 取消 context
+	if a.cancel != nil {
+		a.cancel()
+	}
+	close(a.closeChan)
+
+	// 等待 goroutine 退出或超时
+	done := make(chan struct{})
+	go func() {
+		a.waitGroup.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		close(a.auditQueue)
+		a.logger.Info("Audit logger shutdown completed")
+		return nil
+	case <-ctx.Done():
+		a.logger.Warn("Audit logger shutdown timeout")
+		return ctx.Err()
+	}
 }
 
 // GetStats 获取统计信息

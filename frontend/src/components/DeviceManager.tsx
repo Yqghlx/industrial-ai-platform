@@ -13,6 +13,53 @@ import { useCRUD } from '../hooks/useCRUD';
 
 const PAGE_SIZE = 20;
 
+// FE-P2: React.memo 优化设备行渲染
+interface DeviceRowProps {
+  device: Device;
+  t: (key: string) => string;
+  isAdmin: boolean;
+  onEdit: (device: Device) => void;
+  onDelete: (id: string) => void;
+}
+
+const DeviceRow = React.memo(function DeviceRow({ device, t, isAdmin, onEdit, onDelete }: DeviceRowProps) {
+  return (
+    <tr data-testid={`device-row-${device.id}`}>
+      <td className="font-mono text-sm">{device.id}</td>
+      <td>{device.name}</td>
+      <td>{device.type}</td>
+      <td>{device.location}</td>
+      <td>
+        <span className={`status-badge ${getDeviceStatusBadgeClass(device.status)}`}>
+          {t(`device.${device.status}`)}
+        </span>
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          <button
+            data-testid="edit-btn"
+            onClick={() => onEdit(device)}
+            className="p-1 text-slate-400 hover:text-primary-400"
+            aria-label={t('common.edit')}
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          {isAdmin && (
+            <button
+              data-testid="delete-btn"
+              onClick={() => onDelete(device.id)}
+              className="p-1 text-slate-400 hover:text-red-400"
+              aria-label={t('common.delete')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export default function DeviceManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
@@ -175,39 +222,14 @@ export default function DeviceManager() {
                 </thead>
                 <tbody>
                   {filteredDevices.map((device) => (
-                    <tr key={device.id} data-testid={`device-row-${device.id}`}>
-                      <td className="font-mono text-sm">{device.id}</td>
-                      <td>{device.name}</td>
-                      <td>{device.type}</td>
-                      <td>{device.location}</td>
-                      <td>
-                        <span className={`status-badge ${getDeviceStatusBadgeClass(device.status)}`}>
-                          {t(`device.${device.status}`)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <button
-                            data-testid="edit-btn"
-                            onClick={() => setEditingDevice(device)}
-                            className="p-1 text-slate-400 hover:text-primary-400"
-                            aria-label={t('common.edit')}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          {isAdmin && (
-                            <button
-                              data-testid="delete-btn"
-                              onClick={() => handleDelete(device.id)}
-                              className="p-1 text-slate-400 hover:text-red-400"
-                              aria-label={t('common.delete')}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                    <DeviceRow
+                      key={device.id}
+                      device={device}
+                      t={t}
+                      isAdmin={isAdmin}
+                      onEdit={setEditingDevice}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </tbody>
               </table>

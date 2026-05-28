@@ -13,6 +13,56 @@ import { isTelemetryData } from '../types/typeGuards';
 // FE-P1: 状态数组上限常量
 const MAX_TELEMETRY_ENTRIES = 500;
 
+// FE-P2: React.memo 优化设备卡片渲染
+interface DeviceCardProps {
+  device: Device & { telemetry?: LatestTelemetry };
+  t: (key: string) => string;
+}
+
+const DeviceCard = React.memo(function DeviceCard({ device, t }: DeviceCardProps) {
+  return (
+    <Link
+      to={`/devices/${device.id}`}
+      className="block p-3 lg:p-4 bg-slate-800/50 rounded-lg border border-slate-700 
+               hover:border-primary-500 active:border-primary-400 transition-colors touch-manipulation"
+    >
+      <div className="flex items-start justify-between mb-2 lg:mb-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full shrink-0 ${getDeviceStatusColor(device.status)}`} />
+            <span className="font-medium text-slate-100 truncate">{device.name}</span>
+          </div>
+          <span className="text-xs lg:text-sm text-slate-400">{device.id}</span>
+        </div>
+        <span className={`status-badge ${getDeviceStatusBadgeClass(device.status)} shrink-0`}>
+          {t(`device.${device.status}`)}
+        </span>
+      </div>
+      
+      {device.telemetry && (
+        <div className="grid grid-cols-2 gap-2 text-xs lg:text-sm">
+          <div>
+            <span className="text-slate-400">{t('telemetry.temperature')}:</span>
+            <span className="text-slate-200 ml-1">
+              {device.telemetry.temperature?.toFixed(1) || '--'}°C
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400">{t('telemetry.vibration')}:</span>
+            <span className="text-slate-200 ml-1">
+              {device.telemetry.vibration?.toFixed(2) || '--'} mm/s
+            </span>
+          </div>
+        </div>
+      )}
+      
+      <div className="mt-1.5 lg:mt-2 text-xs text-slate-400 truncate">
+        {device.location} · {device.type}
+      </div>
+    </Link>
+  );
+});
+
 export default function FleetDashboard() {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -176,46 +226,11 @@ export default function FleetDashboard() {
           ) : (
             <div className="responsive-grid-3">
               {devicesWithTelemetry.map((device) => (
-                <Link
+                <DeviceCard
                   key={device.id}
-                  to={`/devices/${device.id}`}
-                  className="block p-3 lg:p-4 bg-slate-800/50 rounded-lg border border-slate-700 
-                           hover:border-primary-500 active:border-primary-400 transition-colors touch-manipulation"
-                >
-                  <div className="flex items-start justify-between mb-2 lg:mb-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${getDeviceStatusColor(device.status)}`} />
-                        <span className="font-medium text-slate-100 truncate">{device.name}</span>
-                      </div>
-                      <span className="text-xs lg:text-sm text-slate-400">{device.id}</span>
-                    </div>
-                    <span className={`status-badge ${getDeviceStatusBadgeClass(device.status)} shrink-0`}>
-                      {t(`device.${device.status}`)}
-                    </span>
-                  </div>
-                  
-                  {device.telemetry && (
-                    <div className="grid grid-cols-2 gap-2 text-xs lg:text-sm">
-                      <div>
-                        <span className="text-slate-400">{t('telemetry.temperature')}:</span>
-                        <span className="text-slate-200 ml-1">
-                          {device.telemetry.temperature?.toFixed(1) || '--'}°C
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">{t('telemetry.vibration')}:</span>
-                        <span className="text-slate-200 ml-1">
-                          {device.telemetry.vibration?.toFixed(2) || '--'} mm/s
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="mt-1.5 lg:mt-2 text-xs text-slate-400 truncate">
-                    {device.location} · {device.type}
-                  </div>
-                </Link>
+                  device={device}
+                  t={t}
+                />
               ))}
             </div>
           )}

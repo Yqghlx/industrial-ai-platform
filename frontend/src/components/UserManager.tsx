@@ -9,6 +9,47 @@ import { User, UserRole, UserCreateInput } from '../types/api';
 import { useConfirmDialog } from './UI/ConfirmDialog';
 import { useCRUD } from '../hooks/useCRUD';
 
+// FE-P2: React.memo 优化用户行渲染
+interface UserRowProps {
+  user: User;
+  t: (key: string) => string;
+  onDelete: (id: number) => void;
+}
+
+const UserRow = React.memo(function UserRow({ user, t, onDelete }: UserRowProps) {
+  return (
+    <tr>
+      <td>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
+            <UserIcon className="w-4 h-4 text-slate-300" />
+          </div>
+          <span className="font-medium">{user.username}</span>
+        </div>
+      </td>
+      <td>{user.email}</td>
+      <td>
+        <span className={`status-badge ${
+          user.role === 'admin' ? 'bg-primary-500/20 text-primary-400' :
+          'bg-slate-500/20 text-slate-300'
+        }`}>
+          {user.role === 'admin' ? t('user.admin') : t('user.user')}
+        </span>
+      </td>
+      <td>{new Date(user.created_at).toLocaleDateString()}</td>
+      <td>
+        <button
+          onClick={() => onDelete(user.id)}
+          className="p-1 text-slate-400 hover:text-red-400"
+          aria-label={t('common.delete')}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>
+  );
+});
+
 export default function UserManager() {
   const { t } = useI18n();
   const { isAdmin } = useAuth();
@@ -103,35 +144,12 @@ export default function UserManager() {
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id}>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
-                            <UserIcon className="w-4 h-4 text-slate-300" />
-                          </div>
-                          <span className="font-medium">{user.username}</span>
-                        </div>
-                      </td>
-                      <td>{user.email}</td>
-                      <td>
-                        <span className={`status-badge ${
-                          user.role === 'admin' ? 'bg-primary-500/20 text-primary-400' :
-                          'bg-slate-500/20 text-slate-300'
-                        }`}>
-                          {user.role === 'admin' ? t('user.admin') : t('user.user')}
-                        </span>
-                      </td>
-                      <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="p-1 text-slate-400 hover:text-red-400"
-                          aria-label={t('common.delete')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                    <UserRow
+                      key={user.id}
+                      user={user}
+                      t={t}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -161,9 +179,9 @@ export default function UserManager() {
                 // FE-P2-09: 使用 useCRUD hook 的 create 方法
                 const success = await create(data) !== null;
                 if (success) {
-                  showToast({ type: 'success', message: '用户已创建' });
+                  showToast({ type: 'success', message: t('user.createSuccess') });
                 } else {
-                  showToast({ type: 'error', message: '创建失败' });
+                  showToast({ type: 'error', message: t('user.createFailed') });
                 }
                 setShowCreateModal(false);
               }}>

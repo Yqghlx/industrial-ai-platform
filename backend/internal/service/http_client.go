@@ -16,6 +16,8 @@ type HealthServiceConfig struct {
 	LLMBseURL    string
 	LLMModel     string
 	CheckTimeout time.Duration
+	// P2-04: Fallback LLM URL for health checks when LLMBseURL is empty
+	LLMFallbackURL string
 }
 
 // DefaultHealthServiceConfig returns default configuration

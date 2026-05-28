@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
@@ -30,18 +30,122 @@ interface AlertStats {
   by_status: Record<string, number>;
 }
 
-const severityConfig = {
-  critical: { label: '紧急', bgColor: 'bg-red-500', textColor: 'text-red-500', icon: AlertTriangle },
-  high: { label: '高', bgColor: 'bg-orange-500', textColor: 'text-orange-500', icon: AlertCircle },
-  medium: { label: '中', bgColor: 'bg-yellow-500', textColor: 'text-yellow-500', icon: Info },
-  low: { label: '低', bgColor: 'bg-green-500', textColor: 'text-green-500', icon: Bell },
-};
+const getSeverityConfig = (t: (key: string) => string) => ({
+  critical: { label: t('alert.criticalLabel'), bgColor: 'bg-red-500', textColor: 'text-red-500', icon: AlertTriangle },
+  high: { label: t('alert.highLabel'), bgColor: 'bg-orange-500', textColor: 'text-orange-500', icon: AlertCircle },
+  medium: { label: t('alert.mediumLabel'), bgColor: 'bg-yellow-500', textColor: 'text-yellow-500', icon: Info },
+  low: { label: t('alert.lowLabel'), bgColor: 'bg-green-500', textColor: 'text-green-500', icon: Bell },
+});
 
-const statusConfig = {
-  active: { label: '活跃', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: AlertTriangle },
-  acknowledged: { label: '已确认', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Clock },
-  resolved: { label: '已解决', bgColor: 'bg-green-100', textColor: 'text-green-700', icon: CheckCircle },
-};
+const getStatusConfig = (t: (key: string) => string) => ({
+  active: { label: t('alert.activeLabel'), bgColor: 'bg-red-100', textColor: 'text-red-700', icon: AlertTriangle },
+  acknowledged: { label: t('alert.acknowledgedLabel'), bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Clock },
+  resolved: { label: t('alert.resolvedLabel'), bgColor: 'bg-green-100', textColor: 'text-green-700', icon: CheckCircle },
+});
+
+// FE-P2: React.memo 优化列表项渲染
+interface AlertItemProps {
+  alert: AlertType;
+  severityConfig: ReturnType<typeof getSeverityConfig>;
+  statusConfig: ReturnType<typeof getStatusConfig>;
+  onAcknowledge: (id: number) => void;
+  onResolve: (id: number) => void;
+  formatTime: (timestamp: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}
+
+const AlertItem = React.memo(function AlertItem({
+  alert,
+  severityConfig,
+  statusConfig,
+  onAcknowledge,
+  onResolve,
+  formatTime,
+  t,
+}: AlertItemProps) {
+  const severity = severityConfig[alert.severity as keyof typeof severityConfig];
+  const status = statusConfig[alert.status as keyof typeof statusConfig];
+
+  if (!severity || !status) {
+    return null;
+  }
+
+  const SeverityIcon = severity.icon;
+
+  return (
+    <div
+      className="flex items-start gap-4 p-4 rounded-lg border border-slate-600 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+    >
+      {/* Severity Icon */}
+      <div className={`p-2 rounded-full ${severity.bgColor}`}>
+        <SeverityIcon className="h-5 w-5 text-white" />
+      </div>
+
+      {/* Alert Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${severity.bgColor} text-white`}>
+            {severity.label}
+          </span>
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
+            {status.label}
+          </span>
+          <span className="text-xs text-slate-400">
+            #{alert.id}
+          </span>
+        </div>
+        <p className="font-medium text-slate-100 mb-1">{alert.message}</p>
+        <div className="flex items-center gap-4 text-sm text-slate-400">
+          <span>{t('alert.device')}: {alert.device_id}</span>
+          <span>{t('alert.triggered')}: {formatTime(alert.triggered_at)}</span>
+          {alert.resolved_at && (
+            <span>{t('alert.resolvedTime')}: {formatTime(alert.resolved_at)}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        {alert.status === 'active' && (
+          <>
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
+              onClick={() => onAcknowledge(alert.id)}
+              aria-label={t('alert.acknowledgedLabel')}
+            >
+              <Clock className="h-4 w-4" />
+              {t('alert.acknowledge')}
+            </button>
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+              onClick={() => onResolve(alert.id)}
+              aria-label={t('alert.resolvedLabel')}
+            >
+              <CheckCircle className="h-4 w-4" />
+              {t('alert.resolve')}
+            </button>
+          </>
+        )}
+        {alert.status === 'acknowledged' && (
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+            onClick={() => onResolve(alert.id)}
+            aria-label={t('alert.resolvedLabel')}
+          >
+            <CheckCircle className="h-4 w-4" />
+            {t('alert.resolve')}
+          </button>
+        )}
+        {alert.status === 'resolved' && (
+          <span className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm">
+            <CheckCircle className="h-4 w-4" />
+            {t('alert.processed')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
 
 export default function AlertsPage() {
   const { t } = useI18n();
@@ -53,6 +157,10 @@ export default function AlertsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
+
+  // FE-P2: 使用 useMemo 缓存配置对象，支持 i18n
+  const severityConfig = useMemo(() => getSeverityConfig(t), [t]);
+  const statusConfig = useMemo(() => getStatusConfig(t), [t]);
 
   // Fetch alerts
   const fetchAlerts = useCallback(async () => {
@@ -357,93 +465,18 @@ export default function AlertsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {alerts.map(alert => {
-              const severity = severityConfig[alert.severity as keyof typeof severityConfig];
-              const status = statusConfig[alert.status as keyof typeof statusConfig];
-              
-              // Skip alerts with invalid severity/status
-              if (!severity || !status) {
-                console.warn('Alert has invalid severity/status:', alert);
-                return null;
-              }
-              
-              const SeverityIcon = severity.icon;
-
-              return (
-                <div
-                  key={alert.id}
-                  className="flex items-start gap-4 p-4 rounded-lg border border-slate-600 bg-slate-700/50 hover:bg-slate-700 transition-colors"
-                >
-                  {/* Severity Icon */}
-                  <div className={`p-2 rounded-full ${severity.bgColor}`}>
-                    <SeverityIcon className="h-5 w-5 text-white" />
-                  </div>
-
-                  {/* Alert Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${severity.bgColor} text-white`}>
-                        {severity.label}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bgColor} ${status.textColor}`}>
-                        {status.label}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        #{alert.id}
-                      </span>
-                    </div>
-                    <p className="font-medium text-slate-100 mb-1">{alert.message}</p>
-                    <div className="flex items-center gap-4 text-sm text-slate-400">
-                      <span>{t('alert.device')}: {alert.device_id}</span>
-                      <span>{t('alert.triggered')}: {formatTime(alert.triggered_at)}</span>
-                      {alert.resolved_at && (
-                        <span>{t('alert.resolvedTime')}: {formatTime(alert.resolved_at)}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    {alert.status === 'active' && (
-                      <>
-                        <button
-                          className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
-                          onClick={() => handleAcknowledge(alert.id)}
-                          aria-label={t('alert.acknowledgedLabel')}
-                        >
-                          <Clock className="h-4 w-4" />
-                          {t('alert.acknowledge')}
-                        </button>
-                        <button
-                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
-                          onClick={() => handleResolve(alert.id)}
-                          aria-label={t('alert.resolvedLabel')}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          {t('alert.resolve')}
-                        </button>
-                      </>
-                    )}
-                    {alert.status === 'acknowledged' && (
-                      <button
-                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
-                        onClick={() => handleResolve(alert.id)}
-                        aria-label={t('alert.resolvedLabel')}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        {t('alert.resolve')}
-                      </button>
-                    )}
-                    {alert.status === 'resolved' && (
-                      <span className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded text-sm">
-                        <CheckCircle className="h-4 w-4" />
-                        {t('alert.processed')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {alerts.map(alert => (
+              <AlertItem
+                key={alert.id}
+                alert={alert}
+                severityConfig={severityConfig}
+                statusConfig={statusConfig}
+                onAcknowledge={handleAcknowledge}
+                onResolve={handleResolve}
+                formatTime={formatTime}
+                t={t}
+              />
+            ))}
           </div>
         )}
       </div>

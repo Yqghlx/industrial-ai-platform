@@ -35,15 +35,27 @@ type AgentServiceConfig struct {
 
 // DefaultAgentServiceConfig 返回默认配置
 // FIX-039: 提供合理的默认值
+// P2-03: 默认LLM URL通过环境变量配置，避免硬编码
 func DefaultAgentServiceConfig() *AgentServiceConfig {
 	return &AgentServiceConfig{
 		HTTPTimeout:         30 * time.Second, // 默认30秒，比60秒更合理
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
 		IdleConnTimeout:     90 * time.Second,
-		LLMBaseURL:          "https://open.bigmodel.cn/api/paas/v4",
-		LLMModel:            "glm-4-flash",
+		// P2-03: Default LLM URL - should be configured via LLM_BASE_URL env var
+		// This is a fallback default for when no environment variable is set
+		LLMBaseURL: getEnvDefaultLLMURL(),
+		LLMModel:   "glm-4-flash",
 	}
+}
+
+// P2-03: Helper function to get default LLM URL from environment or fallback
+func getEnvDefaultLLMURL() string {
+	if url := os.Getenv("LLM_BASE_URL"); url != "" {
+		return url
+	}
+	// Fallback default URL (can be overridden via LLM_BASE_URL)
+	return "https://open.bigmodel.cn/api/paas/v4"
 }
 
 // LoadAgentServiceConfigFromEnv 从环境变量加载配置

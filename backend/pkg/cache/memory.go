@@ -8,6 +8,7 @@ import (
 )
 
 // MemoryCache 内存缓存实现
+// BE-P2-08: 添加 Context 生命周期管理
 type MemoryCache struct {
 	data        map[string]*memoryItem
 	mu          sync.RWMutex
@@ -15,6 +16,11 @@ type MemoryCache struct {
 	stats       Stats
 	cleanupOnce sync.Once
 	stopCleanup chan struct{}
+
+	// BE-P2-08: Context 生命周期管理
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 type memoryItem struct {
@@ -33,10 +39,15 @@ func NewMemoryCache(cfgOrTtl interface{}) *MemoryCache {
 		ttl = 5 * time.Minute
 	}
 
+	// BE-P2-08: 创建可取消的 context
+	ctx, cancel := context.WithCancel(context.Background())
+
 	c := &MemoryCache{
 		data:        make(map[string]*memoryItem),
 		ttl:         ttl,
 		stopCleanup: make(chan struct{}),
+		ctx:         ctx,
+		cancel:      cancel,
 		stats: Stats{
 			Available:   true,
 			BackendType: "memory",
@@ -50,6 +61,7 @@ func NewMemoryCache(cfgOrTtl interface{}) *MemoryCache {
 }
 
 // startCleanupRoutine 启动后台清理goroutine
+// BE-P2-08: 使用 Context 控制生命周期
 func (c *MemoryCache) startCleanupRoutine() {
 	c.cleanupOnce.Do(func() {
 		// 清理间隔默认为5分钟，或使用TTL的一半（取较小值）
@@ -61,7 +73,10 @@ func (c *MemoryCache) startCleanupRoutine() {
 			cleanupInterval = time.Minute
 		}
 
+		c.wg.Add(1)
 		go func() {
+			defer c.wg.Done()
+
 			ticker := time.NewTicker(cleanupInterval)
 			defer ticker.Stop()
 
@@ -70,6 +85,9 @@ func (c *MemoryCache) startCleanupRoutine() {
 				case <-ticker.C:
 					c.Cleanup()
 				case <-c.stopCleanup:
+					return
+				case <-c.ctx.Done():
+					// BE-P2-08: Context 取消时也优雅退出
 					return
 				}
 			}
@@ -170,14 +188,49 @@ func (c *MemoryCache) GetStats() Stats {
 }
 
 // Close 关闭缓存并停止清理goroutine
+// BE-P2-08: 添加 Context 取消确保优雅退出
 func (c *MemoryCache) Close() error {
+	// 先取消 context
+	if c.cancel != nil {
+		c.cancel()
+	}
 	select {
 	case <-c.stopCleanup:
 		// 已经关闭
 	default:
 		close(c.stopCleanup)
 	}
+	c.wg.Wait()
 	return nil
+}
+
+// Shutdown 优雅关闭（带超时）
+// BE-P2-08: 新增带超时的关闭方法
+func (c *MemoryCache) Shutdown(ctx context.Context) error {
+	// 取消 context
+	if c.cancel != nil {
+		c.cancel()
+	}
+	select {
+	case <-c.stopCleanup:
+		// 已经关闭
+	default:
+		close(c.stopCleanup)
+	}
+
+	// 等待 goroutine 退出或超时
+	done := make(chan struct{})
+	go func() {
+		c.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // DeleteByPattern 模式删除

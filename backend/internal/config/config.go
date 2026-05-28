@@ -72,6 +72,12 @@ type Config struct {
 
 	// Environment indicator
 	Environment string
+
+	// P2-01: Server host for logging URLs (default: localhost)
+	ServerHost string
+
+	// P2-04: Fallback LLM API URL for health checks
+	LLMFallbackURL string
 }
 
 // ValidationError represents configuration validation errors
@@ -227,6 +233,12 @@ func LoadFromEnv() *Config {
 	dbConnMaxLifetime := parseEnvInt("DB_CONN_MAX_LIFETIME", 1800) // 默认30分钟（秒）
 	dbConnMaxIdleTime := parseEnvInt("DB_CONN_MAX_IDLE_TIME", 300) // 默认5分钟（秒）
 
+	// P2-01: Server host for logging URLs
+	serverHost := getEnv("SERVER_HOST", "localhost")
+
+	// P2-04: Fallback LLM API URL for health checks
+	llmFallbackURL := getEnv("LLM_FALLBACK_URL", "https://open.bigmodel.cn/api/paas/v4")
+
 	return &Config{
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
@@ -272,6 +284,9 @@ func LoadFromEnv() *Config {
 		CORSOrigins:            os.Getenv("CORS_ORIGINS"),
 		AdminPassword:          os.Getenv("ADMIN_PASSWORD"),
 		Environment:            os.Getenv("ENV"),
+		// P2-01 & P2-04
+		ServerHost:     serverHost,
+		LLMFallbackURL: llmFallbackURL,
 	}
 }
 
