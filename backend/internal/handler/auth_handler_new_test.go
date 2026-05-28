@@ -474,3 +474,125 @@ func TestAuthHandlerNew_ChangePassword_InvalidBody(t *testing.T) {
 	// Should return 400 for invalid JSON
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+// ============================================
+// GetCSRFToken Tests (SEC-HIGH-02)
+// ============================================
+
+func TestAuthHandlerNew_GetCSRFToken_NewToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.GET("/csrf-token", handler.GetCSRFToken)
+
+	req := httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	// Check that csrf_token is present and not empty
+	assert.NotEmpty(t, response["csrf_token"])
+	assert.Contains(t, response["message"], "CSRF token")
+
+	// Check that cookie was set
+	cookies := w.Result().Cookies()
+	assert.NotEmpty(t, cookies)
+
+	// Find the csrf_token cookie
+	var csrfCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "csrf_token" {
+			csrfCookie = c
+			break
+		}
+	}
+	assert.NotNil(t, csrfCookie)
+	assert.NotEmpty(t, csrfCookie.Value)
+	assert.Equal(t, csrfCookie.Value, response["csrf_token"])
+}
+
+func TestAuthHandlerNew_GetCSRFToken_ExistingToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.GET("/csrf-token", handler.GetCSRFToken)
+
+	// Create request with existing CSRF cookie
+	existingToken := "existing-csrf-token-value"
+	req := httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "csrf_token",
+		Value: existingToken,
+	})
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	// Should return the existing token
+	assert.Equal(t, existingToken, response["csrf_token"])
+}
+
+func TestAuthHandlerNew_GetCSRFToken_EmptyCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.GET("/csrf-token", handler.GetCSRFToken)
+
+	// Create request with empty CSRF cookie (should generate new token)
+	req := httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "csrf_token",
+		Value: "", // Empty value
+	})
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	// Should return a new token (not empty)
+	assert.NotEmpty(t, response["csrf_token"])
+
+	// Check that new cookie was set
+	cookies := w.Result().Cookies()
+	var csrfCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "csrf_token" {
+			csrfCookie = c
+			break
+		}
+	}
+	assert.NotNil(t, csrfCookie)
+	assert.NotEmpty(t, csrfCookie.Value)
+}
