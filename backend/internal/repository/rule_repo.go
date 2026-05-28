@@ -57,7 +57,10 @@ func (r *RuleRepository) GetByID(ctx context.Context, id int) (*model.AlertRule,
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(actionsJSON), &rule.Actions)
+	// FIX-P0-03: 添加json.Unmarshal错误处理
+	if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
+	}
 	return rule, nil
 }
 
@@ -84,7 +87,10 @@ func (r *RuleRepository) List(ctx context.Context) ([]model.AlertRule, error) {
 		); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(actionsJSON), &rule.Actions)
+		// FIX-P0-03: 添加json.Unmarshal错误处理
+		if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
+		}
 		rules = append(rules, rule)
 	}
 
@@ -118,7 +124,10 @@ func (r *RuleRepository) ListEnabled(ctx context.Context) ([]model.AlertRule, er
 		); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(actionsJSON), &rule.Actions)
+		// FIX-P0-03: 添加json.Unmarshal错误处理
+		if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
+		}
 		rules = append(rules, rule)
 	}
 

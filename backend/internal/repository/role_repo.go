@@ -30,7 +30,7 @@ func (r *RoleRepo) WithTx(tx database.TransactionInterface) *RoleRepo {
 }
 
 // Create inserts a new role
-func (r *RoleRepo) Create(role *model.Role) error {
+func (r *RoleRepo) Create(ctx context.Context, role *model.Role) error {
 	now := time.Now()
 	role.CreatedAt = now
 	role.UpdatedAt = now
@@ -40,7 +40,7 @@ func (r *RoleRepo) Create(role *model.Role) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	return r.db.QueryRow(context.Background(), query,
+	return r.db.QueryRow(ctx, query,
 		role.Name,
 		role.Description,
 		role.TenantID,
@@ -51,14 +51,14 @@ func (r *RoleRepo) Create(role *model.Role) error {
 }
 
 // GetByID retrieves a role by ID
-func (r *RoleRepo) GetByID(id int) (*model.Role, error) {
+func (r *RoleRepo) GetByID(ctx context.Context, id int) (*model.Role, error) {
 	query := `
 		SELECT id, name, description, tenant_id, is_system, created_at, updated_at
 		FROM roles
 		WHERE id = $1
 	`
 	role := &model.Role{}
-	err := r.db.QueryRow(context.Background(), query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&role.ID,
 		&role.Name,
 		&role.Description,
@@ -77,14 +77,14 @@ func (r *RoleRepo) GetByID(id int) (*model.Role, error) {
 }
 
 // GetByName retrieves a role by name within a tenant
-func (r *RoleRepo) GetByName(tenantID, name string) (*model.Role, error) {
+func (r *RoleRepo) GetByName(ctx context.Context, tenantID, name string) (*model.Role, error) {
 	query := `
 		SELECT id, name, description, tenant_id, is_system, created_at, updated_at
 		FROM roles
 		WHERE tenant_id = $1 AND name = $2
 	`
 	role := &model.Role{}
-	err := r.db.QueryRow(context.Background(), query, tenantID, name).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID, name).Scan(
 		&role.ID,
 		&role.Name,
 		&role.Description,
@@ -103,14 +103,14 @@ func (r *RoleRepo) GetByName(tenantID, name string) (*model.Role, error) {
 }
 
 // ListByTenant retrieves all roles for a tenant
-func (r *RoleRepo) ListByTenant(tenantID string) ([]model.Role, error) {
+func (r *RoleRepo) ListByTenant(ctx context.Context, tenantID string) ([]model.Role, error) {
 	query := `
 		SELECT id, name, description, tenant_id, is_system, created_at, updated_at
 		FROM roles
 		WHERE tenant_id = $1 OR tenant_id = ''
 		ORDER BY created_at DESC
 	`
-	rows, err := r.db.Query(context.Background(), query, tenantID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,14 +141,14 @@ func (r *RoleRepo) ListByTenant(tenantID string) ([]model.Role, error) {
 }
 
 // Update updates a role
-func (r *RoleRepo) Update(role *model.Role) error {
+func (r *RoleRepo) Update(ctx context.Context, role *model.Role) error {
 	role.UpdatedAt = time.Now()
 	query := `
 		UPDATE roles
 		SET name = $2, description = $3, updated_at = $4
 		WHERE id = $1 AND is_system = false
 	`
-	result, err := r.db.Exec(context.Background(), query,
+	result, err := r.db.Exec(ctx, query,
 		role.ID,
 		role.Name,
 		role.Description,
@@ -168,9 +168,9 @@ func (r *RoleRepo) Update(role *model.Role) error {
 }
 
 // Delete removes a role by ID
-func (r *RoleRepo) Delete(id int) error {
+func (r *RoleRepo) Delete(ctx context.Context, id int) error {
 	// Check if it's a system role
-	role, err := r.GetByID(id)
+	role, err := r.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -179,19 +179,19 @@ func (r *RoleRepo) Delete(id int) error {
 	}
 
 	// Delete role permissions first
-	_, err = r.db.Exec(context.Background(), "DELETE FROM role_permissions WHERE role_id = $1", id)
+	_, err = r.db.Exec(ctx, "DELETE FROM role_permissions WHERE role_id = $1", id)
 	if err != nil {
 		return err
 	}
 
 	// Delete user role assignments
-	_, err = r.db.Exec(context.Background(), "DELETE FROM user_roles WHERE role_id = $1", id)
+	_, err = r.db.Exec(ctx, "DELETE FROM user_roles WHERE role_id = $1", id)
 	if err != nil {
 		return err
 	}
 
 	// Delete the role
-	result, err := r.db.Exec(context.Background(), "DELETE FROM roles WHERE id = $1", id)
+	result, err := r.db.Exec(ctx, "DELETE FROM roles WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -206,10 +206,10 @@ func (r *RoleRepo) Delete(id int) error {
 }
 
 // AssignRoleToUser assigns a role to a user
-func (r *RoleRepo) AssignRoleToUser(userID, roleID int, tenantID string) error {
+func (r *RoleRepo) AssignRoleToUser(ctx context.Context, userID, roleID int, tenantID string) error {
 	// Check if already assigned
 	var exists bool
-	err := r.db.QueryRow(context.Background(),
+	err := r.db.QueryRow(ctx,
 		"SELECT EXISTS(SELECT 1 FROM user_roles WHERE user_id = $1 AND role_id = $2)",
 		userID, roleID,
 	).Scan(&exists)
@@ -224,13 +224,13 @@ func (r *RoleRepo) AssignRoleToUser(userID, roleID int, tenantID string) error {
 		INSERT INTO user_roles (user_id, role_id, tenant_id, assigned_at)
 		VALUES ($1, $2, $3, $4)
 	`
-	_, err = r.db.Exec(context.Background(), query, userID, roleID, tenantID, time.Now())
+	_, err = r.db.Exec(ctx, query, userID, roleID, tenantID, time.Now())
 	return err
 }
 
 // RemoveRoleFromUser removes a role from a user
-func (r *RoleRepo) RemoveRoleFromUser(userID, roleID int) error {
-	result, err := r.db.Exec(context.Background(),
+func (r *RoleRepo) RemoveRoleFromUser(ctx context.Context, userID, roleID int) error {
+	result, err := r.db.Exec(ctx,
 		"DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2",
 		userID, roleID,
 	)
@@ -248,7 +248,7 @@ func (r *RoleRepo) RemoveRoleFromUser(userID, roleID int) error {
 }
 
 // GetUserRoles retrieves all roles for a user
-func (r *RoleRepo) GetUserRoles(userID int) ([]model.Role, error) {
+func (r *RoleRepo) GetUserRoles(ctx context.Context, userID int) ([]model.Role, error) {
 	query := `
 		SELECT r.id, r.name, r.description, r.tenant_id, r.is_system, r.created_at, r.updated_at
 		FROM roles r
@@ -256,7 +256,7 @@ func (r *RoleRepo) GetUserRoles(userID int) ([]model.Role, error) {
 		WHERE ur.user_id = $1
 		ORDER BY r.created_at DESC
 	`
-	rows, err := r.db.Query(context.Background(), query, userID)
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (r *RoleRepo) GetUserRoles(userID int) ([]model.Role, error) {
 }
 
 // GetRolePermissions retrieves all permissions for a role
-func (r *RoleRepo) GetRolePermissions(roleID int) ([]model.Permission, error) {
+func (r *RoleRepo) GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error) {
 	query := `
 		SELECT p.id, p.name, p.resource, p.action, p.description, p.created_at
 		FROM permissions p
@@ -295,7 +295,7 @@ func (r *RoleRepo) GetRolePermissions(roleID int) ([]model.Permission, error) {
 		WHERE rp.role_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.Query(context.Background(), query, roleID)
+	rows, err := r.db.Query(ctx, query, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -325,19 +325,19 @@ func (r *RoleRepo) GetRolePermissions(roleID int) ([]model.Permission, error) {
 }
 
 // AssignPermissionToRole assigns a permission to a role
-func (r *RoleRepo) AssignPermissionToRole(roleID, permissionID int) error {
+func (r *RoleRepo) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
 	query := `
 		INSERT INTO role_permissions (role_id, permission_id)
 		VALUES ($1, $2)
 		ON CONFLICT (role_id, permission_id) DO NOTHING
 	`
-	_, err := r.db.Exec(context.Background(), query, roleID, permissionID)
+	_, err := r.db.Exec(ctx, query, roleID, permissionID)
 	return err
 }
 
 // RemovePermissionFromRole removes a permission from a role
-func (r *RoleRepo) RemovePermissionFromRole(roleID, permissionID int) error {
-	result, err := r.db.Exec(context.Background(),
+func (r *RoleRepo) RemovePermissionFromRole(ctx context.Context, roleID, permissionID int) error {
+	result, err := r.db.Exec(ctx,
 		"DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2",
 		roleID, permissionID,
 	)
@@ -355,7 +355,7 @@ func (r *RoleRepo) RemovePermissionFromRole(roleID, permissionID int) error {
 }
 
 // GetUserPermissions retrieves all permissions for a user through their roles
-func (r *RoleRepo) GetUserPermissions(userID int) ([]model.Permission, error) {
+func (r *RoleRepo) GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error) {
 	query := `
 		SELECT DISTINCT p.id, p.name, p.resource, p.action, p.description, p.created_at
 		FROM permissions p
@@ -364,7 +364,7 @@ func (r *RoleRepo) GetUserPermissions(userID int) ([]model.Permission, error) {
 		WHERE ur.user_id = $1
 		ORDER BY p.resource, p.action
 	`
-	rows, err := r.db.Query(context.Background(), query, userID)
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func (r *RoleRepo) GetUserPermissions(userID int) ([]model.Permission, error) {
 }
 
 // CheckUserPermission checks if a user has a specific permission
-func (r *RoleRepo) CheckUserPermission(userID int, resource, action string) (bool, error) {
+func (r *RoleRepo) CheckUserPermission(ctx context.Context, userID int, resource, action string) (bool, error) {
 	query := `
 		SELECT EXISTS(
 			SELECT 1
@@ -405,7 +405,7 @@ func (r *RoleRepo) CheckUserPermission(userID int, resource, action string) (boo
 		)
 	`
 	var hasPermission bool
-	err := r.db.QueryRow(context.Background(), query, userID, resource, action).Scan(&hasPermission)
+	err := r.db.QueryRow(ctx, query, userID, resource, action).Scan(&hasPermission)
 	if err != nil {
 		return false, err
 	}
@@ -413,13 +413,13 @@ func (r *RoleRepo) CheckUserPermission(userID int, resource, action string) (boo
 }
 
 // GetByIDWithPermissions retrieves a role with its permissions
-func (r *RoleRepo) GetByIDWithPermissions(id int) (*model.RoleResponse, error) {
-	role, err := r.GetByID(id)
+func (r *RoleRepo) GetByIDWithPermissions(ctx context.Context, id int) (*model.RoleResponse, error) {
+	role, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	permissions, err := r.GetRolePermissions(id)
+	permissions, err := r.GetRolePermissions(ctx, id)
 	if err != nil {
 		return nil, err
 	}
