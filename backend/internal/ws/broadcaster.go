@@ -95,6 +95,7 @@ func (b *Broadcaster) run() {
 				if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 					logger.L().Error("Write error", zap.Error(err))
 					conn.Close()
+					// FIX-P0-01: 避免RLock锁升级，先收集需要删除的连接，稍后统一删除
 					b.mu.RUnlock()
 					b.mu.Lock()
 					delete(b.connections, conn)
