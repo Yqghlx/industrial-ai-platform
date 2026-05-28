@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -14,13 +14,8 @@ export default function ROIDashboard() {
   const [stats, setStats] = useState<ROIStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-    const interval = setInterval(loadStats, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadStats = async () => {
+  // MINOR-07: 使用 useCallback 创建稳定的 loadStats 函数，确保 useEffect 依赖完整
+  const loadStats = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getROIStats();
@@ -32,7 +27,14 @@ export default function ROIDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast, t]);
+
+  // MINOR-07: 添加完整的 useEffect 依赖数组
+  useEffect(() => {
+    loadStats();
+    const interval = setInterval(loadStats, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
+  }, [loadStats]);
 
   return (
     <div className="space-y-6">

@@ -303,7 +303,12 @@ func (h *BusinessHandlerNew) GetAlertStats(c *gin.Context) {
 	})
 }
 
-// GetWorkOrder 获取单个工单（占位实现）
+// GetWorkOrder 获取单个工单
+// MINOR-02: 占位实现 - TODO: 实现计划
+// 实现步骤：
+// 1. 扩展 WorkOrderService 掷加 GetWorkOrder 方法
+// 2. 实现工单详情查询，包含关联设备和告警信息
+// 3. 添加操作历史记录展示
 func (h *BusinessHandlerNew) GetWorkOrder(c *gin.Context) {
 	orderID := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{
@@ -312,7 +317,12 @@ func (h *BusinessHandlerNew) GetWorkOrder(c *gin.Context) {
 	})
 }
 
-// GetBlackBoxData 获取黑匣子数据（占位实现）
+// GetBlackBoxData 获取黑匣子数据
+// MINOR-02: 占位实现 - TODO: 实现计划
+// 实现步骤：
+// 1. 扩展 BlackBoxService 添加 GetData 方法
+// 2. 实现黑匣子数据查询和解析逻辑
+// 3. 添加数据导出功能支持
 func (h *BusinessHandlerNew) GetBlackBoxData(c *gin.Context) {
 	recordID := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{

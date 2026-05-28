@@ -326,7 +326,9 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	// Initialize database
 	s.initDatabase()
 
-	// Start WebSocket broadcaster
+	// MINOR-04: WebSocket broadcaster 启动时机明确
+	// 在服务器初始化时显式调用 startBroadcaster()，确保 WebSocket 服务可用
+	// 这替代了之前在 init() 中隐式启动的做法，更加可控和安全
 	s.startBroadcaster()
 
 	// Warmup cache

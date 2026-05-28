@@ -65,6 +65,14 @@ func (r *DeviceRepository) Create(ctx context.Context, device *model.Device) err
 
 // GetByID retrieves a device by ID
 // FIX-022: 添加租户隔离支持，防止跨租户数据访问
+// 
+// MINOR-05: 租户隔离迁移说明
+// 当前 GetByID 方法不包含租户隔离检查，建议逐步迁移使用 GetByIDWithTenant
+// 迁移步骤：
+// 1. 在 Handler 层从 Context 获取 tenantID (middleware.GetTenantID)
+// 2. 调用 GetByIDWithTenant 替代 GetByID
+// 3. 在 Service 层统一使用带租户隔离的 Repository 方法
+// 4. 保持 GetByID 用于内部查询（如系统级操作）
 func (r *DeviceRepository) GetByID(ctx context.Context, id string) (*model.Device, error) {
 	query := `
 		SELECT id, name, type, location, status, description, created_at, updated_at

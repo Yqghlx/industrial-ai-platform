@@ -45,7 +45,8 @@ export default function KnowledgeGraph() {
     const canvas = document.createElement('canvas');
     canvas.width = containerRef.current.clientWidth;
     canvas.height = 500;
-    containerRef.current.innerHTML = '';
+    // MINOR-01: 使用 textContent 替代 innerHTML 清空容器，更安全
+    containerRef.current.textContent = '';
     containerRef.current.appendChild(canvas);
 
     const ctx = canvas.getContext('2d');

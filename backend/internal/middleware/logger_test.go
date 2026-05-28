@@ -172,6 +172,11 @@ func TestLogger_ClientIP(t *testing.T) {
 // Recovery middleware coverage tests
 // ============================================
 
+// MINOR-06: 测试代码中的 panic 调用
+// 这些 panic 调用用于测试 Recovery 中间件的 panic 恢复机制
+// Recovery 中间件使用 defer recover() 捕获 panic，确保服务稳定性
+// 这是合理的设计：故意触发 panic 以验证 recovery 机制正常工作
+
 func TestRecovery_PanicWithMessage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

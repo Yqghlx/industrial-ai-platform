@@ -21,6 +21,9 @@ func TestMain(m *testing.M) {
 	// Initialize JWT with a test secret before running any tests
 	testSecret := "test-jwt-secret-for-unit-tests-min-32-chars"
 	if err := InitJWT(testSecret); err != nil {
+		// MINOR-06: panic 用于测试初始化失败是合理的设计
+		// TestMain 中的 panic 是在测试运行前发生的，不会影响其他测试
+		// 且 os.Exit(m.Run()) 会在 panic 之后正常处理测试退出
 		panic("Failed to initialize JWT for tests: " + err.Error())
 	}
 	os.Exit(m.Run())

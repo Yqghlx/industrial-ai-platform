@@ -277,7 +277,12 @@ func (h *DeviceHandlerNew) GetDeviceTelemetry(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": data, "device_id": deviceID})
 }
 
-// GetDeviceStats 获取设备统计（占位实现）
+// GetDeviceStats 获取设备统计
+// MINOR-02: 占位实现 - TODO: 实现计划
+// 实现步骤：
+// 1. 扩展 DeviceServiceInterface 添加 GetDeviceStats 方法
+// 2. 实现统计逻辑：故障率、平均响应时间、在线时长等
+// 3. 添加缓存支持避免频繁计算
 func (h *DeviceHandlerNew) GetDeviceStats(c *gin.Context) {
 	deviceID := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{
@@ -287,7 +292,12 @@ func (h *DeviceHandlerNew) GetDeviceStats(c *gin.Context) {
 	})
 }
 
-// GetRule 获取单个规则（占位实现）
+// GetRule 获取单个规则
+// MINOR-02: 占位实现 - TODO: 实现计划
+// 实现步骤：
+// 1. 扩展 AlertServiceInterface 添加 GetRule 方法
+// 2. 实现规则查询逻辑，包含关联设备信息
+// 3. 添加权限验证确保用户有权访问该规则
 func (h *DeviceHandlerNew) GetRule(c *gin.Context) {
 	ruleID := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{
@@ -320,7 +330,12 @@ func (h *DeviceHandlerNew) UpdateRule(c *gin.Context) {
 	c.JSON(http.StatusOK, rule)
 }
 
-// ToggleRule 启用/禁用规则（占位实现）
+// ToggleRule 启用/禁用规则
+// MINOR-02: 占位实现 - TODO: 实现计划
+// 实现步骤：
+// 1. 扩展 AlertServiceInterface 添加 ToggleRule 方法
+// 2. 实现规则状态切换逻辑
+// 3. 添加审计日志记录规则变更
 func (h *DeviceHandlerNew) ToggleRule(c *gin.Context) {
 	ruleID := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{

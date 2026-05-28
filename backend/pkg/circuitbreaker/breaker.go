@@ -74,16 +74,29 @@ type CircuitBreaker struct {
 	halfOpenSuccesses int
 	halfOpenFailures  int
 
+	// MINOR-03: 添加滑动窗口统计，避免统计数据丢失
+	// 使用环形缓冲区记录最近N次请求结果
+	slidingWindow     []bool // true = success, false = failure
+	slidingWindowIdx  int
+	slidingWindowSize int
+
 	mutex         sync.RWMutex
 	onStateChange func(name string, old, new State)
 }
 
 // NewCircuitBreaker creates a new circuit breaker
 func NewCircuitBreaker(config Config) *CircuitBreaker {
+	// MINOR-03: 初始化滑动窗口，默认大小为100
+	windowSize := 100
+	if config.MinRequests > 0 {
+		windowSize = config.MinRequests * 10 // 滑动窗口大小为最小请求的10倍
+	}
 	return &CircuitBreaker{
-		config:          config,
-		state:           StateClosed,
-		lastStateChange: time.Now(),
+		config:           config,
+		state:            StateClosed,
+		lastStateChange:  time.Now(),
+		slidingWindow:    make([]bool, windowSize),
+		slidingWindowSize: windowSize,
 	}
 }
 
@@ -156,10 +169,15 @@ func (cb *CircuitBreaker) CallWithFallback(fn func() error, fallback func() erro
 //   - HalfOpen state: increment half-open success count, recover to Closed state when threshold reached
 //   - Closed state: reset failure counter, maintain normal state
 //
+// MINOR-03: 同时更新滑动窗口统计
+//
 // Note: Must hold write lock before calling this method
 func (cb *CircuitBreaker) recordSuccess() {
 	cb.successCount++
 	cb.requestCount++
+
+	// MINOR-03: 更新滑动窗口
+	cb.updateSlidingWindow(true)
 
 	switch cb.state {
 	case StateHalfOpen:
@@ -184,11 +202,16 @@ func (cb *CircuitBreaker) recordSuccess() {
 //   - HalfOpen state: immediately transition to Open state, half-open probe failed
 //   - Closed state: increment failure count, trigger circuit breaker when failure rate threshold reached
 //
+// MINOR-03: 同时更新滑动窗口统计
+//
 // Note: Must hold write lock before calling this method
 func (cb *CircuitBreaker) recordFailure() {
 	cb.failureCount++
 	cb.requestCount++
 	cb.lastFailureTime = time.Now()
+
+	// MINOR-03: 更新滑动窗口
+	cb.updateSlidingWindow(false)
 
 	switch cb.state {
 	case StateHalfOpen:
@@ -214,6 +237,38 @@ func (cb *CircuitBreaker) recordFailure() {
 			}
 		}
 	}
+}
+
+// MINOR-03: 更新滑动窗口统计
+// 使用环形缓冲区记录最近N次请求结果，避免统计数据丢失
+func (cb *CircuitBreaker) updateSlidingWindow(success bool) {
+	if cb.slidingWindowSize == 0 {
+		return
+	}
+	cb.slidingWindow[cb.slidingWindowIdx] = success
+	cb.slidingWindowIdx = (cb.slidingWindowIdx + 1) % cb.slidingWindowSize
+}
+
+// MINOR-03: 获取滑动窗口统计
+// 计算滑动窗口内的成功率，用于更准确的故障率判断
+func (cb *CircuitBreaker) getSlidingWindowStats() (successCount int, failureCount int, failureRate int) {
+	if cb.slidingWindowSize == 0 {
+		return cb.successCount, cb.failureCount, 0
+	}
+
+	for _, success := range cb.slidingWindow {
+		if success {
+			successCount++
+		} else {
+			failureCount++
+		}
+	}
+
+	total := successCount + failureCount
+	if total > 0 {
+		failureRate = failureCount * 100 / total
+	}
+	return successCount, failureCount, failureRate
 }
 
 // === State Transition ===
