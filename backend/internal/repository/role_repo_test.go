@@ -515,3 +515,569 @@ func TestRoleRepo_GetByIDWithPermissions_Success(t *testing.T) {
 	assert.Equal(t, "admin", result.Role.Name)
 	assert.Len(t, result.Permissions, 1)
 }
+
+// Additional tests to improve coverage
+
+func TestRoleRepo_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	// Begin transaction
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	// WithTx should return a new repo with the transaction
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+func TestRoleRepo_GetByID_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	// Return a generic error (not sql.ErrNoRows)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnError(errors.New("database connection error"))
+
+	role, err := repo.GetByID(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database connection error")
+	assert.Nil(t, role)
+}
+
+func TestRoleRepo_GetByName_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	// Return a generic error (not sql.ErrNoRows)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id = .* AND name = .*`).
+		WithArgs("tenant-001", "admin").
+		WillReturnError(errors.New("database connection error"))
+
+	role, err := repo.GetByName(context.Background(), "tenant-001", "admin")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database connection error")
+	assert.Nil(t, role)
+}
+
+func TestRoleRepo_ListByTenant_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id`).
+		WithArgs("tenant-001").
+		WillReturnError(errors.New("database error"))
+
+	roles, err := repo.ListByTenant(context.Background(), "tenant-001")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_ListByTenant_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	// Return malformed data
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow("invalid", "admin", "Admin role", "tenant-001", false, time.Now(), time.Now())
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id`).
+		WithArgs("tenant-001").
+		WillReturnRows(rows)
+
+	roles, err := repo.ListByTenant(context.Background(), "tenant-001")
+	assert.Error(t, err)
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_ListByTenant_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	// Create rows that will trigger an error during iteration
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "admin", "Admin role", "tenant-001", false, time.Now(), time.Now())
+	rows.RowError(0, errors.New("rows iteration error"))
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE tenant_id`).
+		WithArgs("tenant-001").
+		WillReturnRows(rows)
+
+	roles, err := repo.ListByTenant(context.Background(), "tenant-001")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows iteration error")
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_Update_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	role := &model.Role{ID: 1, Name: "updated", Description: "Updated"}
+
+	mock.ExpectExec(`UPDATE roles SET`).
+		WillReturnError(errors.New("database error"))
+
+	err = repo.Update(context.Background(), role)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+}
+
+func TestRoleRepo_Update_RowsAffectedError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	role := &model.Role{ID: 1, Name: "updated", Description: "Updated"}
+
+	mock.ExpectExec(`UPDATE roles SET`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	// Override RowsAffected to return error
+	mock.ExpectExec(`UPDATE roles SET`).
+		WillReturnResult(sqlmock.NewErrorResult(errors.New("result error")))
+
+	err = repo.Update(context.Background(), role)
+	assert.Error(t, err)
+}
+
+func TestRoleRepo_Delete_GetByIDError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnError(errors.New("database error"))
+
+	err = repo.Delete(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+}
+
+func TestRoleRepo_Delete_DeleteRolePermissionsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "custom_role", "Custom role", "tenant-001", false, now, now)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .*`).
+		WillReturnError(errors.New("delete error"))
+
+	err = repo.Delete(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete error")
+}
+
+func TestRoleRepo_Delete_DeleteUserRolesError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "custom_role", "Custom role", "tenant-001", false, now, now)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .*`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec(`DELETE FROM user_roles WHERE role_id = .*`).
+		WillReturnError(errors.New("delete user_roles error"))
+
+	err = repo.Delete(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete user_roles error")
+}
+
+func TestRoleRepo_Delete_DeleteRoleError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "custom_role", "Custom role", "tenant-001", false, now, now)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .*`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec(`DELETE FROM user_roles WHERE role_id = .*`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec(`DELETE FROM roles WHERE id = .*`).
+		WillReturnError(errors.New("delete role error"))
+
+	err = repo.Delete(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete role error")
+}
+
+func TestRoleRepo_AssignRoleToUser_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT EXISTS\(SELECT 1 FROM user_roles`).
+		WillReturnError(errors.New("query error"))
+
+	err = repo.AssignRoleToUser(context.Background(), 1, 2, "tenant-001")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "query error")
+}
+
+func TestRoleRepo_AssignRoleToUser_InsertError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"exists"}).AddRow(false)
+	mock.ExpectQuery(`SELECT EXISTS\(SELECT 1 FROM user_roles`).
+		WithArgs(1, 2).
+		WillReturnRows(rows)
+
+	mock.ExpectExec(`INSERT INTO user_roles`).
+		WillReturnError(errors.New("insert error"))
+
+	err = repo.AssignRoleToUser(context.Background(), 1, 2, "tenant-001")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "insert error")
+}
+
+func TestRoleRepo_RemoveRoleFromUser_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectExec(`DELETE FROM user_roles WHERE user_id = .* AND role_id = .*`).
+		WillReturnError(errors.New("delete error"))
+
+	err = repo.RemoveRoleFromUser(context.Background(), 1, 2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete error")
+}
+
+func TestRoleRepo_RemoveRoleFromUser_RowsAffectedError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectExec(`DELETE FROM user_roles WHERE user_id = .* AND role_id = .*`).
+		WillReturnResult(sqlmock.NewErrorResult(errors.New("result error")))
+
+	err = repo.RemoveRoleFromUser(context.Background(), 1, 2)
+	assert.Error(t, err)
+}
+
+func TestRoleRepo_GetUserRoles_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT r\.id, r\.name.*FROM roles r INNER JOIN user_roles`).
+		WillReturnError(errors.New("query error"))
+
+	roles, err := repo.GetUserRoles(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "query error")
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_GetUserRoles_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow("invalid", "admin", "Admin role", "tenant-001", false, time.Now(), time.Now())
+	mock.ExpectQuery(`SELECT r\.id, r\.name.*FROM roles r INNER JOIN user_roles`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	roles, err := repo.GetUserRoles(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_GetUserRoles_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "admin", "Admin role", "tenant-001", false, time.Now(), time.Now())
+	rows.RowError(0, errors.New("rows error"))
+	mock.ExpectQuery(`SELECT r\.id, r\.name.*FROM roles r INNER JOIN user_roles`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	roles, err := repo.GetUserRoles(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows error")
+	assert.Nil(t, roles)
+}
+
+func TestRoleRepo_GetRolePermissions_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT p\.id, p\.name.*FROM permissions p INNER JOIN role_permissions`).
+		WillReturnError(errors.New("query error"))
+
+	perms, err := repo.GetRolePermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "query error")
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_GetRolePermissions_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
+		AddRow("invalid", "device:read", "device", "read", "Read", time.Now())
+	mock.ExpectQuery(`SELECT p\.id, p\.name.*FROM permissions p INNER JOIN role_permissions`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	perms, err := repo.GetRolePermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_GetRolePermissions_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
+		AddRow(1, "device:read", "device", "read", "Read", time.Now())
+	rows.RowError(0, errors.New("rows error"))
+	mock.ExpectQuery(`SELECT p\.id, p\.name.*FROM permissions p INNER JOIN role_permissions`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	perms, err := repo.GetRolePermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows error")
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_AssignPermissionToRole_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectExec(`INSERT INTO role_permissions`).
+		WillReturnError(errors.New("insert error"))
+
+	err = repo.AssignPermissionToRole(context.Background(), 1, 2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "insert error")
+}
+
+func TestRoleRepo_RemovePermissionFromRole_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .* AND permission_id = .*`).
+		WillReturnError(errors.New("delete error"))
+
+	err = repo.RemovePermissionFromRole(context.Background(), 1, 2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete error")
+}
+
+func TestRoleRepo_RemovePermissionFromRole_RowsAffectedError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = .* AND permission_id = .*`).
+		WillReturnResult(sqlmock.NewErrorResult(errors.New("result error")))
+
+	err = repo.RemovePermissionFromRole(context.Background(), 1, 2)
+	assert.Error(t, err)
+}
+
+func TestRoleRepo_GetUserPermissions_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT DISTINCT p\.id.*FROM permissions p INNER JOIN`).
+		WillReturnError(errors.New("query error"))
+
+	perms, err := repo.GetUserPermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "query error")
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_GetUserPermissions_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
+		AddRow("invalid", "device:read", "device", "read", "Read", time.Now())
+	mock.ExpectQuery(`SELECT DISTINCT p\.id.*FROM permissions p INNER JOIN`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	perms, err := repo.GetUserPermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_GetUserPermissions_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
+		AddRow(1, "device:read", "device", "read", "Read", time.Now())
+	rows.RowError(0, errors.New("rows error"))
+	mock.ExpectQuery(`SELECT DISTINCT p\.id.*FROM permissions p INNER JOIN`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	perms, err := repo.GetUserPermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows error")
+	assert.Nil(t, perms)
+}
+
+func TestRoleRepo_CheckUserPermission_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT EXISTS\( SELECT 1 FROM permissions`).
+		WillReturnError(errors.New("query error"))
+
+	hasPermission, err := repo.CheckUserPermission(context.Background(), 1, "device", "read")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "query error")
+	assert.False(t, hasPermission)
+}
+
+func TestRoleRepo_GetByIDWithPermissions_GetByIDError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnError(sql.ErrNoRows)
+
+	result, err := repo.GetByIDWithPermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Equal(t, ErrRoleNotFound, err)
+	assert.Nil(t, result)
+}
+
+func TestRoleRepo_GetByIDWithPermissions_GetRolePermissionsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRoleRepo(database.NewDBWrapper(db))
+
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
+		AddRow(1, "admin", "Admin role", "tenant-001", false, now, now)
+	mock.ExpectQuery(`SELECT .* FROM roles WHERE id = .*`).
+		WithArgs(1).
+		WillReturnRows(rows)
+
+	mock.ExpectQuery(`SELECT p\.id.*FROM permissions p INNER JOIN role_permissions`).
+		WillReturnError(errors.New("permissions error"))
+
+	result, err := repo.GetByIDWithPermissions(context.Background(), 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "permissions error")
+	assert.Nil(t, result)
+}

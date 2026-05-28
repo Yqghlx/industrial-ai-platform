@@ -565,3 +565,413 @@ func TestTelemetryRepository_ContextCancellation(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// Tests for GetStatsBatch - 0% coverage function
+
+func TestTelemetryRepository_GetStatsBatch_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	deviceIDs := []string{"CNC-001", "INJ-001", "ASM-001"}
+
+	// Expect batch query returning stats for multiple devices
+	rows := sqlmock.NewRows([]string{"device_id", "avg_temp", "avg_pressure", "avg_vibration", "max_temp", "max_pressure", "max_vibration", "count"}).
+		AddRow("CNC-001", 25.5, 101.3, 0.02, 30.0, 105.0, 0.05, 100).
+		AddRow("INJ-001", 30.0, 105.0, 0.05, 35.0, 110.0, 0.08, 150).
+		AddRow("ASM-001", 22.0, 100.0, 0.01, 25.0, 102.0, 0.03, 50)
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY\(.*\) AND time >= .* AND time <= .* GROUP BY device_id`).
+		WillReturnRows(rows)
+
+	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stats)
+	assert.Len(t, stats, 3)
+	assert.Equal(t, 25.5, stats["CNC-001"].AvgTemperature)
+	assert.Equal(t, 30.0, stats["INJ-001"].AvgTemperature)
+	assert.Equal(t, 22.0, stats["ASM-001"].AvgTemperature)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestTelemetryRepository_GetStatsBatch_EmptyDeviceIDs(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	// Empty deviceIDs should return empty map without error
+	stats, err := repo.GetStatsBatch(ctx, []string{}, start, end)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stats)
+	assert.Len(t, stats, 0)
+}
+
+func TestTelemetryRepository_GetStatsBatch_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	deviceIDs := []string{"CNC-001", "INJ-001"}
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY`).
+		WillReturnError(errors.New("database error"))
+
+	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+	assert.Nil(t, stats)
+}
+
+func TestTelemetryRepository_GetStatsBatch_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	deviceIDs := []string{"CNC-001"}
+
+	// Return malformed data
+	rows := sqlmock.NewRows([]string{"device_id", "avg_temp", "avg_pressure", "avg_vibration", "max_temp", "max_pressure", "max_vibration", "count"}).
+		AddRow("CNC-001", "invalid_temp", 101.3, 0.02, 30.0, 105.0, 0.05, 100)
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY`).
+		WillReturnRows(rows)
+
+	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)
+
+	assert.Error(t, err)
+	assert.Nil(t, stats)
+}
+
+func TestTelemetryRepository_GetStatsBatch_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	deviceIDs := []string{"CNC-001"}
+
+	rows := sqlmock.NewRows([]string{"device_id", "avg_temp", "avg_pressure", "avg_vibration", "max_temp", "max_pressure", "max_vibration", "count"}).
+		AddRow("CNC-001", 25.5, 101.3, 0.02, 30.0, 105.0, 0.05, 100)
+	rows.RowError(0, errors.New("rows iteration error"))
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY`).
+		WillReturnRows(rows)
+
+	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows iteration error")
+	assert.Nil(t, stats)
+}
+
+func TestTelemetryRepository_GetStatsBatch_PartialResults(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	deviceIDs := []string{"CNC-001", "INJ-001", "ASM-001", "UNKNOWN-001"}
+
+	// Only return stats for some devices (not all have data)
+	rows := sqlmock.NewRows([]string{"device_id", "avg_temp", "avg_pressure", "avg_vibration", "max_temp", "max_pressure", "max_vibration", "count"}).
+		AddRow("CNC-001", 25.5, 101.3, 0.02, 30.0, 105.0, 0.05, 100).
+		AddRow("INJ-001", 30.0, 105.0, 0.05, 35.0, 110.0, 0.08, 150)
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY`).
+		WillReturnRows(rows)
+
+	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stats)
+	// Only 2 devices have stats
+	assert.Len(t, stats, 2)
+	assert.NotNil(t, stats["CNC-001"])
+	assert.NotNil(t, stats["INJ-001"])
+	assert.Nil(t, stats["ASM-001"]) // No data for this device
+	assert.Nil(t, stats["UNKNOWN-001"]) // No data for this device
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// Tests for TelemetryRepository WithTx - 0% coverage function
+
+func TestTelemetryRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+
+	// Begin transaction
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	// WithTx should return a new repo with the transaction
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+// Tests for WorkOrderRepository CountOpen and CountByStatus - 0% coverage functions
+
+func TestWorkOrderRepository_CountOpen_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	rows := sqlmock.NewRows([]string{"count"}).AddRow(5)
+
+	mock.ExpectQuery(`SELECT COUNT\(.*\) FROM work_orders WHERE status IN \(.*open.*in_progress.*pending.*\)`).
+		WillReturnRows(rows)
+
+	count, err := repo.CountOpen(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 5, count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestWorkOrderRepository_CountOpen_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	mock.ExpectQuery(`SELECT COUNT\(.*\) FROM work_orders WHERE status IN`).
+		WillReturnError(errors.New("database error"))
+
+	count, err := repo.CountOpen(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+	assert.Equal(t, 0, count)
+}
+
+func TestWorkOrderRepository_CountByStatus_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	rows := sqlmock.NewRows([]string{"count"}).AddRow(3)
+
+	mock.ExpectQuery(`SELECT COUNT\(.*\) FROM work_orders WHERE status = .*`).
+		WithArgs("open").
+		WillReturnRows(rows)
+
+	count, err := repo.CountByStatus(ctx, "open")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 3, count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestWorkOrderRepository_CountByStatus_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	mock.ExpectQuery(`SELECT COUNT\(.*\) FROM work_orders WHERE status = .*`).
+		WillReturnError(errors.New("database error"))
+
+	count, err := repo.CountByStatus(ctx, "open")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+	assert.Equal(t, 0, count)
+}
+
+func TestWorkOrderRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewWorkOrderRepository(database.NewDBWrapper(db))
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+// Tests for NotificationRepository WithTx - 0% coverage function
+
+func TestNotificationRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewNotificationRepository(database.NewDBWrapper(db))
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+// Tests for BlackBoxRepository WithTx - 0% coverage function
+
+func TestBlackBoxRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewBlackBoxRepository(database.NewDBWrapper(db))
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+// Tests for ReportRepository WithTx - 0% coverage function
+
+func TestReportRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewReportRepository(database.NewDBWrapper(db))
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	assert.NotSame(t, repo, txRepo)
+}
+
+// Tests for AgentTaskLogRepository WithTx - 0% coverage function
+
+func TestAgentTaskLogRepository_WithTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewAgentTaskLogRepository(database.NewDBWrapper(db))
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
+	assert.NotNil(t, txRepo)
+	// Check interface compliance
+	var _ AgentTaskLogRepositoryInterface = txRepo
+}
+
+// Additional tests for rows.Err() coverage in TelemetryRepository
+
+func TestTelemetryRepository_GetByDeviceID_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now
+
+	rows := sqlmock.NewRows([]string{"id", "device_id", "time", "temperature", "pressure", "vibration", "humidity", "power", "status", "message"}).
+		AddRow(1, "CNC-001", now, 25.5, 101.3, 0.02, 45.0, 1500.0, "normal", "test")
+	rows.RowError(0, errors.New("rows iteration error"))
+
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id`).
+		WillReturnRows(rows)
+
+	data, err := repo.GetByDeviceID(ctx, "CNC-001", start, end, 100)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows iteration error")
+	assert.Nil(t, data)
+}
+
+func TestTelemetryRepository_GetLatest_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTelemetryRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+
+	rows := sqlmock.NewRows([]string{"id", "device_id", "time", "temperature", "pressure", "vibration", "humidity", "power", "status", "message"}).
+		AddRow(1, "CNC-001", now, 25.5, 101.3, 0.02, 45.0, 1500.0, "normal", "test")
+	rows.RowError(0, errors.New("rows iteration error"))
+
+	mock.ExpectQuery(`SELECT DISTINCT ON \(device_id\)`).
+		WillReturnRows(rows)
+
+	data, err := repo.GetLatest(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "rows iteration error")
+	assert.Nil(t, data)
+}
