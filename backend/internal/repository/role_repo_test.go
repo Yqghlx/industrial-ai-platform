@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"testing"
@@ -34,7 +35,7 @@ func TestRoleRepo_Create_Success(t *testing.T) {
 		WithArgs(role.Name, role.Description, role.TenantID, role.IsSystem, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	err = repo.Create(role)
+	err = repo.Create(context.Background(), role)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, role.ID)
 	assert.NoError(t, mock.ExpectationsWereMet())
@@ -57,7 +58,7 @@ func TestRoleRepo_Create_Error(t *testing.T) {
 	mock.ExpectQuery(`INSERT INTO roles`).
 		WillReturnError(errors.New("duplicate key value"))
 
-	err = repo.Create(role)
+	err = repo.Create(context.Background(), role)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "duplicate key value")
 }
@@ -77,7 +78,7 @@ func TestRoleRepo_GetByID_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	role, err := repo.GetByID(1)
+	role, err := repo.GetByID(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, role)
 	assert.Equal(t, "admin", role.Name)
@@ -95,7 +96,7 @@ func TestRoleRepo_GetByID_NotFound(t *testing.T) {
 		WithArgs(999).
 		WillReturnError(sql.ErrNoRows)
 
-	role, err := repo.GetByID(999)
+	role, err := repo.GetByID(context.Background(), 999)
 	assert.Error(t, err)
 	assert.Equal(t, ErrRoleNotFound, err)
 	assert.Nil(t, role)
@@ -116,7 +117,7 @@ func TestRoleRepo_GetByName_Success(t *testing.T) {
 		WithArgs("tenant-001", "admin").
 		WillReturnRows(rows)
 
-	role, err := repo.GetByName("tenant-001", "admin")
+	role, err := repo.GetByName(context.Background(), "tenant-001", "admin")
 	assert.NoError(t, err)
 	assert.NotNil(t, role)
 	assert.Equal(t, "admin", role.Name)
@@ -133,7 +134,7 @@ func TestRoleRepo_GetByName_NotFound(t *testing.T) {
 		WithArgs("tenant-001", "nonexistent").
 		WillReturnError(sql.ErrNoRows)
 
-	role, err := repo.GetByName("tenant-001", "nonexistent")
+	role, err := repo.GetByName(context.Background(), "tenant-001", "nonexistent")
 	assert.Error(t, err)
 	assert.Equal(t, ErrRoleNotFound, err)
 	assert.Nil(t, role)
@@ -155,7 +156,7 @@ func TestRoleRepo_ListByTenant_Success(t *testing.T) {
 		WithArgs("tenant-001").
 		WillReturnRows(rows)
 
-	roles, err := repo.ListByTenant("tenant-001")
+	roles, err := repo.ListByTenant(context.Background(), "tenant-001")
 	assert.NoError(t, err)
 	assert.Len(t, roles, 2)
 	assert.Equal(t, "admin", roles[0].Name)
@@ -174,7 +175,7 @@ func TestRoleRepo_ListByTenant_Empty(t *testing.T) {
 		WithArgs("empty-tenant").
 		WillReturnRows(rows)
 
-	roles, err := repo.ListByTenant("empty-tenant")
+	roles, err := repo.ListByTenant(context.Background(), "empty-tenant")
 	assert.NoError(t, err)
 	assert.Len(t, roles, 0)
 }
@@ -196,7 +197,7 @@ func TestRoleRepo_Update_Success(t *testing.T) {
 		WithArgs(role.ID, role.Name, role.Description, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = repo.Update(role)
+	err = repo.Update(context.Background(), role)
 	assert.NoError(t, err)
 }
 
@@ -216,7 +217,7 @@ func TestRoleRepo_Update_NotFound(t *testing.T) {
 	mock.ExpectExec(`UPDATE roles SET`).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err = repo.Update(role)
+	err = repo.Update(context.Background(), role)
 	assert.Error(t, err)
 	assert.Equal(t, ErrRoleNotFound, err)
 }
@@ -251,7 +252,7 @@ func TestRoleRepo_Delete_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = repo.Delete(1)
+	err = repo.Delete(context.Background(), 1)
 	assert.NoError(t, err)
 }
 
@@ -270,7 +271,7 @@ func TestRoleRepo_Delete_SystemRole(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	err = repo.Delete(1)
+	err = repo.Delete(context.Background(), 1)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot delete system role")
 }
@@ -293,7 +294,7 @@ func TestRoleRepo_AssignRoleToUser_Success(t *testing.T) {
 		WithArgs(1, 2, "tenant-001", sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = repo.AssignRoleToUser(1, 2, "tenant-001")
+	err = repo.AssignRoleToUser(context.Background(), 1, 2, "tenant-001")
 	assert.NoError(t, err)
 }
 
@@ -310,7 +311,7 @@ func TestRoleRepo_AssignRoleToUser_AlreadyAssigned(t *testing.T) {
 		WithArgs(1, 2).
 		WillReturnRows(rows)
 
-	err = repo.AssignRoleToUser(1, 2, "tenant-001")
+	err = repo.AssignRoleToUser(context.Background(), 1, 2, "tenant-001")
 	assert.NoError(t, err) // Already assigned, no error
 }
 
@@ -325,7 +326,7 @@ func TestRoleRepo_RemoveRoleFromUser_Success(t *testing.T) {
 		WithArgs(1, 2).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = repo.RemoveRoleFromUser(1, 2)
+	err = repo.RemoveRoleFromUser(context.Background(), 1, 2)
 	assert.NoError(t, err)
 }
 
@@ -340,7 +341,7 @@ func TestRoleRepo_RemoveRoleFromUser_NotFound(t *testing.T) {
 		WithArgs(1, 999).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err = repo.RemoveRoleFromUser(1, 999)
+	err = repo.RemoveRoleFromUser(context.Background(), 1, 999)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "role assignment not found")
 }
@@ -361,7 +362,7 @@ func TestRoleRepo_GetUserRoles_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	roles, err := repo.GetUserRoles(1)
+	roles, err := repo.GetUserRoles(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.Len(t, roles, 2)
 }
@@ -381,7 +382,7 @@ func TestRoleRepo_GetRolePermissions_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	perms, err := repo.GetRolePermissions(1)
+	perms, err := repo.GetRolePermissions(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.Len(t, perms, 2)
 }
@@ -397,7 +398,7 @@ func TestRoleRepo_AssignPermissionToRole_Success(t *testing.T) {
 		WithArgs(1, 2).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = repo.AssignPermissionToRole(1, 2)
+	err = repo.AssignPermissionToRole(context.Background(), 1, 2)
 	assert.NoError(t, err)
 }
 
@@ -412,7 +413,7 @@ func TestRoleRepo_RemovePermissionFromRole_Success(t *testing.T) {
 		WithArgs(1, 2).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = repo.RemovePermissionFromRole(1, 2)
+	err = repo.RemovePermissionFromRole(context.Background(), 1, 2)
 	assert.NoError(t, err)
 }
 
@@ -427,7 +428,7 @@ func TestRoleRepo_RemovePermissionFromRole_NotFound(t *testing.T) {
 		WithArgs(1, 999).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err = repo.RemovePermissionFromRole(1, 999)
+	err = repo.RemovePermissionFromRole(context.Background(), 1, 999)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "permission assignment not found")
 }
@@ -447,7 +448,7 @@ func TestRoleRepo_GetUserPermissions_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(rows)
 
-	perms, err := repo.GetUserPermissions(1)
+	perms, err := repo.GetUserPermissions(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.Len(t, perms, 2)
 }
@@ -464,7 +465,7 @@ func TestRoleRepo_CheckUserPermission_HasPermission(t *testing.T) {
 		WithArgs(1, "device", "read").
 		WillReturnRows(rows)
 
-	hasPermission, err := repo.CheckUserPermission(1, "device", "read")
+	hasPermission, err := repo.CheckUserPermission(context.Background(), 1, "device", "read")
 	assert.NoError(t, err)
 	assert.True(t, hasPermission)
 }
@@ -481,7 +482,7 @@ func TestRoleRepo_CheckUserPermission_NoPermission(t *testing.T) {
 		WithArgs(1, "device", "delete").
 		WillReturnRows(rows)
 
-	hasPermission, err := repo.CheckUserPermission(1, "device", "delete")
+	hasPermission, err := repo.CheckUserPermission(context.Background(), 1, "device", "delete")
 	assert.NoError(t, err)
 	assert.False(t, hasPermission)
 }
@@ -508,7 +509,7 @@ func TestRoleRepo_GetByIDWithPermissions_Success(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(permRows)
 
-	result, err := repo.GetByIDWithPermissions(1)
+	result, err := repo.GetByIDWithPermissions(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, "admin", result.Role.Name)
