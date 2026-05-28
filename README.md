@@ -4,7 +4,7 @@
 [![Code Quality](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/lint.yml/badge.svg)](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/lint.yml)
 [![Security Scan](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/security.yml/badge.svg)](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/security.yml)
 [![Docker Build](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/docker.yml/badge.svg)](https://github.com/Yqghlx/industrial-ai-platform/actions/workflows/docker.yml)
-[![Backend Tests](https://img.shields.io/badge/backend_tests-85_passed-brightgreen)](./backend)
+[![Backend Tests](https://img.shields.io/badge/backend_tests-74.2%25_coverage-brightgreen)](./backend)
 [![Frontend Tests](https://img.shields.io/badge/frontend-vitest_passed-brightgreen)](./frontend)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](./frontend)
 [![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4)](./frontend)

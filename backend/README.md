@@ -10,7 +10,7 @@ Industrial AI Platform Backend Service
 
 ## Test Coverage
 
-Current coverage: **72.3%**
+Current coverage: **74.2%** (handler 75.9%, service 73.2%)
 
 See [TEST_COVERAGE_REPORT.md](docs/TEST_COVERAGE_REPORT.md) for detailed coverage analysis.
 
@@ -59,7 +59,7 @@ gofmt -l .
 ## Coverage Target
 
 - Minimum coverage: **70%**
-- Current coverage: **72.3%** ✅
+- Current coverage: **74.2%** ✅ (handler 75.9%, service 73.2%)
 
 ## License
 
