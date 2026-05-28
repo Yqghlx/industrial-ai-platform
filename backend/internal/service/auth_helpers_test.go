@@ -216,6 +216,7 @@ func TestNewJWTService(t *testing.T) {
 		expectError bool
 		errorType   *JWTInitError
 	}{
+		// FIX-P1-10: 测试密钥安全注释 - 仅用于单元测试，不会进入生产环境
 		{
 			name:        "Valid secret",
 			secret:      "this-is-a-very-long-secret-key-for-testing-123456",
