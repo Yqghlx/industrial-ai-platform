@@ -223,7 +223,7 @@ Backend → PostgreSQL → TimescaleDB
 │  │       Data Security             │               │
 │  │  • SQL Injection Protection     │               │
 │  │  • XSS Protection               │               │
-│  │  • No Hardcoded Secrets         │               │
+│  │  • No Hardcoded Secrets (P0-01, SEC-CRITICAL-01) │               │
 │  └─────────────────────────────────┘               │
 │                                                     │
 └─────────────────────────────────────────────────────┘
@@ -281,5 +281,5 @@ Backend → PostgreSQL → TimescaleDB
 
 ---
 
-**Last Updated**: 2026-05-21
+**Last Updated**: 2026-05-28
 **Author**: 小羊蹄儿 🐑

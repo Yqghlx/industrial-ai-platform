@@ -30,7 +30,7 @@
 
 | 变量名 | 类型 | 默认值 | 描述 |
 |--------|------|--------|------|
-| `REDIS_URL` | 可选 | - | Redis 连接字符串。格式: `redis://host:6379/0` |
+| `REDIS_URL` | 必需 | - | Redis 连接字符串。格式: `redis://host:6379/0`。**Phase 1 P0-01修复：从硬编码改为环境变量** |
 | `REDIS_PASSWORD` | 可选 | - | Redis 密码（K8s 环境通过 Secret 提供） |
 | `REDIS_POOL_SIZE` | 可选 | 50 | Redis 连接池大小 |
 | `REDIS_MIN_IDLE_CONNS` | 可选 | 10 | Redis 最小空闲连接数 |
@@ -65,7 +65,7 @@
 |--------|------|--------|------|
 | `PORT` | 可选 | 8080 | 服务监听端口 |
 | `REQUEST_TIMEOUT` | 可选 | 15 | HTTP 请求超时（秒） |
-| `CORS_ORIGINS` | 可选 | - | CORS 允许的源（逗号分隔）。**生产环境不允许 `*`** |
+| `CORS_ORIGINS` | 必需(生产) | - | CORS 允许的源（逗号分隔）。**生产环境不允许 `*`**（SEC-HIGH-04修复） |
 
 ### WebSocket 配置
 
