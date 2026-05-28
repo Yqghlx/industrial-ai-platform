@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
@@ -19,12 +19,8 @@ export default function DeviceDetail() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('24h');
 
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, timeRange]);
-
-  const loadData = async () => {
+  // Stable loadData function for useEffect dependencies
+  const loadData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
@@ -48,7 +44,11 @@ export default function DeviceDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, timeRange, showToast, t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // FE-P2-03: 使用 useMemo 缓存 timeRangeOptions，避免每次渲染重新创建
   const timeRangeOptions = useMemo(() => [

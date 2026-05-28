@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -14,12 +14,8 @@ export default function KnowledgeGraph() {
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadGraph();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadGraph = async () => {
+  // Stable loadGraph function for useEffect dependencies
+  const loadGraph = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getDeviceGraph();
@@ -31,7 +27,16 @@ export default function KnowledgeGraph() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast, t]);
+
+  // Initial load - use ref to ensure only runs once on mount
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      loadGraph();
+    }
+  }, [loadGraph]);
 
   // Simple graph visualization using canvas
   useEffect(() => {

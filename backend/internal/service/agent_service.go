@@ -286,7 +286,9 @@ func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*mode
 		Agent:      agent,
 		ExecutedAt: time.Now(),
 	}
-	s.taskLogRepo.Create(ctx, taskLog)
+	if err := s.taskLogRepo.Create(ctx, taskLog); err != nil {
+		logger.L().Error("Failed to create task log", zap.Error(err))
+	}
 
 	return &model.AgentResponse{
 		SessionID: sessionID,

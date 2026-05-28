@@ -146,16 +146,19 @@ export default function AlertsPage() {
   // FE-P1: 防抖 ref，用于 filter 变化时的 API 调用防抖
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initial load
+  // Initial load - use ref to ensure only runs once on mount
+  const isMountedRef = useRef(false);
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      await Promise.all([fetchAlerts(), fetchStats()]);
-      setLoading(false);
-    };
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      const load = async () => {
+        setLoading(true);
+        await Promise.all([fetchAlerts(), fetchStats()]);
+        setLoading(false);
+      };
+      load();
+    }
+  }, [fetchAlerts, fetchStats]);
 
   // FE-P1: 使用防抖处理 filter 变化，避免频繁 API 调用
   useEffect(() => {

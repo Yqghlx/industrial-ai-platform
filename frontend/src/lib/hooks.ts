@@ -115,7 +115,7 @@ export function useVirtualList<T>(
   );
 
   // FE-P3-12: 使用 itemCount 而非 items 作为依赖，优化大数据集性能
-  const itemCount = items.length;
+  // Note: itemsRef.current holds the latest items reference, so we only depend on computed values
   const virtualItems = useMemo(() => {
     const result: { item: T; index: number; style: React.CSSProperties }[] = [];
     
@@ -133,8 +133,7 @@ export function useVirtualList<T>(
     }
     
     return result;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemCount, startIndex, endIndex, itemHeight]);
+  }, [startIndex, endIndex, itemHeight]);
 
   const scrollToIndex = useCallback((index: number) => {
     setScrollTop(index * itemHeight);

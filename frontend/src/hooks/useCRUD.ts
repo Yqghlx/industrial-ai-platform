@@ -2,7 +2,7 @@
 // FIX-038: CRUD逻辑提取
 // FE-P2-09: 支持多种API返回类型（直接返回和包装返回）
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { sanitizeErrorMessage } from '../utils/security';
 
 // Simple toast fallback
@@ -69,15 +69,13 @@ export function useCRUD<T extends { id?: string | number }>(
     } else {
       showToast({ type: 'error', message: `${action}失败: ${message}` });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.onError]);
+  }, [config.onError, showToast]);
 
   const handleSuccess = useCallback((action: string) => {
     setState((prev) => ({ ...prev, error: null }));
     if (config.onSuccess) {
       config.onSuccess(action);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.onSuccess]);
 
   const fetchAll = useCallback(async (page?: number, pageSize?: number) => {
@@ -99,7 +97,6 @@ export function useCRUD<T extends { id?: string | number }>(
     } catch (error) {
       handleError(error, '获取列表');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.page, state.pageSize, config.apiGetAll, handleSuccess, handleError]);
 
   const fetchOne = useCallback(async (id: string): Promise<T | null> => {
@@ -114,7 +111,6 @@ export function useCRUD<T extends { id?: string | number }>(
       handleError(error, '获取详情');
       return null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiGetOne, handleSuccess, handleError]);
 
   const create = useCallback(async (data: Partial<T>): Promise<T | null> => {
@@ -138,7 +134,6 @@ export function useCRUD<T extends { id?: string | number }>(
       handleError(error, '创建');
       return null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiCreate, handleSuccess, handleError]);
 
   const update = useCallback(async (id: string, data: Partial<T>): Promise<T | null> => {
@@ -163,7 +158,6 @@ export function useCRUD<T extends { id?: string | number }>(
       handleError(error, '更新');
       return null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiUpdate, handleSuccess, handleError]);
 
   const deleteItem = useCallback(async (id: string): Promise<boolean> => {
@@ -183,7 +177,6 @@ export function useCRUD<T extends { id?: string | number }>(
       handleError(error, '删除');
       return false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiDelete, handleSuccess, handleError]);
 
   const refresh = useCallback(async () => {
@@ -202,11 +195,14 @@ export function useCRUD<T extends { id?: string | number }>(
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
-  // 初始加载
+  // 初始加载 - 使用 ref 确保只在挂载时执行一次
+  const isMountedRef = useRef(false);
   useEffect(() => {
-    fetchAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 仅初始加载一次
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      fetchAll();
+    }
+  }, [fetchAll]);
 
   const actions: CRUDActions<T> = {
     fetchAll,

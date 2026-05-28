@@ -39,18 +39,82 @@ func NewServiceFactory() *ServiceFactory {
 }
 
 // NewServiceFactoryFromRepo 创建 Service 工厂（从 Repository 创建）
-//
-// DESIGN DECISION: 当前返回空工厂，原因如下：
-// 1. 服务依赖复杂，需要逐步完善初始化逻辑
-// 2. 避免循环依赖，某些服务需要其他服务作为依赖
-// 3. 生产环境应使用完整的依赖注入框架（如 wire、dig）
-//
-// TODO: 实现完整的 Service 初始化
-// - 实例化基础服务（无依赖）
-// - 按依赖顺序初始化其他服务
-// - 或引入 DI 框架自动管理依赖
+// P1-09: 实现完整的Service初始化逻辑（简化版）
+// 注意：部分服务因依赖复杂或返回值类型不匹配，保持nil，可通过Set方法注入
 func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *ServiceFactory {
-	return &ServiceFactory{}
+	if repoFactory == nil {
+		return &ServiceFactory{}
+	}
+
+	factory := &ServiceFactory{}
+
+	// 按依赖顺序初始化服务
+	// 1. 基础服务（无其他服务依赖）
+	factory.deviceService = NewDeviceService(
+		repoFactory.GetDeviceRepository(),
+		repoFactory.GetUserRepository(),
+	)
+	factory.userService = NewUserService(repoFactory.GetUserRepository())
+	factory.authService = NewAuthService(repoFactory.GetUserRepository())
+
+	// TenantService: GetTenantRepo 返回 (*TenantRepo, error)，需要错误处理
+	tenantRepo, err := repoFactory.GetTenantRepo()
+	if err == nil && tenantRepo != nil {
+		factory.tenantService = NewTenantService(tenantRepo)
+	}
+
+	// RBACService: 接口方法签名与实现不匹配，暂时跳过
+	// 注意：RBACService.CreateRole签名是 (ctx, tenantID, name...) 而接口期望 (ctx, *model.Role)
+	// 这是一个预先存在的问题，可通过 SetRBACService 方法手动注入
+	// TODO: 统一RBACService接口签名后可在此处初始化
+
+	// 2. AlertService（带配置）
+	alertSvc := NewAlertService(
+		repoFactory.GetRuleRepository(),
+		repoFactory.GetAlertRepository(),
+		repoFactory.GetNotificationRepository(),
+		repoFactory.GetWorkOrderRepository(),
+		repoFactory.GetBlackBoxRepository(),
+		repoFactory.GetTelemetryRepository(),
+		repoFactory.GetDeviceRepository(),
+		AlertServiceConfig{},
+	)
+	factory.alertService = alertSvc
+
+	// 3. TelemetryService（依赖AlertService，使用具体类型）
+	factory.telemetryService = NewTelemetryService(
+		repoFactory.GetTelemetryRepository(),
+		repoFactory.GetDeviceRepository(),
+		repoFactory.GetAlertRepository(),
+		repoFactory.GetWorkOrderRepository(),
+		alertSvc, // 使用具体类型 *AlertService
+	)
+
+	// 4. 报告和导出服务
+	factory.reportService = NewReportService(
+		repoFactory.GetReportRepository(),
+		repoFactory.GetTelemetryRepository(),
+		repoFactory.GetDeviceRepository(),
+		repoFactory.GetWorkOrderRepository(),
+		repoFactory.GetNotificationRepository(),
+	)
+	factory.exportService = NewExportService(
+		repoFactory.GetDeviceRepository(),
+		nil,
+		repoFactory.GetAlertRepository(),
+		nil,
+		nil,
+	)
+
+	// 5. 其他服务（暂未实现或需要额外依赖）
+	// - agentService: 需要 CacheService 接口
+	// - workOrderService: 需要独立初始化
+	// - notificationService: 需要独立初始化
+	// - blackBoxService: 需要独立初始化
+	// - healthService: 需要 HTTP client 配置
+	// 这些服务可通过 Set* 方法手动注入
+
+	return factory
 }
 
 // ============================================

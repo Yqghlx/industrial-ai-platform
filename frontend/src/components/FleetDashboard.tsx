@@ -89,8 +89,7 @@ export default function FleetDashboard() {
       isInitialMountRef.current = false;
     }
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, loadData]);
 
   // Fallback polling when WebSocket is disconnected
   useEffect(() => {

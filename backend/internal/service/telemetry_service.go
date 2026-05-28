@@ -73,7 +73,9 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 	case "fault":
 		status = "fault"
 	}
-	s.deviceRepo.UpdateStatus(ctx, data.DeviceID, status)
+	if err := s.deviceRepo.UpdateStatus(ctx, data.DeviceID, status); err != nil {
+		logger.L().Error("Failed to update device status", zap.Error(err), zap.String("device_id", data.DeviceID))
+	}
 
 	// Broadcast via WebSocket
 	Broadcast(model.WSMessage{
@@ -385,7 +387,10 @@ func (s *TelemetryService) GetSystemStatus(ctx context.Context) (*model.SystemSt
 		dbStatus = "unhealthy"
 	}
 
-	deviceCount, _ := s.deviceRepo.Count(ctx)
+	deviceCount, err := s.deviceRepo.Count(ctx)
+	if err != nil {
+		logger.L().Error("Failed to count devices", zap.Error(err))
+	}
 
 	return &model.SystemStatus{
 		Database:    dbStatus,

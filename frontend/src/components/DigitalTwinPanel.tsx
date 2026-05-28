@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
@@ -37,25 +37,8 @@ export default function DigitalTwinPanel() {
     },
   });
 
-  // Initial load
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Fallback polling when WebSocket is disconnected
-  useEffect(() => {
-    if (isConnected) {
-      // WebSocket connected - no polling needed
-      return;
-    }
-    // WebSocket disconnected - use polling fallback
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected]);
-
-  const loadData = async () => {
+  // Stable loadData function for useEffect dependencies
+  const loadData = useCallback(async () => {
     try {
       const res = await api.getLatestTelemetry();
       // FE-P1-01: 使用类型守卫安全转换数组
@@ -70,7 +53,27 @@ export default function DigitalTwinPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDevice, showToast, t]);
+
+  // Initial load - use ref to ensure only runs once on mount
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      loadData();
+    }
+  }, [loadData]);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) {
+      // WebSocket connected - no polling needed
+      return;
+    }
+    // WebSocket disconnected - use polling fallback
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [isConnected, loadData]);
 
   const currentDevice = telemetry.find(t => t.device_id === selectedDevice);
 

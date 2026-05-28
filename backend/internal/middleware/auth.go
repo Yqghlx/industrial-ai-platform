@@ -280,9 +280,12 @@ func TenantRequired() gin.HandlerFunc {
 }
 
 // GetUserID extracts user ID from context
+// P1-08: 安全类型断言 - 避免panic
 func GetUserID(c *gin.Context) int {
 	if id, exists := c.Get("user_id"); exists {
-		return id.(int)
+		if userID, ok := id.(int); ok {
+			return userID
+		}
 	}
 	return 0
 }

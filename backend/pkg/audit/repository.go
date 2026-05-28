@@ -259,7 +259,10 @@ func (r *PostgresRepository) DeleteOld(ctx context.Context, retentionDays int) e
 		return err
 	}
 
-	deleted, _ := result.RowsAffected()
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		r.logger.Warn("Failed to get rows affected", zap.Error(err))
+	}
 	r.logger.Info("Deleted old audit logs",
 		zap.Int64("deleted_count", deleted),
 		zap.Int("retention_days", retentionDays),

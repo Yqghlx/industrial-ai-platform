@@ -586,7 +586,10 @@ func (s *AlertService) InitializeDefaultRules(ctx context.Context) error {
 func ParseActions(actionsJSON string) []map[string]interface{} {
 	var actions []map[string]interface{}
 	if actionsJSON != "" {
-		json.Unmarshal([]byte(actionsJSON), &actions)
+		if err := json.Unmarshal([]byte(actionsJSON), &actions); err != nil {
+			// 解析失败时返回默认值
+			return []map[string]interface{}{{"type": "notification"}}
+		}
 	}
 	return actions
 }
