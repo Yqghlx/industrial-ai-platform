@@ -599,3 +599,86 @@ func TestAuthHandlerNew_GetCSRFToken_EmptyCookie(t *testing.T) {
 	assert.NotNil(t, csrfCookie)
 	assert.NotEmpty(t, csrfCookie.Value)
 }
+
+
+func TestAuthHandlerNew_ChangePassword_InvalidUserID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.POST("/change-password", func(c *gin.Context) {
+		c.Set("user_id", "invalid_type") // Set invalid type
+		handler.ChangePassword(c)
+	})
+
+	body := map[string]string{
+		"old_password": "OldPass123!@",
+		"new_password": "NewPass123!@",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestAuthHandlerNew_ChangePassword_InvalidPasswordComplexity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.POST("/change-password", func(c *gin.Context) {
+		c.Set("user_id", 1)
+		handler.ChangePassword(c)
+	})
+
+	body := map[string]string{
+		"old_password": "OldPass123!@",
+		"new_password": "weak", // Weak password (less than 12 chars)
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestAuthHandlerNew_ChangePassword_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+
+	handler := NewAuthHandlerNew(mockAuthSvc, mockUserSvc)
+
+	router.POST("/change-password", func(c *gin.Context) {
+		c.Set("user_id", 1)
+		handler.ChangePassword(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewBuffer([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+

@@ -265,3 +265,28 @@ func TestAdminHandlerNew_CreateUser_WithOptionalFields(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 }
+
+
+func TestAdminHandlerNew_GetSystemStatus_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockAuthSvc := new(MockAuthService)
+	mockTelemetrySvc := new(MockTelemetryService)
+
+	// Mock service error
+	mockTelemetrySvc.On("GetSystemStatus", mock.Anything).Return(nil, assert.AnError)
+
+	handler := NewAdminHandlerNew(mockAuthSvc, mockTelemetrySvc)
+
+	router.GET("/system/status", handler.GetSystemStatus)
+
+	req := httptest.NewRequest(http.MethodGet, "/system/status", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	mockTelemetrySvc.AssertExpectations(t)
+}
+
