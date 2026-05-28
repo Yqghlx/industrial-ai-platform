@@ -897,9 +897,9 @@ func TestBusinessHandlerNew_GetROIStats_CacheUnavailable(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	assert.Equal(t, int64(100), response.TotalDevices)
-	assert.Equal(t, int64(5), response.ActiveAlerts)
-	assert.Equal(t, int64(10), response.OpenWorkOrders)
+	assert.Equal(t, 100, response.TotalDevices) // ROIStats uses int, not int64
+	assert.Equal(t, 5, response.ActiveAlerts)
+	assert.Equal(t, 10, response.OpenWorkOrders)
 
 	mockReportSvc.AssertExpectations(t)
 	mockCacheSvc.AssertExpectations(t)
