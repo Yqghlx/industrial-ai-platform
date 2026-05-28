@@ -19,6 +19,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// LLM配置常量
+// P2-FIX: 将魔法数字定义为常量，提高代码可读性和可维护性
+const (
+	// DefaultMaxTokens LLM响应的最大token数
+	// 较小的值可以加快响应速度，适合工业AI平台的实时查询场景
+	DefaultMaxTokens = 512
+
+	// DefaultTemperature LLM生成的温度参数
+	// 0.7 提供了创造性和一致性的良好平衡
+	DefaultTemperature = 0.7
+)
+
 func (s *AgentService) determineAgent(query string) string {
 	queryLower := strings.ToLower(query)
 
@@ -59,15 +71,15 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 	}
 
 	// Build request body (OpenAI-compatible format)
-	// OPT-001: Reduce max_tokens from 2048 to 512 for faster response
+	// OPT-001: Reduce max_tokens for faster response (see DefaultMaxTokens constant)
 	reqBody := map[string]interface{}{
 		"model": s.model,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userMessage},
 		},
-		"max_tokens":  512, // Reduced for faster response
-		"temperature": 0.7,
+		"max_tokens":  DefaultMaxTokens, // P2-FIX: 使用常量替代魔法数字
+		"temperature": DefaultTemperature, // P2-FIX: 使用常量替代魔法数字
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
