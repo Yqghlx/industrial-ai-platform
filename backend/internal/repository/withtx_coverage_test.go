@@ -140,3 +140,23 @@ func TestRuleRepository_WithTx_Coverage(t *testing.T) {
 	tx.Rollback()
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestReportRepository_WithTx_Coverage(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	dbWrapper := database.NewDBWrapper(db)
+	repo := NewReportRepository(dbWrapper)
+
+	mock.ExpectBegin()
+	tx, err := dbWrapper.BeginTx(context.Background(), nil)
+	require.NoError(t, err)
+
+	txRepo := repo.WithTx(tx)
+	require.NotNil(t, txRepo)
+
+	mock.ExpectRollback()
+	tx.Rollback()
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

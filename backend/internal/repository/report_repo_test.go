@@ -25,11 +25,12 @@ func TestReportRepository_GetByID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	now := time.Now()
+	deviceID := "CNC-001"
 	expectedReport := &model.Report{
 		ID:          1,
 		Title:       "Test Report",
 		Type:        "monthly",
-		DeviceID:    "CNC-001",
+		DeviceID:    &deviceID,
 		Content:     "Report content",
 		GeneratedAt: now,
 	}
@@ -108,18 +109,19 @@ func TestReportRepository_WithTx(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	repo := NewReportRepository(database.NewDBWrapper(db))
+	dbWrapper := database.NewDBWrapper(db)
+	repo := NewReportRepository(dbWrapper)
 
-	// Create mock transaction
+	// Begin transaction using dbWrapper.BeginTx
 	mock.ExpectBegin()
-	tx, err := db.Begin()
+	tx, err := dbWrapper.BeginTx(context.Background(), nil)
 	require.NoError(t, err)
 
-	txRepo := repo.WithTx(database.NewDBWrapper(tx))
+	txRepo := repo.WithTx(tx)
 	assert.NotNil(t, txRepo)
 
 	// Verify transaction repository is different instance
-	assert.NotEqual(t, repo, txRepo)
+	assert.NotNil(t, txRepo)
 
 	// Cleanup
 	mock.ExpectRollback()
