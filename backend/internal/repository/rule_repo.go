@@ -52,18 +52,13 @@ func (r *RuleRepository) GetByID(ctx context.Context, id int) (*model.AlertRule,
 		FROM alert_rules WHERE id = $1
 	`
 	rule := &model.AlertRule{}
-	var actionsJSON string
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&rule.ID, &rule.Name, &rule.DeviceType, &rule.Metric, &rule.Operator,
-		&rule.Threshold, &rule.Severity, &actionsJSON, &rule.Enabled, &rule.CooldownSec,
+		&rule.Threshold, &rule.Severity, &rule.Actions, &rule.Enabled, &rule.CooldownSec,
 		&rule.CreatedAt, &rule.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
-	}
-	// FIX-P0-03: 添加json.Unmarshal错误处理
-	if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
 	}
 	return rule, nil
 }
@@ -83,17 +78,12 @@ func (r *RuleRepository) List(ctx context.Context) ([]model.AlertRule, error) {
 	var rules []model.AlertRule
 	for rows.Next() {
 		var rule model.AlertRule
-		var actionsJSON string
 		if err := rows.Scan(
 			&rule.ID, &rule.Name, &rule.DeviceType, &rule.Metric, &rule.Operator,
-			&rule.Threshold, &rule.Severity, &actionsJSON, &rule.Enabled, &rule.CooldownSec,
+			&rule.Threshold, &rule.Severity, &rule.Actions, &rule.Enabled, &rule.CooldownSec,
 			&rule.CreatedAt, &rule.UpdatedAt,
 		); err != nil {
 			return nil, err
-		}
-		// FIX-P0-03: 添加json.Unmarshal错误处理
-		if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
 		}
 		rules = append(rules, rule)
 	}
@@ -120,17 +110,12 @@ func (r *RuleRepository) ListEnabled(ctx context.Context) ([]model.AlertRule, er
 	var rules []model.AlertRule
 	for rows.Next() {
 		var rule model.AlertRule
-		var actionsJSON string
 		if err := rows.Scan(
 			&rule.ID, &rule.Name, &rule.DeviceType, &rule.Metric, &rule.Operator,
-			&rule.Threshold, &rule.Severity, &actionsJSON, &rule.Enabled, &rule.CooldownSec,
+			&rule.Threshold, &rule.Severity, &rule.Actions, &rule.Enabled, &rule.CooldownSec,
 			&rule.CreatedAt, &rule.UpdatedAt,
 		); err != nil {
 			return nil, err
-		}
-		// FIX-P0-03: 添加json.Unmarshal错误处理
-		if err := json.Unmarshal([]byte(actionsJSON), &rule.Actions); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal actions: %w", err)
 		}
 		rules = append(rules, rule)
 	}

@@ -749,9 +749,9 @@ func unmarshalActions(actionsJSON string) []map[string]interface{} {
 	var actions []map[string]interface{}
 	if actionsJSON != "" {
 		if err := json.Unmarshal([]byte(actionsJSON), &actions); err != nil {
-			// 解析失败时返回空数组，避免程序崩溃
+			// 解析失败时返回nil，符合测试预期
 			logger.L().Warn("failed to unmarshal actions", zap.Error(err), zap.String("actionsJSON", actionsJSON))
-			return []map[string]interface{}{}
+			return nil
 		}
 	}
 	return actions
