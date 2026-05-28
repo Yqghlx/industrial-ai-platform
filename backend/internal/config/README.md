@@ -149,7 +149,8 @@ See `.env.example` in the backend directory for a complete example:
 
 ```bash
 # Required
-DATABASE_URL=postgres://user:pass@localhost:5432/industrial_ai?sslmode=disable
+# SEC-HIGH-01: 生产环境必须使用 sslmode=verify-full，开发环境使用 require
+DATABASE_URL=postgres://user:password@localhost:5432/industrial_ai?sslmode=require
 JWT_SECRET=your-secret-key-here
 
 # Optional

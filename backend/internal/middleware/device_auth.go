@@ -4,13 +4,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // SEC-002: Device Authentication Middleware
-// Device API Key mechanism for authenticating device telemetry endpoints
+// SEC-HIGH-02: Device API Key mechanism for authenticating device telemetry endpoints
 // Devices authenticate using X-Device-Key header or Device-Key query parameter
 
 // DeviceAuthConfig holds configuration for device authentication
@@ -22,6 +26,8 @@ type DeviceAuthConfig struct {
 	// ValidateKey is a function to validate the device key
 	// Returns device ID if valid, empty string if invalid
 	ValidateKey func(deviceKey string) (deviceID string, valid bool)
+	// RequireAuth determines if authentication is required (default: true for SEC-HIGH-02)
+	RequireAuth bool
 }
 
 // DefaultDeviceAuthConfig returns the default device auth configuration
@@ -29,12 +35,31 @@ func DefaultDeviceAuthConfig() *DeviceAuthConfig {
 	return &DeviceAuthConfig{
 		HeaderName:     "X-Device-Key",
 		QueryParamName: "device_key",
+		RequireAuth:    true,
 	}
 }
 
+// SEC-HIGH-02: Global device API key validator
+// Uses environment variable DEVICE_API_KEY for validation
+var (
+	deviceAPIKey     string
+	deviceAPIKeyOnce sync.Once
+)
+
+// getDeviceAPIKey returns the device API key from environment
+func getDeviceAPIKey() string {
+	deviceAPIKeyOnce.Do(func() {
+		deviceAPIKey = os.Getenv("DEVICE_API_KEY")
+		if deviceAPIKey == "" {
+			logger.L().Warn("DEVICE_API_KEY not set, device authentication will be less secure")
+		}
+	})
+	return deviceAPIKey
+}
+
 // DeviceAuthRequired creates a middleware that requires device authentication
-// This is used for device telemetry endpoints where devices need to authenticate
-// but don't have user JWT tokens
+// SEC-HIGH-02: Used for device telemetry endpoints where devices need to authenticate
+// This is the primary authentication mechanism for the telemetry endpoint
 func DeviceAuthRequired(config *DeviceAuthConfig) gin.HandlerFunc {
 	if config == nil {
 		config = DefaultDeviceAuthConfig()
@@ -54,7 +79,13 @@ func DeviceAuthRequired(config *DeviceAuthConfig) gin.HandlerFunc {
 			deviceKey = c.Query(config.QueryParamName)
 		}
 
-		if deviceKey == "" {
+		// SEC-HIGH-02: 如果没有配置验证器，使用环境变量验证
+		if config.ValidateKey == nil {
+			config.ValidateKey = createDefaultDeviceKeyValidator()
+		}
+
+		// SEC-HIGH-02: 如果认证是必需的，但没有提供密钥
+		if config.RequireAuth && deviceKey == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":   "Device authentication required",
 				"code":    "DEVICE_AUTH_REQUIRED",
@@ -64,8 +95,8 @@ func DeviceAuthRequired(config *DeviceAuthConfig) gin.HandlerFunc {
 			return
 		}
 
-		// Validate the device key
-		if config.ValidateKey != nil {
+		// 如果提供了密钥，验证它
+		if deviceKey != "" {
 			deviceID, valid := config.ValidateKey(deviceKey)
 			if !valid {
 				c.JSON(http.StatusUnauthorized, gin.H{
@@ -78,14 +109,57 @@ func DeviceAuthRequired(config *DeviceAuthConfig) gin.HandlerFunc {
 			// Set device info in context
 			c.Set("device_id", deviceID)
 			c.Set("device_authenticated", true)
+			logger.L().Info("Device authenticated",
+				zap.String("device_id", deviceID),
+				zap.String("path", c.Request.URL.Path))
 		} else {
-			// Without a validator, we just check that a key was provided
-			// This is useful for development/testing
-			c.Set("device_key", deviceKey)
-			c.Set("device_authenticated", true)
+			// 如果认证不是必需的，标记为未认证
+			c.Set("device_authenticated", false)
 		}
 
 		c.Next()
+	}
+}
+
+// createDefaultDeviceKeyValidator creates a default validator using environment variable
+// SEC-HIGH-02: 使用环境变量 DEVICE_API_KEY 进行验证
+func createDefaultDeviceKeyValidator() func(deviceKey string) (deviceID string, valid bool) {
+	apiKey := getDeviceAPIKey()
+
+	return func(deviceKey string) (string, bool) {
+		// 如果没有设置 DEVICE_API_KEY，使用宽松验证（仅检查格式）
+		if apiKey == "" {
+			// 开发环境：接受任何非空密钥
+			if deviceKey != "" && len(deviceKey) >= 8 {
+				logger.L().Warn("Device authenticated without DEVICE_API_KEY validation (development mode)")
+				return deviceKey, true
+			}
+			return "", false
+		}
+
+		// 生产环境：严格验证
+		// 密钥可以是直接的 API Key 或设备特定密钥 (格式: deviceID:key)
+		if deviceKey == apiKey {
+			return "device", true
+		}
+
+		// 验证设备特定密钥格式
+		parts := strings.SplitN(deviceKey, ":", 2)
+		if len(parts) == 2 {
+			deviceID := parts[0]
+			key := parts[1]
+			// 验证密钥是否匹配 API Key
+			if key == apiKey {
+				return deviceID, true
+			}
+			// 或验证 SHA256 哈希格式
+			expectedHash := GenerateDeviceKey(deviceID, apiKey)
+			if strings.EqualFold(deviceKey, expectedHash) {
+				return deviceID, true
+			}
+		}
+
+		return "", false
 	}
 }
 

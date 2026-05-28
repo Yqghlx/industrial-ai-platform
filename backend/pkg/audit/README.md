@@ -43,7 +43,8 @@ go mod tidy
 
 ```bash
 # 使用迁移工具
-migrate -path ./internal/database/migrations -database "postgres://user:password@localhost:5432/dbname?sslmode=disable" up
+# SEC-HIGH-01: 生产环境使用 sslmode=verify-full
+migrate -path ./internal/database/migrations -database "postgres://user:password@localhost:5432/dbname?sslmode=require" up
 ```
 
 ## 快速开始

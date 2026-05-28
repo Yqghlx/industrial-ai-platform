@@ -384,8 +384,13 @@ func (s *HTTPServerNew) setupHandlers() {
 	authPublic.GET("/auth/csrf-token", s.authHandler.GetCSRFToken)
 
 	// SEC-MED-02: Telemetry endpoint with rate limiting and input validation
-	// Device authentication is optional - see DeviceAuthRequired middleware
-	s.router.POST("/api/v1/devices/telemetry", middleware.TelemetryRateLimit(), s.telemetryHandler.IngestTelemetry)
+	// SEC-HIGH-02: 添加设备 API Key 认证机制
+	// Device authentication is required for telemetry data ingestion
+	// Devices must provide valid API key via X-Device-Key header or device_key query parameter
+	s.router.POST("/api/v1/devices/telemetry",
+		middleware.TelemetryRateLimit(),
+		middleware.DeviceAuthRequired(nil), // SEC-HIGH-02: 添加设备认证
+		s.telemetryHandler.IngestTelemetry)
 
 	// SEC-MED-01: WebSocket endpoint - public with rate limiting
 	// WebSocket authentication is available via ws_auth.go middleware
@@ -699,6 +704,12 @@ func (c *compatAuthSvc) ValidateToken(ctx context.Context, token string) (*servi
 // ListUsers 用户列表 - compat模式不支持
 func (c *compatAuthSvc) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error) {
 	return nil, 0, fmt.Errorf("list users not supported in compat mode")
+}
+
+// DeleteUser 删除用户 - compat模式不支持
+// SEC-HIGH-03: 新增删除用户方法
+func (c *compatAuthSvc) DeleteUser(ctx context.Context, userID int) error {
+	return fmt.Errorf("delete user not supported in compat mode")
 }
 
 // getCacheStatus wrapper for backward compat

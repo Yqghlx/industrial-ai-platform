@@ -42,7 +42,8 @@ func setupTestEnvironment() {
 	if testDBURL == "" {
 		// Use local PostgreSQL (skip if no database available)
 		// BE-P2-04: 使用环境变量而非硬编码
-		testDBURL = "postgres://postgres@localhost:5432/test_platform?sslmode=disable"
+		// SEC-HIGH-01: 测试环境也使用 SSL 连接
+		testDBURL = "postgres://postgres@localhost:5432/test_platform?sslmode=require"
 		fmt.Println("⚠️  Using default test database URL. Set TEST_DATABASE_URL for custom configuration.")
 	}
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -24,17 +25,39 @@ type CORSConfig struct {
 
 // DefaultCORSConfig 生产环境默认 CORS 配置
 // 返回一个安全的 CORS 配置，适合生产环境使用
+// SEC-HIGH-04: 从环境变量读取允许的域名列表
 // 特点：
 //   - 明确的 AllowedOrigins 列表，不使用通配符
 //   - 允许 Credentials，支持认证
 //   - 24 小时预检缓存，减少 OPTIONS 请求
 //   - 只允许必要的 HTTP 方法和头部
 func DefaultCORSConfig() *CORSConfig {
-	return &CORSConfig{
-		AllowedOrigins: []string{
+	// SEC-HIGH-04: 从环境变量读取 CORS origins
+	// 如果未设置，返回空列表（生产环境会拒绝所有跨域请求）
+	originsStr := os.Getenv("CORS_ORIGINS")
+	allowedOrigins := []string{}
+
+	if originsStr != "" {
+		for _, o := range strings.Split(originsStr, ",") {
+			trimmed := strings.TrimSpace(o)
+			if trimmed != "" && trimmed != "*" {
+				// 生产环境不允许使用通配符
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
+		}
+	}
+
+	// 如果没有配置 CORS_ORIGINS，使用示例域名作为默认值（仅用于演示）
+	// 生产部署时必须设置 CORS_ORIGINS 环境变量
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{
 			"https://industrial-ai.example.com",
 			"https://admin.industrial-ai.example.com",
-		},
+		}
+	}
+
+	return &CORSConfig{
+		AllowedOrigins: allowedOrigins,
 		AllowedMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS",
 		},

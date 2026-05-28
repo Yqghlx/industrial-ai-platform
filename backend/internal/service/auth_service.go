@@ -218,3 +218,41 @@ func (s *AuthService) ListUsers(ctx context.Context, page, pageSize int) ([]mode
 	defer cancel()
 	return s.userRepo.List(ctx, page, pageSize)
 }
+
+// DeleteUser 删除用户
+// SEC-HIGH-03: 新增删除用户方法
+// FIX-019: 添加 Context 超时设置
+func (s *AuthService) DeleteUser(ctx context.Context, userID int) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
+	// 先检查用户是否存在
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return errors.NewUserNotFoundError(fmt.Sprintf("%d", userID))
+	}
+
+	// 检查是否是最后一个管理员
+	if user.Role == "admin" {
+		users, _, err := s.userRepo.List(ctx, 1, 100)
+		if err == nil {
+			adminCount := 0
+			for _, u := range users {
+				if u.Role == "admin" {
+					adminCount++
+				}
+			}
+			if adminCount <= 1 {
+				return errors.NewAppError(errors.ErrCodeForbidden, "cannot delete the last admin user", "")
+			}
+		}
+	}
+
+	// 执行删除
+	if err := s.userRepo.Delete(ctx, userID); err != nil {
+		return errors.NewDatabaseError(err.Error())
+	}
+
+	return nil
+}

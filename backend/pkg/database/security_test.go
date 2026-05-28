@@ -60,16 +60,16 @@ func TestBuildConnectionString(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "basic connection string",
+			name: "basic connection string with SSL require (SEC-HIGH-01)",
 			config: &DatabaseConfig{
 				Host:     "localhost",
 				Port:     5432,
 				User:     "testuser",
 				Password: "testpass",
 				Database: "testdb",
-				SSLMode:  "disable",
+				SSLMode:  "require",
 			},
-			expected: "host=localhost port=5432 user=testuser password=testpass dbname=testdb sslmode=disable",
+			expected: "host=localhost port=5432 user=testuser password=testpass dbname=testdb sslmode=require",
 		},
 		{
 			name: "connection string with require SSL",

@@ -132,6 +132,12 @@ func (m *MockAuthService) ListUsers(ctx context.Context, page, pageSize int) ([]
 	return args.Get(0).([]model.User), args.Get(1).(int), args.Error(2)
 }
 
+// SEC-HIGH-03: 新增 DeleteUser 方法
+func (m *MockAuthService) DeleteUser(ctx context.Context, userID int) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
 // ============================================
 // Mock AlertService
 // ============================================

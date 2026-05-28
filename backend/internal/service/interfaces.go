@@ -41,6 +41,7 @@ type DeviceServiceInterface interface {
 
 // AuthServiceInterface 认证服务接口
 // 用于 Mock 测试和依赖注入
+// SEC-HIGH-03: 添加 DeleteUser 方法
 type AuthServiceInterface interface {
 	// Login 用户登录
 	Login(ctx context.Context, username, password string) (*model.User, string, error)
@@ -62,6 +63,10 @@ type AuthServiceInterface interface {
 
 	// ListUsers 列出所有用户
 	ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int, error)
+
+	// DeleteUser 删除用户
+	// SEC-HIGH-03: 新增删除用户方法
+	DeleteUser(ctx context.Context, userID int) error
 }
 
 // UserServiceInterface 用户服务接口

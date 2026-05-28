@@ -84,9 +84,16 @@ type ConnectionConfig struct {
 
 // DefaultConnectionConfig 默认连接配置
 // FIX-012: 从环境变量读取连接池参数
+// SEC-HIGH-01: 默认使用 SSL 连接，而不是禁用 SSL
+// 在生产环境中，应该使用 verify-full 以验证服务器证书
 func DefaultConnectionConfig() *ConnectionConfig {
+	// SEC-HIGH-01: 从环境变量读取 SSL 模式，默认使用 require
+	sslMode := os.Getenv("DB_SSLMODE")
+	if sslMode == "" {
+		sslMode = "require" // 安全默认值：要求 SSL 连接
+	}
 	return &ConnectionConfig{
-		SSLMode:         "disable",
+		SSLMode:         sslMode,
 		MaxOpenConns:    parseEnvInt("DB_MAX_OPEN_CONNS", 25),
 		MaxIdleConns:    parseEnvInt("DB_MAX_IDLE_CONNS", 10),
 		ConnMaxLifetime: time.Duration(parseEnvInt("DB_CONN_MAX_LIFETIME", 1800)) * time.Second,

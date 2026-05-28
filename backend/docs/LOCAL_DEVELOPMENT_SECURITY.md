@@ -97,7 +97,8 @@ GIN_MODE=debug
 PORT=8080
 
 # 数据库配置 (本地开发)
-DATABASE_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
+# SEC-HIGH-01: 即使开发环境也建议使用 SSL，生产环境必须使用 verify-full
+DATABASE_URL=postgres://user:password@localhost:5432/dbname?sslmode=require
 
 # Redis 配置 (本地开发)
 REDIS_URL=localhost:6379
