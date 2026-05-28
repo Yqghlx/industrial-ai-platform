@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Comprehensive test coverage for backend services (73%+ average)
+- Test coverage enhancement: handler/service packages 75.4% (2026-05-28)
+- Comprehensive test coverage for backend services (77%+ average)
+- AgentOptimizer test suite (GetCachedAnswer, CacheAnswer, AcquireSlot, ReleaseSlot)
+- GetDeviceContext test coverage
+- GetCSRFToken test coverage
 - WebSocket real-time telemetry streaming
 - AI Agent integration with GLM-4-flash
 - Device fleet dashboard with live metrics
