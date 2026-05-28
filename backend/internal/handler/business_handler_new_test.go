@@ -810,3 +810,98 @@ func TestBusinessHandlerNew_ListNotifications_ServiceError(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, w.Code)
 	mockNotificationSvc.AssertExpectations(t)
 }
+
+
+func TestBusinessHandlerNew_GetROIStats_NilReportService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockCacheSvc := new(MockCache)
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	// Create handler with nil reportSvc
+	handler := NewBusinessHandlerNew(
+		new(MockWorkOrderService),
+		new(MockNotificationService),
+		new(MockBlackBoxService),
+		nil, // nil reportSvc
+		new(MockAlertService),
+		broadcastFunc,
+		mockCacheSvc,
+	)
+
+	router.GET("/roi-stats", handler.GetROIStats)
+
+	req := httptest.NewRequest(http.MethodGet, "/roi-stats", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	// Should return default stats
+	assert.Equal(t, float64(0), response["total_devices"])
+	assert.Equal(t, float64(0), response["active_alerts"])
+	assert.Equal(t, float64(0), response["open_work_orders"])
+	assert.Equal(t, float64(0), response["resolved_issues"])
+	assert.Equal(t, float64(0), response["predicted_savings"])
+	assert.Equal(t, 99.5, response["uptime_percentage"])
+	assert.Equal(t, 2.5, response["avg_response_time"])
+}
+
+func TestBusinessHandlerNew_GetROIStats_CacheUnavailable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockReportSvc := new(MockReportService)
+	mockCacheSvc := new(MockCache)
+	broadcastFunc := func(msg model.WSMessage) {}
+
+	handler := NewBusinessHandlerNew(
+		new(MockWorkOrderService),
+		new(MockNotificationService),
+		new(MockBlackBoxService),
+		mockReportSvc,
+		new(MockAlertService),
+		broadcastFunc,
+		mockCacheSvc,
+	)
+
+	stats := &model.ROIStats{
+		TotalDevices:     100,
+		ActiveAlerts:     5,
+		OpenWorkOrders:   10,
+		ResolvedIssues:   50,
+		PredictedSavings: 7750,
+		UptimePercentage: 99.5,
+		AvgResponseTime:  2.5,
+	}
+
+	mockReportSvc.On("GetROIStats", mock.Anything).Return(stats, nil)
+	mockCacheSvc.On("IsAvailable").Return(false) // Cache unavailable
+
+	router.GET("/roi-stats", handler.GetROIStats)
+
+	req := httptest.NewRequest(http.MethodGet, "/roi-stats", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response model.ROIStats
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(100), response.TotalDevices)
+	assert.Equal(t, int64(5), response.ActiveAlerts)
+	assert.Equal(t, int64(10), response.OpenWorkOrders)
+
+	mockReportSvc.AssertExpectations(t)
+	mockCacheSvc.AssertExpectations(t)
+}
+
