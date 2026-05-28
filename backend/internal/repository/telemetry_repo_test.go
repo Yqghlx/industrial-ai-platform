@@ -9,6 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/pkg/database"
+	"github.com/lib/pq"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -588,7 +589,8 @@ func TestTelemetryRepository_GetStatsBatch_Success(t *testing.T) {
 		AddRow("INJ-001", 30.0, 105.0, 0.05, 35.0, 110.0, 0.08, 150).
 		AddRow("ASM-001", 22.0, 100.0, 0.01, 25.0, 102.0, 0.03, 50)
 
-	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY\(.*\) AND time >= .* AND time <= .* GROUP BY device_id`).
+	mock.ExpectQuery(`SELECT .* FROM device_telemetry WHERE device_id = ANY\(\$1\) AND time >= .* AND time <= .* GROUP BY device_id`).
+		WithArgs(pq.Array(deviceIDs), start, end).
 		WillReturnRows(rows)
 
 	stats, err := repo.GetStatsBatch(ctx, deviceIDs, start, end)

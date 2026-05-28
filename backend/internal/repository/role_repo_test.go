@@ -655,14 +655,13 @@ func TestRoleRepo_Update_RowsAffectedError(t *testing.T) {
 
 	role := &model.Role{ID: 1, Name: "updated", Description: "Updated"}
 
-	mock.ExpectExec(`UPDATE roles SET`).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	// Override RowsAffected to return error
+	// Return a result that will error when RowsAffected() is called
 	mock.ExpectExec(`UPDATE roles SET`).
 		WillReturnResult(sqlmock.NewErrorResult(errors.New("result error")))
 
 	err = repo.Update(context.Background(), role)
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "result error")
 }
 
 func TestRoleRepo_Delete_GetByIDError(t *testing.T) {
