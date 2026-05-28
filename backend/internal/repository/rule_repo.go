@@ -33,7 +33,11 @@ func (r *RuleRepository) Create(ctx context.Context, rule *model.AlertRule) erro
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	`
-	actionsJSON, _ := json.Marshal(rule.Actions)
+	// FIX-P1-11: 添加json.Marshal错误处理
+	actionsJSON, err := json.Marshal(rule.Actions)
+	if err != nil {
+		return fmt.Errorf("failed to marshal actions: %w", err)
+	}
 	return r.db.QueryRow(ctx, query,
 		rule.Name, rule.DeviceType, rule.Metric, rule.Operator, rule.Threshold,
 		rule.Severity, string(actionsJSON), rule.Enabled, rule.CooldownSec,
@@ -146,9 +150,13 @@ func (r *RuleRepository) Update(ctx context.Context, rule *model.AlertRule) erro
 			severity = $6, actions = $7, enabled = $8, cooldown_sec = $9, updated_at = $10
 		WHERE id = $11
 	`
-	actionsJSON, _ := json.Marshal(rule.Actions)
+	// FIX-P1-11: 添加json.Marshal错误处理
+	actionsJSON, err := json.Marshal(rule.Actions)
+	if err != nil {
+		return fmt.Errorf("failed to marshal actions: %w", err)
+	}
 	rule.UpdatedAt = time.Now()
-	_, err := r.db.Exec(ctx, query,
+	_, err = r.db.Exec(ctx, query,
 		rule.Name, rule.DeviceType, rule.Metric, rule.Operator, rule.Threshold,
 		rule.Severity, string(actionsJSON), rule.Enabled, rule.CooldownSec,
 		rule.UpdatedAt, rule.ID,
@@ -211,6 +219,8 @@ func (r *AlertRepository) List(ctx context.Context, status string, page, pageSiz
 		argIdx++
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -279,6 +289,8 @@ func (r *AlertRepository) ListWithFilter(ctx context.Context, filter AlertFilter
 		argIdx++
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -461,6 +473,8 @@ func (r *AlertRepository) GetArchivedAlerts(ctx context.Context, deviceID string
 		argIdx++
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alerts %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)

@@ -288,6 +288,8 @@ func (r *WorkOrderRepository) List(ctx context.Context, status, deviceID string,
 	}
 
 	// Count total
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM work_orders %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -414,6 +416,8 @@ func (r *NotificationRepository) List(ctx context.Context, notifType string, unr
 		whereClause += " AND read = false"
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM notifications %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -508,6 +512,8 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 		argIdx++
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM blackbox_records %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -600,6 +606,8 @@ func (r *ReportRepository) List(ctx context.Context, reportType string, page, pa
 		argIdx++
 	}
 
+	// Security: SQL动态拼接安全性说明 - whereClause由参数化查询条件构建，所有变量值通过$N占位符传递，
+	// 非用户直接输入。字段名和操作符均为硬编码常量，不存在SQL注入风险。
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM reports %s", whereClause)
 	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
