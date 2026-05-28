@@ -1,10 +1,44 @@
 # Kubernetes Deployment - Backend
 # Industrial AI Agent Platform
+#
+# ============================================================================
+# Security Configuration Notes
+# ============================================================================
+# This deployment includes security hardening configurations:
+#
+# 1. Pod Security Context:
+#    - runAsNonRoot: true - Containers must not run as root
+#    - runAsUser: 1000 - Run as non-root user (UID 1000)
+#    - runAsGroup: 1000 - Run with non-root group
+#    - fsGroup: 1000 - Shared filesystem group for volumes
+#
+# 2. Container Security Context:
+#    - allowPrivilegeEscalation: false - Prevent privilege escalation
+#    - readOnlyRootFilesystem: true - Immutable container filesystem
+#    - capabilities.drop: ["ALL"] - Drop all Linux capabilities
+#    - seccompProfile: RuntimeDefault - Use container runtime seccomp profile
+#
+# 3. Resource Limits:
+#    - Set appropriate CPU and memory limits
+#    - Prevent resource exhaustion attacks
+#
+# 4. Network Policies:
+#    - Consider adding NetworkPolicy resources to restrict traffic
+#    - See infra/k8s/network-policy.yaml for examples
+#
+# 5. Service Account:
+#    - Use dedicated service account with minimal RBAC permissions
+#    - See infra/k8s/secrets.yaml for RBAC configuration
+# ============================================================================
 
 apiVersion: v1
 kind: Namespace
 metadata:
   name: industrial-ai
+  labels:
+    name: industrial-ai
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
 
 ---
 apiVersion: v1
@@ -12,12 +46,17 @@ kind: Secret
 metadata:
   name: industrial-ai-secrets
   namespace: industrial-ai
+  annotations:
+    # SECURITY WARNING: Replace placeholder values before deployment!
+    # Use ./scripts/generate-secrets.sh to generate secure values
+    secret.kubernetes.io/managed-by: "manual"
 type: Opaque
 stringData:
-  DATABASE_URL: "postgres://industrial_user:CHANGE_ME@postgres:5432/industrial_ai?sslmode=disable"
+  # Replace these values before deploying to production!
+  DATABASE_URL: "postgres://industrial_user:PLACEHOLDER_CHANGE_ME@postgres:5432/industrial_ai?sslmode=require"
   REDIS_URL: "redis://redis:6379"
-  JWT_SECRET: "CHANGE_ME"
-  ADMIN_PASSWORD: "CHANGE_ME"
+  JWT_SECRET: "PLACEHOLDER_CHANGE_ME"
+  ADMIN_PASSWORD: "PLACEHOLDER_CHANGE_ME"
 
 ---
 apiVersion: v1
@@ -28,6 +67,13 @@ metadata:
 data:
   PORT: "8080"
   GIN_MODE: "release"
+  # Logging configuration
+  LOG_LEVEL: "info"
+  # Database connection pool settings
+  DB_MAX_OPEN_CONNS: "25"
+  DB_MAX_IDLE_CONNS: "10"
+  # Redis settings
+  REDIS_MAX_RETRIES: "3"
 
 ---
 apiVersion: apps/v1
@@ -35,26 +81,75 @@ kind: Deployment
 metadata:
   name: backend
   namespace: industrial-ai
+  labels:
+    app: backend
+    version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
+      # ======================================================================
+      # Pod Security Context
+      # ======================================================================
+      # Enforces security at the pod level
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Use dedicated service account
+      serviceAccountName: backend-sa
+      # Image pull secrets (if using private registry)
+      # imagePullSecrets:
+      #   - name: registry-credentials
       containers:
         - name: backend
           image: ghcr.io/yangqinggang-it/industrial-ai-platform/backend:latest
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+              protocol: TCP
           envFrom:
             - secretRef:
                 name: industrial-ai-secrets
             - configMapRef:
                 name: industrial-ai-config
+          # ==================================================================
+          # Container Security Context
+          # ==================================================================
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          # ==================================================================
+          # Resource Management
+          # ==================================================================
           resources:
             requests:
               cpu: 100m
@@ -62,18 +157,43 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          # ==================================================================
+          # Health Probes
+          # ==================================================================
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # ==================================================================
+          # Volume Mounts
+          # ==================================================================
+          volumeMounts:
+            # Temporary directory (needed for read-only root filesystem)
+            - name: tmp
+              mountPath: /tmp
+            # Cache directory
+            - name: cache
+              mountPath: /var/cache/app
+      # ======================================================================
+      # Volumes
+      # ======================================================================
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
 
 ---
 apiVersion: v1
@@ -85,8 +205,9 @@ spec:
   selector:
     app: backend
   ports:
-    - port: 8080
-      targetPort: 8080
+    - name: http
+      port: 8080
+      targetPort: http
   type: ClusterIP
 
 ---
@@ -95,21 +216,60 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: industrial-ai
+  labels:
+    app: frontend
+    version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: frontend
+        version: v1
     spec:
+      # ======================================================================
+      # Pod Security Context
+      # ======================================================================
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101  # nginx user
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: ghcr.io/yangqinggang-it/industrial-ai-platform/frontend:latest
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          # ==================================================================
+          # Container Security Context
+          # ==================================================================
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          # ==================================================================
+          # Resource Management
+          # ==================================================================
           resources:
             requests:
               cpu: 50m
@@ -117,12 +277,38 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
+          # ==================================================================
+          # Health Probes
+          # ==================================================================
           livenessProbe:
             httpGet:
               path: /health
-              port: 80
+              port: http
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # ==================================================================
+          # Volume Mounts
+          # ==================================================================
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /var/cache/nginx
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
 
 ---
 apiVersion: v1
@@ -134,8 +320,9 @@ spec:
   selector:
     app: frontend
   ports:
-    - port: 80
-      targetPort: 80
+    - name: http
+      port: 80
+      targetPort: http
   type: ClusterIP
 
 ---
@@ -147,8 +334,22 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # TLS configuration
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-ssl-protocols: "TLSv1.2 TLSv1.3"
 spec:
   ingressClassName: nginx
+  # TLS configuration (uncomment when using cert-manager)
+  # tls:
+  #   - hosts:
+  #       - industrial-ai.example.com
+  #     secretName: industrial-ai-tls-secret
   rules:
     - host: industrial-ai.example.com
       http:

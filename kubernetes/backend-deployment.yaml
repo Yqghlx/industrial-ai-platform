@@ -2,27 +2,80 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: industrial-ai
+  labels:
+    name: industrial-ai
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
 ---
+# ============================================================================
+# Backend Deployment with Security Hardening
+# ============================================================================
+# Security Features:
+#   - Non-root user execution (UID 1000)
+#   - Read-only root filesystem
+#   - No privilege escalation
+#   - All Linux capabilities dropped
+#   - Seccomp profile enabled
+#   - Resource limits enforced
+# ============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
   namespace: industrial-ai
+  labels:
+    app: backend
+    version: v1
+    security.level: "high"
 spec:
   replicas: 3
   selector:
     matchLabels:
       app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
+      # Pod-level Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: backend-sa
       containers:
       - name: backend
         image: industrial-ai/backend:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        # Container-level Security Context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -51,21 +104,42 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: http
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: http
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # Volume mounts for read-only filesystem
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/app
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
 ---
+# ============================================================================
+# Redis Deployment with Security Hardening
+# ============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
   namespace: industrial-ai
+  labels:
+    app: redis
+    version: v1
 spec:
   replicas: 1
   selector:
@@ -75,12 +149,36 @@ spec:
     metadata:
       labels:
         app: redis
+        version: v1
     spec:
+      # Pod-level Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # Redis user in official image
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: redis
         image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 6379
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        # Container-level Security Context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
         resources:
           requests:
             memory: "128Mi"
@@ -88,46 +186,87 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
+        # Volume mounts for Redis data
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
 ---
+# ============================================================================
+# Backend Service
+# ============================================================================
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
   namespace: industrial-ai
+  labels:
+    app: backend
 spec:
-  type: LoadBalancer
+  type: ClusterIP  # Changed from LoadBalancer for better security
   selector:
     app: backend
   ports:
-  - port: 80
-    targetPort: 8080
+  - name: http
+    port: 80
+    targetPort: http
 ---
+# ============================================================================
+# Redis Service
+# ============================================================================
 apiVersion: v1
 kind: Service
 metadata:
   name: redis
   namespace: industrial-ai
+  labels:
+    app: redis
 spec:
+  type: ClusterIP
   selector:
     app: redis
   ports:
-  - port: 6379
-    targetPort: 6379
+  - name: redis
+    port: 6379
+    targetPort: redis
 ---
+# ============================================================================
+# Secrets Configuration
+# ============================================================================
+# SECURITY: Do NOT store actual secrets in Git!
+# Use external secrets management:
+#   - HashiCorp Vault
+#   - AWS Secrets Manager
+#   - Azure Key Vault
+#   - Kubernetes external-secrets operator
+#
+# Generate secrets with: ./scripts/generate-secrets.sh
+# Or use kubectl: kubectl create secret generic industrial-ai-secrets --from-literal=...
+# ============================================================================
 apiVersion: v1
 kind: Secret
 metadata:
   name: industrial-ai-secrets
   namespace: industrial-ai
+  labels:
+    app: industrial-ai
+    component: secrets
+  annotations:
+    secret.kubernetes.io/managed-by: "external-secrets"
 type: Opaque
-# SECURITY: Do NOT store secrets in Git!
-# Use external-secrets or Vault for production
-# Example: kubectl create secret generic industrial-ai-secrets \
-#   --from-literal=database-url='postgresql://...' \
-#   --from-literal=jwt-secret='...' \
-#   --from-literal=llm-api-key='...'
+# SECURITY: Values should be set via external secrets or kubectl
+# Do NOT commit actual values to Git!
 stringData: {}
 ---
+# ============================================================================
+# Horizontal Pod Autoscaler for Backend
+# ============================================================================
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
