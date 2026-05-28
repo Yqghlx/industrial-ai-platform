@@ -9,6 +9,8 @@ import (
 
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/pkg/database"
+	"github.com/industrial-ai/platform/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // TelemetryRepositoryInterface defines the interface for telemetry repository

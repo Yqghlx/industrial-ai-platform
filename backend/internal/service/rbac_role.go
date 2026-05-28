@@ -57,7 +57,7 @@ func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayNam
 
 	// Check if role already exists
 	if s.roleRepo != nil {
-		existing, err := s.roleRepo.GetByName(tenantID, name)
+		existing, err := s.roleRepo.GetByName(ctx, tenantID, name)
 		if err == nil && existing != nil {
 			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeConflict, "Role already exists", "")
 		}
@@ -79,7 +79,7 @@ func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayNam
 
 	var err error
 	if s.roleRepo != nil {
-		err = s.roleRepo.Create(role)
+		err = s.roleRepo.Create(ctx, role)
 	} else if s.rbacRepo != nil {
 		err = s.rbacRepo.CreateRole(ctx, role)
 	}
@@ -102,7 +102,7 @@ func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) 
 	var err error
 
 	if s.roleRepo != nil {
-		role, err = s.roleRepo.GetByID(id)
+		role, err = s.roleRepo.GetByID(ctx, id)
 	} else if s.rbacRepo != nil {
 		role, err = s.rbacRepo.GetRoleByID(ctx, id)
 	}
@@ -127,7 +127,7 @@ func (s *RBACService) GetRoleWithPermissions(ctx context.Context, id int) (*mode
 	var err error
 
 	if s.roleRepo != nil {
-		result, err = s.roleRepo.GetByIDWithPermissions(id)
+		result, err = s.roleRepo.GetByIDWithPermissions(ctx, id)
 	} else if s.rbacRepo != nil {
 		role, err := s.rbacRepo.GetRoleByID(ctx, id)
 		if err != nil {
@@ -163,7 +163,7 @@ func (s *RBACService) ListRoles(ctx context.Context, tenantID string) ([]model.R
 	var err error
 
 	if s.roleRepo != nil {
-		roles, err = s.roleRepo.ListByTenant(tenantID)
+		roles, err = s.roleRepo.ListByTenant(ctx, tenantID)
 	} else if s.rbacRepo != nil {
 		roles, err = s.rbacRepo.ListRoles(ctx, tenantID)
 	}
@@ -185,7 +185,7 @@ func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string
 	var err error
 
 	if s.roleRepo != nil {
-		role, err = s.roleRepo.GetByID(id)
+		role, err = s.roleRepo.GetByID(ctx, id)
 	} else if s.rbacRepo != nil {
 		role, err = s.rbacRepo.GetRoleByID(ctx, id)
 	}
@@ -207,7 +207,7 @@ func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string
 	role.UpdatedAt = time.Now()
 
 	if s.roleRepo != nil {
-		err = s.roleRepo.Update(role)
+		err = s.roleRepo.Update(ctx, role)
 	} else if s.rbacRepo != nil {
 		err = s.rbacRepo.UpdateRole(ctx, role)
 	}
@@ -230,7 +230,7 @@ func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
 	var err error
 
 	if s.roleRepo != nil {
-		role, err = s.roleRepo.GetByID(id)
+		role, err = s.roleRepo.GetByID(ctx, id)
 	} else if s.rbacRepo != nil {
 		role, err = s.rbacRepo.GetRoleByID(ctx, id)
 	}
@@ -247,7 +247,7 @@ func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
 	}
 
 	if s.roleRepo != nil {
-		err = s.roleRepo.Delete(id)
+		err = s.roleRepo.Delete(ctx, id)
 	} else if s.rbacRepo != nil {
 		err = s.rbacRepo.DeleteRole(ctx, id)
 	}
@@ -269,7 +269,7 @@ func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenant
 	// Verify role exists
 	var err error
 	if s.roleRepo != nil {
-		_, err = s.roleRepo.GetByID(roleID)
+		_, err = s.roleRepo.GetByID(ctx, roleID)
 	} else if s.rbacRepo != nil {
 		_, err = s.rbacRepo.GetRoleByID(ctx, roleID)
 	}
@@ -282,7 +282,7 @@ func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenant
 	}
 
 	if s.roleRepo != nil {
-		err = s.roleRepo.AssignRoleToUser(userID, roleID, tenantID)
+		err = s.roleRepo.AssignRoleToUser(ctx, userID, roleID, tenantID)
 	} else if s.rbacRepo != nil {
 		err = s.rbacRepo.AssignRoleToUser(ctx, userID, roleID, tenantID)
 	}
@@ -303,7 +303,7 @@ func (s *RBACService) RemoveRoleFromUser(ctx context.Context, userID, roleID int
 
 	var err error
 	if s.roleRepo != nil {
-		err = s.roleRepo.RemoveRoleFromUser(userID, roleID)
+		err = s.roleRepo.RemoveRoleFromUser(ctx, userID, roleID)
 	} else if s.rbacRepo != nil {
 		err = s.rbacRepo.RemoveRoleFromUser(ctx, userID, roleID)
 	}
@@ -325,7 +325,7 @@ func (s *RBACService) GetUserRoles(ctx context.Context, userID int) ([]model.Rol
 	var err error
 
 	if s.roleRepo != nil {
-		roles, err = s.roleRepo.GetUserRoles(userID)
+		roles, err = s.roleRepo.GetUserRoles(ctx, userID)
 	} else if s.rbacRepo != nil {
 		roles, err = s.rbacRepo.GetUserRoles(ctx, userID)
 	}
@@ -347,7 +347,7 @@ func (s *RBACService) GetUserPermissions(ctx context.Context, userID int) ([]mod
 	var err error
 
 	if s.roleRepo != nil {
-		permissions, err = s.roleRepo.GetUserPermissions(userID)
+		permissions, err = s.roleRepo.GetUserPermissions(ctx, userID)
 	} else if s.rbacRepo != nil {
 		permissions, err = s.rbacRepo.GetUserPermissions(ctx, userID)
 	}
@@ -369,7 +369,7 @@ func (s *RBACService) CheckPermission(ctx context.Context, userID int, resource,
 	var err error
 
 	if s.roleRepo != nil {
-		hasPermission, err = s.roleRepo.CheckUserPermission(userID, resource, action)
+		hasPermission, err = s.roleRepo.CheckUserPermission(ctx, userID, resource, action)
 	} else if s.rbacRepo != nil {
 		hasPermission, err = s.rbacRepo.CheckPermission(ctx, userID, resource, action)
 	}

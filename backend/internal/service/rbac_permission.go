@@ -14,7 +14,7 @@ import (
 func (s *RBACService) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
 	var err error
 	if s.roleRepo != nil {
-		_, err = s.roleRepo.GetByID(roleID)
+		_, err = s.roleRepo.GetByID(ctx, roleID)
 	} else if s.rbacRepo != nil {
 		_, err = s.rbacRepo.GetRoleByID(ctx, roleID)
 	}
