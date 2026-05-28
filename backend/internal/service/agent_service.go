@@ -17,12 +17,30 @@ import (
 
 // AgentServiceConfig holds configuration for AgentService
 // FIX-039: HTTP Timeout 和连接池配置外部化
+// P1-08: HTTP Client连接池参数调优指南
 type AgentServiceConfig struct {
 	// HTTP Client 配置
-	HTTPTimeout         time.Duration // HTTP 请求超时时间
-	MaxIdleConns        int           // 最大空闲连接数
-	MaxIdleConnsPerHost int           // 每个主机最大空闲连接数
-	IdleConnTimeout     time.Duration // 空闲连接超时时间
+	// HTTPTimeout: HTTP请求总超时时间（包括连接、传输、重定向等）
+	// 建议：LLM API调用可设置较长超时（30-120秒），普通API调用设置较短超时（5-30秒）
+	// 环境变量: LLM_HTTP_TIMEOUT (单位: 秒)
+	HTTPTimeout time.Duration // HTTP 请求超时时间
+
+	// MaxIdleConns: 所有主机的最大空闲连接总数
+	// 建议：高并发场景设置100-200，低并发场景设置50-100
+	// 环境变量: LLM_MAX_IDLE_CONNS
+	MaxIdleConns int // 最大空闲连接数
+
+	// MaxIdleConnsPerHost: 每个主机的最大空闲连接数
+	// 建议：单主机高并发设置10-20，一般场景设置5-10
+	// 注意：此值过小会导致频繁建立新连接，过大则占用资源
+	// 环境变量: LLM_MAX_IDLE_CONNS_PER_HOST
+	MaxIdleConnsPerHost int // 每个主机最大空闲连接数
+
+	// IdleConnTimeout: 空闲连接保持时间
+	// 建议：设置90-120秒，确保连接复用同时避免占用过多资源
+	// 注意：此值应大于服务端Keep-Alive时间
+	// 环境变量: LLM_IDLE_CONN_TIMEOUT (单位: 秒)
+	IdleConnTimeout time.Duration // 空闲连接超时时间
 
 	// LLM 配置
 	LLMAPIKey  string

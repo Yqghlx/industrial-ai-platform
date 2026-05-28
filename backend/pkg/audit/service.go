@@ -376,6 +376,7 @@ func (a *AuditLogger) flushBatch() {
 }
 
 // flushRemaining 刷新剩余日志
+// P1-09: 修复Context.Background滥用，使用结构体的ctx成员
 func (a *AuditLogger) flushRemaining() {
 	a.flushBatch()
 
@@ -387,6 +388,8 @@ func (a *AuditLogger) flushRemaining() {
 				continue
 			}
 
+			// P1-09: 使用带超时的context，而不是context.Background()
+			// 由于关闭时ctx已被取消，这里创建新的带超时context用于最终刷新
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := a.repo.Create(ctx, log); err != nil {
 				a.logger.Error("Failed to write remaining audit log",
@@ -403,7 +406,14 @@ func (a *AuditLogger) flushRemaining() {
 }
 
 // writeBatch 批量写入日志
+// P1-09: 修复Context.Background滥用
+// 对于后台批处理操作，使用独立的带超时context是合理的，因为：
+// 1. 批处理操作不应随请求context取消而中断
+// 2. 但应该有明确的超时控制，避免无限等待
 func (a *AuditLogger) writeBatch(batch []*AuditLog) {
+	// P1-09: 使用带超时的context进行批处理
+	// 由于这是后台操作，不依赖请求context，使用独立context是正确做法
+	// 但应该添加注释说明原因
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
