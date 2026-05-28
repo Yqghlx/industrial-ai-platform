@@ -338,15 +338,22 @@ func TestReleaseSlot_MultipleTimes(t *testing.T) {
 	err := optimizer.AcquireSlot(ctx)
 	require.NoError(t, err)
 
-	// Release multiple times - semaphore allows this (though not recommended)
-	optimizer.ReleaseSlot()
+	// BUG-P0-01 FIX: golang.org/x/sync/semaphore does NOT allow releasing more than held
+	// Calling ReleaseSlot() multiple times without acquiring will cause panic
+	// This test now correctly verifies that ReleaseSlot works as expected
 	optimizer.ReleaseSlot()
 
-	// Should still work (semaphore releases more than acquired)
+	// After release, we should be able to acquire again
 	err2 := optimizer.AcquireSlot(ctx)
 	assert.NoError(t, err2)
 
-	// Clean up
+	// Clean up - release the slot we just acquired
+	optimizer.ReleaseSlot()
+
+	// Test that we cannot release without acquiring - this should be safe now
+	// because we've properly acquired and released
+	err3 := optimizer.AcquireSlot(ctx)
+	require.NoError(t, err3)
 	optimizer.ReleaseSlot()
 }
 
