@@ -8,6 +8,8 @@ test.describe('登录流程', () => {
   test.beforeEach(async ({ page }) => {
     // 确保每次测试前在登录页（清除 localStorage/token）
     await page.goto('/login');
+    // 等待LoginPage组件完全渲染（React.lazy懒加载）
+    await page.waitForSelector('[name="username"]', { state: 'attached', timeout: 10000 });
     // 清除认证状态
     await page.evaluate(() => {
       localStorage.clear();
@@ -15,14 +17,18 @@ test.describe('登录流程', () => {
     });
   });
   
-  test('成功登录 - 管理员', async ({ page }) => {
+test('成功登录 - 管理员', async ({ page }) => {
     // 访问登录页
     await page.goto('/login');
     
+    // 等待LoginPage组件完全渲染（React.lazy懒加载）
+    await page.waitForSelector('[name="username"]', { state: 'attached', timeout: 10000 });
+    await page.waitForSelector('[name="username"]', { state: 'visible', timeout: 10000 });
+    
     // 验证登录页面元素 - 只验证关键元素避免 strict mode
-    await expect(page.locator('[name="username"]')).toBeVisible();
-    await expect(page.locator('[name="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(page.locator('[name="username"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[name="password"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('button[type="submit"]')).toBeVisible({ timeout: 10000 });
     
     // 输入凭据
     await page.fill('[name="username"]', TEST_USERS.admin.username);
@@ -35,7 +41,7 @@ test.describe('登录流程', () => {
     await page.waitForURL(/\/dashboard|\/devices|\/$/, { timeout: 10000 });
     
     // 验证用户信息显示 - 使用 .first() 避免 strict mode
-    await expect(page.locator('[data-testid="user-menu"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid="user-menu"]').first()).toBeVisible({ timeout: 10000 });
   });
   
   test('成功登录 - 操作员', async ({ page }) => {
