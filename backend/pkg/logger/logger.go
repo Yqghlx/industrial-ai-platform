@@ -205,8 +205,21 @@ func InitGlobalLogger(cfg Config) error {
 func GetLogger() *Logger {
 	if globalLogger == nil {
 		// 初始化默认日志器
-		logger, _ := NewLogger(DefaultConfig())
-		globalLogger = logger
+		logger, err := NewLogger(DefaultConfig())
+		if err != nil {
+			// 初始化失败时使用标准输出回退
+			fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+			// 创建一个最基本的logger作为回退
+			fallbackLogger, fallbackErr := zap.NewProduction()
+			if fallbackErr != nil {
+				// 完全失败时使用nop logger
+				globalLogger = &Logger{Logger: zap.NewNop(), config: DefaultConfig()}
+			} else {
+				globalLogger = &Logger{Logger: fallbackLogger, config: DefaultConfig()}
+			}
+		} else {
+			globalLogger = logger
+		}
 	}
 	return globalLogger
 }

@@ -27,7 +27,8 @@ func ExampleUsage() {
 	}
 	db, err := sqlx.Connect("postgres", dbURL)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to connect to database: %v\n", err)
+		return
 	}
 
 	// 2. 创建日志记录器

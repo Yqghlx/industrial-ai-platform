@@ -27,6 +27,11 @@ var (
 	uuidRegex  = regexp.MustCompile(UUIDPattern)
 	idRegex    = regexp.MustCompile(IDPattern)
 	emailRegex = regexp.MustCompile(EmailPattern)
+	// P0-02: 预编译密码复杂度验证正则表达式，提升性能
+	upperCaseRegex   = regexp.MustCompile(`[A-Z]`)
+	lowerCaseRegex   = regexp.MustCompile(`[a-z]`)
+	digitRegex       = regexp.MustCompile(`[0-9]`)
+	specialCharRegex = regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?` + "`" + `~]`)
 )
 
 // ValidateUUID validates UUID format
@@ -124,26 +129,26 @@ func ValidatePasswordComplexity(password string) error {
 		errors = append(errors, "must be at most 128 characters long")
 	}
 
-	// Check for uppercase letter
-	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	// Check for uppercase letter (P0-02: 使用预编译正则)
+	hasUpper := upperCaseRegex.MatchString(password)
 	if !hasUpper {
 		errors = append(errors, "must contain at least one uppercase letter")
 	}
 
-	// Check for lowercase letter
-	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+	// Check for lowercase letter (P0-02: 使用预编译正则)
+	hasLower := lowerCaseRegex.MatchString(password)
 	if !hasLower {
 		errors = append(errors, "must contain at least one lowercase letter")
 	}
 
-	// Check for digit
-	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+	// Check for digit (P0-02: 使用预编译正则)
+	hasDigit := digitRegex.MatchString(password)
 	if !hasDigit {
 		errors = append(errors, "must contain at least one digit")
 	}
 
-	// Check for special character
-	hasSpecial := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?` + "`" + `~]`).MatchString(password)
+	// Check for special character (P0-02: 使用预编译正则)
+	hasSpecial := specialCharRegex.MatchString(password)
 	if !hasSpecial {
 		errors = append(errors, "must contain at least one special character (e.g., !@#$%^&*)")
 	}

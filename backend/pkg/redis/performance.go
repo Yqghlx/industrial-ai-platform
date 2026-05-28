@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -45,8 +46,13 @@ func DefaultProductionRedisConfig() *RedisConfig {
 
 // DefaultDevelopmentRedisConfig 开发环境 Redis 配置
 func DefaultDevelopmentRedisConfig() *RedisConfig {
+	// P0-01: 从环境变量读取 Redis 地址，避免硬编码
+	redisAddr := os.Getenv("REDIS_URL")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
 	return &RedisConfig{
-		Addr:         "localhost:6379",
+		Addr:         redisAddr,
 		Password:     "",
 		DB:           0,
 		PoolSize:     10,

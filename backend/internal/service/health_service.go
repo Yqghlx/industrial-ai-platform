@@ -263,7 +263,8 @@ func (s *HealthService) checkDisk() HealthStatus {
 	// This is a simplified check - in production, you'd use syscall.Statfs
 	// For now, we'll just check if we can write to the directory
 	testFile := wd + "/.health_check_test"
-	f, err := os.Create(testFile)
+	// SEC-CRITICAL-02: 使用安全文件权限0600创建临时文件，防止敏感信息泄露
+	f, err := os.OpenFile(testFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return HealthStatus{
 			Status:  "unhealthy",

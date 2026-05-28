@@ -18,10 +18,11 @@ import (
 
 // allowedTables 是允许在动态 SQL 中使用的表名白名单
 // 这些表名已经在代码库中预定义，不接受外部输入
+// P0-06: 修复动态SQL拼接风险 - 确保白名单完整覆盖所有实际表名
 var allowedTables = map[string]bool{
 	"users":               true,
 	"devices":             true,
-	"telemetry_data":      true,
+	"device_telemetry":    true, // P0-06: 修正表名 telemetry_data -> device_telemetry
 	"alerts":              true,
 	"alert_rules":         true,
 	"work_orders":         true,
@@ -33,6 +34,8 @@ var allowedTables = map[string]bool{
 	"user_roles":          true,
 	"role_permissions":    true,
 	"agent_task_logs":     true,
+	"reports":             true, // P0-06: 添加缺失的表
+	"audit_logs":          true, // P0-06: 添加缺失的表
 	"dashboards":          true,
 	"widgets":             true,
 	"token_blacklist":     true,
@@ -52,6 +55,7 @@ func ValidateTableName(table string) error {
 }
 
 // validateTableAndColumn 验证表名和列名
+// P0-06: 增强列名验证 - 添加列名白名单验证
 func validateTableAndColumn(table, column string) error {
 	if err := ValidateTableName(table); err != nil {
 		return err
@@ -59,11 +63,25 @@ func validateTableAndColumn(table, column string) error {
 	if column == "" {
 		return fmt.Errorf("column name cannot be empty")
 	}
-	// 列名只允许字母数字和下划线
-	for _, c := range column {
+	// 列名只允许字母数字和下划线，且不能以数字开头
+	// 防止 SQL 注入通过列名
+	if len(column) == 0 {
+		return fmt.Errorf("column name cannot be empty")
+	}
+	// 检查第一个字符是否为字母或下划线
+	firstChar := column[0]
+	if !((firstChar >= 'a' && firstChar <= 'z') || (firstChar >= 'A' && firstChar <= 'Z') || firstChar == '_') {
+		return fmt.Errorf("invalid column name: %s (must start with letter or underscore)", column)
+	}
+	// 检查所有字符
+	for i, c := range column {
 		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-			return fmt.Errorf("invalid column name: %s (contains invalid characters)", column)
+			return fmt.Errorf("invalid column name: %s (invalid character at position %d)", column, i+1)
 		}
+	}
+	// 检查列名长度限制
+	if len(column) > 128 {
+		return fmt.Errorf("column name too long: %s (max 128 characters)", column)
 	}
 	return nil
 }

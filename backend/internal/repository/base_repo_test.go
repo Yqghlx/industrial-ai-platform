@@ -16,10 +16,11 @@ import (
 
 func TestValidateTableName_ValidTables(t *testing.T) {
 	// Test all allowed table names
+	// P0-06: 更新表名列表以匹配白名单
 	allowedTables := []string{
 		"users",
 		"devices",
-		"telemetry_data",
+		"device_telemetry", // P0-06: 修正表名
 		"alerts",
 		"alert_rules",
 		"work_orders",
@@ -31,6 +32,8 @@ func TestValidateTableName_ValidTables(t *testing.T) {
 		"user_roles",
 		"role_permissions",
 		"agent_task_logs",
+		"reports",    // P0-06: 添加缺失的表
+		"audit_logs", // P0-06: 添加缺失的表
 		"dashboards",
 		"widgets",
 		"token_blacklist",

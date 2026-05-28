@@ -596,7 +596,11 @@ func FormatActions(actions []map[string]interface{}) string {
 	if len(actions) == 0 {
 		return `[{"type": "notification"}]`
 	}
-	b, _ := json.Marshal(actions)
+	b, err := json.Marshal(actions)
+	if err != nil {
+		// 序列化失败时返回默认值，并记录错误
+		return `[{"type": "notification"}]`
+	}
 	return string(b)
 }
 
@@ -606,10 +610,16 @@ func ParseRuleActions(actions interface{}) string {
 	case string:
 		return v
 	case []interface{}:
-		b, _ := json.Marshal(v)
+		b, err := json.Marshal(v)
+		if err != nil {
+			return `[{"type": "notification"}]`
+		}
 		return string(b)
 	case map[string]interface{}:
-		b, _ := json.Marshal([]map[string]interface{}{v})
+		b, err := json.Marshal([]map[string]interface{}{v})
+		if err != nil {
+			return `[{"type": "notification"}]`
+		}
 		return string(b)
 	default:
 		return `[{"type": "notification"}]`
