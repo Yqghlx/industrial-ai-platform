@@ -736,3 +736,140 @@ func TestDeviceRepository_ContextCancellation(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// Test GetByIDWithTenant
+func TestDeviceRepository_GetByIDWithTenant_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	expectedDevice := &model.Device{
+		ID:          "CNC-001",
+		Name:        "数控机床001",
+		Type:        "数控机床",
+		Location:    "车间A",
+		Status:      "online",
+		Description: "主加工设备",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	rows := sqlmock.NewRows([]string{"id", "name", "type", "location", "status", "description", "created_at", "updated_at"}).
+		AddRow(expectedDevice.ID, expectedDevice.Name, expectedDevice.Type, expectedDevice.Location,
+			expectedDevice.Status, expectedDevice.Description, expectedDevice.CreatedAt, expectedDevice.UpdatedAt)
+
+	mock.ExpectQuery(`SELECT id, name, type, location, status, description, created_at, updated_at FROM devices WHERE id = \$1 AND`).
+		WithArgs("CNC-001", "tenant-001").
+		WillReturnRows(rows)
+
+	device, err := repo.GetByIDWithTenant(ctx, "CNC-001", "tenant-001")
+	require.NoError(t, err)
+	assert.Equal(t, expectedDevice.ID, device.ID)
+	assert.Equal(t, expectedDevice.Name, device.Name)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestDeviceRepository_GetByIDWithTenant_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	mock.ExpectQuery(`SELECT id, name, type, location, status, description, created_at, updated_at FROM devices WHERE id = \$1 AND`).
+		WithArgs("CNC-999", "tenant-001").
+		WillReturnError(sql.ErrNoRows)
+
+	device, err := repo.GetByIDWithTenant(ctx, "CNC-999", "tenant-001")
+	require.Error(t, err)
+	assert.Nil(t, device)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// Test BatchCreate
+func TestDeviceRepository_BatchCreate_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	devices := []*model.Device{
+		{
+			ID:          "CNC-001",
+			Name:        "数控机床001",
+			Type:        "数控机床",
+			Location:    "车间A",
+			Status:      "online",
+			Description: "主加工设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "CNC-002",
+			Name:        "数控机床002",
+			Type:        "数控机床",
+			Location:    "车间B",
+			Status:      "online",
+			Description: "备用设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+
+	mock.ExpectExec(`INSERT INTO devices`).
+		WillReturnResult(sqlmock.NewResult(2, 2))
+
+	err = repo.BatchCreate(ctx, devices)
+	require.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestDeviceRepository_BatchCreate_Empty(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	err = repo.BatchCreate(ctx, []*model.Device{})
+	require.NoError(t, err)
+}
+
+func TestDeviceRepository_BatchCreate_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	devices := []*model.Device{
+		{
+			ID:          "CNC-001",
+			Name:        "数控机床001",
+			Type:        "数控机床",
+			Location:    "车间A",
+			Status:      "online",
+			Description: "主加工设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+
+	mock.ExpectExec(`INSERT INTO devices`).
+		WillReturnError(errors.New("database error"))
+
+	err = repo.BatchCreate(ctx, devices)
+	require.Error(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
