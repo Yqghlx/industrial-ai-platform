@@ -873,3 +873,140 @@ func TestDeviceRepository_BatchCreate_Error(t *testing.T) {
 	require.Error(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+// Test BatchUpdate
+func TestDeviceRepository_BatchUpdate_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	devices := []*model.Device{
+		{
+			ID:          "CNC-001",
+			Name:        "数控机床001-更新",
+			Type:        "数控机床",
+			Location:    "车间A",
+			Status:      "online",
+			Description: "主加工设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "CNC-002",
+			Name:        "数控机床002-更新",
+			Type:        "数控机床",
+			Location:    "车间B",
+			Status:      "offline",
+			Description: "备用设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+
+	mock.ExpectExec("UPDATE devices").
+		WillReturnResult(sqlmock.NewResult(2, 2))
+
+	err = repo.BatchUpdate(ctx, devices)
+	require.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestDeviceRepository_BatchUpdate_Empty(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	err = repo.BatchUpdate(ctx, []*model.Device{})
+	require.NoError(t, err)
+}
+
+func TestDeviceRepository_BatchUpdate_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	now := time.Now()
+	devices := []*model.Device{
+		{
+			ID:          "CNC-001",
+			Name:        "数控机床001",
+			Type:        "数控机床",
+			Location:    "车间A",
+			Status:      "online",
+			Description: "主加工设备",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+
+	mock.ExpectExec("UPDATE devices").
+		WillReturnError(errors.New("database error"))
+
+	err = repo.BatchUpdate(ctx, devices)
+	require.Error(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// Test BatchUpdateStatus
+func TestDeviceRepository_BatchUpdateStatus_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	deviceStatuses := map[string]string{
+		"CNC-001": "online",
+		"CNC-002": "offline",
+	}
+
+	mock.ExpectExec("UPDATE devices").
+		WillReturnResult(sqlmock.NewResult(2, 2))
+
+	err = repo.BatchUpdateStatus(ctx, deviceStatuses)
+	require.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestDeviceRepository_BatchUpdateStatus_Empty(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	err = repo.BatchUpdateStatus(ctx, map[string]string{})
+	require.NoError(t, err)
+}
+
+func TestDeviceRepository_BatchUpdateStatus_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewDeviceRepository(database.NewDBWrapper(db))
+	ctx := context.Background()
+
+	deviceStatuses := map[string]string{
+		"CNC-001": "online",
+	}
+
+	mock.ExpectExec("UPDATE devices").
+		WillReturnError(errors.New("database error"))
+
+	err = repo.BatchUpdateStatus(ctx, deviceStatuses)
+	require.Error(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
