@@ -748,3 +748,187 @@ func TestWaitForRequestsComplete_Immediate(t *testing.T) {
 	// With no active requests, IsRequestComplete returns true
 	assert.True(t, tracker.IsRequestComplete())
 }
+
+// ============================================
+// SEC-MAJOR-01: Device Authentication Middleware Tests
+// ============================================
+
+func TestDeviceAuthRequired_MissingKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Use default config (RequireAuth = true)
+	config := &DeviceAuthConfig{
+		HeaderName:     "X-Device-Key",
+		QueryParamName: "device_key",
+		RequireAuth:    true,
+		ValidateKey: func(key string) (string, bool) {
+			// Simple validator for testing
+			if key == "valid-key" {
+				return "device-001", true
+			}
+			return "", false
+		},
+	}
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(config))
+	router.POST("/telemetry", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	// Request without device key should fail
+	req := httptest.NewRequest("POST", "/telemetry", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+	assert.Contains(t, w.Body.String(), "DEVICE_AUTH_REQUIRED")
+}
+
+func TestDeviceAuthRequired_ValidKeyHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	config := &DeviceAuthConfig{
+		HeaderName:     "X-Device-Key",
+		QueryParamName: "device_key",
+		RequireAuth:    true,
+		ValidateKey: func(key string) (string, bool) {
+			if key == "valid-key" {
+				return "device-001", true
+			}
+			return "", false
+		},
+	}
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(config))
+	router.POST("/telemetry", func(c *gin.Context) {
+		// Verify device is authenticated
+		assert.True(t, IsDeviceAuthenticated(c))
+		assert.Equal(t, "device-001", GetDeviceID(c))
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	// Request with valid device key in header
+	req := httptest.NewRequest("POST", "/telemetry", nil)
+	req.Header.Set("X-Device-Key", "valid-key")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestDeviceAuthRequired_ValidKeyQueryParam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	config := &DeviceAuthConfig{
+		HeaderName:     "X-Device-Key",
+		QueryParamName: "device_key",
+		RequireAuth:    true,
+		ValidateKey: func(key string) (string, bool) {
+			if key == "valid-key" {
+				return "device-002", true
+			}
+			return "", false
+		},
+	}
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(config))
+	router.POST("/telemetry", func(c *gin.Context) {
+		assert.True(t, IsDeviceAuthenticated(c))
+		assert.Equal(t, "device-002", GetDeviceID(c))
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	// Request with valid device key in query parameter
+	req := httptest.NewRequest("POST", "/telemetry?device_key=valid-key", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestDeviceAuthRequired_InvalidKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	config := &DeviceAuthConfig{
+		HeaderName:     "X-Device-Key",
+		QueryParamName: "device_key",
+		RequireAuth:    true,
+		ValidateKey: func(key string) (string, bool) {
+			if key == "valid-key" {
+				return "device-001", true
+			}
+			return "", false
+		},
+	}
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(config))
+	router.POST("/telemetry", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	// Request with invalid device key
+	req := httptest.NewRequest("POST", "/telemetry", nil)
+	req.Header.Set("X-Device-Key", "invalid-key")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+	assert.Contains(t, w.Body.String(), "INVALID_DEVICE_KEY")
+}
+
+func TestDeviceAuthRequired_OptionalAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// RequireAuth = false means authentication is optional
+	config := &DeviceAuthConfig{
+		HeaderName:     "X-Device-Key",
+		QueryParamName: "device_key",
+		RequireAuth:    false,
+		ValidateKey: func(key string) (string, bool) {
+			if key == "valid-key" {
+				return "device-001", true
+			}
+			return "", false
+		},
+	}
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(config))
+	router.POST("/telemetry", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok", "authenticated": IsDeviceAuthenticated(c)})
+	})
+
+	// Request without device key should succeed (auth is optional)
+	req := httptest.NewRequest("POST", "/telemetry", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	assert.Contains(t, w.Body.String(), "authenticated\":false")
+}
+
+// TestDeviceAuthRequired_DefaultValidator tests the default environment-based validator
+func TestDeviceAuthRequired_DefaultValidator(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Set environment variable for testing
+	t.Setenv("DEVICE_API_KEY", "test-api-key-12345")
+
+	router := gin.New()
+	router.Use(DeviceAuthRequired(nil)) // Uses default config
+	router.POST("/telemetry", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	// Request with correct API key
+	req := httptest.NewRequest("POST", "/telemetry", nil)
+	req.Header.Set("X-Device-Key", "test-api-key-12345")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+}

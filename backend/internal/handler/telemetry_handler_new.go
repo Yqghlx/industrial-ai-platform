@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/industrial-ai/platform/internal/middleware"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/service"
+	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/industrial-ai/platform/pkg/response"
 	"github.com/industrial-ai/platform/pkg/validation"
+	"go.uber.org/zap"
 )
 
 // ============================================
@@ -18,6 +21,7 @@ import (
 // ============================================
 
 // TelemetryHandlerNew 遥测处理器（新架构）
+// SEC-MAJOR-01: Includes logger for device authentication logging
 type TelemetryHandlerNew struct {
 	telemetrySvc service.TelemetryServiceInterface
 	agentSvc     service.AgentServiceInterface
@@ -100,8 +104,9 @@ func (h *TelemetryHandlerNew) GetAIStatus(c *gin.Context) {
 }
 
 // IngestTelemetry 接收遥测数据
-// SEC-MED-02: Public endpoint for edge device telemetry ingestion
+// SEC-MAJOR-01: Endpoint now requires DeviceAuthRequired middleware for device authentication
 // SEC-MED-04: Device ID format validation is required
+// Devices must provide valid API key via X-Device-Key header or device_key query parameter
 func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
 	ctx := c.Request.Context()
 	var data model.TelemetryData
@@ -146,6 +151,16 @@ func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
 		data.Status = "normal"
 	}
 
+	// SEC-MAJOR-01: Log device authentication status if available
+	// Device authentication is handled by DeviceAuthRequired middleware
+	authDeviceID := middleware.GetDeviceID(c)
+	if authDeviceID != "" {
+		logger.L().Info("Telemetry from authenticated device",
+			zap.String("auth_device_id", authDeviceID),
+			zap.String("telemetry_device_id", data.DeviceID),
+			zap.Bool("device_authenticated", middleware.IsDeviceAuthenticated(c)))
+	}
+
 	// 实际存储遥测数据
 	if err := h.telemetrySvc.Ingest(ctx, &data); err != nil {
 		response.HandleError(c, err)
@@ -153,9 +168,10 @@ func (h *TelemetryHandlerNew) IngestTelemetry(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "Telemetry ingested successfully",
-		"device_id": data.DeviceID,
-		"timestamp": data.Timestamp.Format(time.RFC3339),
+		"message":            "Telemetry ingested successfully",
+		"device_id":          data.DeviceID,
+		"timestamp":          data.Timestamp.Format(time.RFC3339),
+		"device_authenticated": middleware.IsDeviceAuthenticated(c),
 	})
 }
 

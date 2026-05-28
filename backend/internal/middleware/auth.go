@@ -24,10 +24,9 @@ type AuthConfig struct {
 func DefaultAuthConfig() *AuthConfig {
 	return &AuthConfig{
 		PublicEndpoints: []string{
-			"/health",
-			"/api/v1/devices/telemetry", // SEC-MED-02: Intentionally public for edge device data ingestion
+			"/health", // Health check endpoint - intentionally public
 		},
-		PublicEndpointPolicy: "Health checks and telemetry endpoints are intentionally public for operational reasons",
+		PublicEndpointPolicy: "Health check endpoint is intentionally public for operational reasons",
 	}
 }
 
@@ -291,17 +290,23 @@ func GetUserID(c *gin.Context) int {
 }
 
 // GetUsername extracts username from context
+// P1-08: 安全类型断言 - 避免panic
 func GetUsername(c *gin.Context) string {
 	if username, exists := c.Get("username"); exists {
-		return username.(string)
+		if usernameStr, ok := username.(string); ok {
+			return usernameStr
+		}
 	}
 	return ""
 }
 
 // GetUserRole extracts user role from context
+// P1-08: 安全类型断言 - 避免panic
 func GetUserRole(c *gin.Context) string {
 	if role, exists := c.Get("user_role"); exists {
-		return role.(string)
+		if roleStr, ok := role.(string); ok {
+			return roleStr
+		}
 	}
 	return ""
 }

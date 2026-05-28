@@ -71,7 +71,7 @@ The `/auth/login` endpoint has rate limiting (`LoginRateLimit()`) to prevent bru
 |----------|--------|
 | `/api/v1/auth/login` | No authentication required |
 | `/api/v1/auth/register` | No authentication required |
-| `/api/v1/devices/telemetry` | Intentionally public for edge devices |
+| `/api/v1/devices/telemetry` | Device API Key authentication (not cookie-based) |
 | `/ws` | WebSocket with origin validation |
 
 ### CSRF Protection IS Needed for These Scenarios

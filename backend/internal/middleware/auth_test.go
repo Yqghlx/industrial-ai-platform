@@ -1358,12 +1358,14 @@ func BenchmarkAdminRequired(b *testing.B) {
 // ============================================
 
 // TestDefaultAuthConfig tests default auth configuration
+// SEC-MAJOR-01: Telemetry endpoint now requires device authentication, removed from public endpoints
 func TestDefaultAuthConfig(t *testing.T) {
 	config := DefaultAuthConfig()
 	assert.NotNil(t, config)
 	assert.NotEmpty(t, config.PublicEndpoints)
 	assert.Contains(t, config.PublicEndpoints, "/health")
-	assert.Contains(t, config.PublicEndpoints, "/api/v1/devices/telemetry")
+	// Telemetry endpoint is no longer public - it requires DeviceAuthRequired middleware
+	assert.NotContains(t, config.PublicEndpoints, "/api/v1/devices/telemetry")
 	assert.NotEmpty(t, config.PublicEndpointPolicy)
 }
 
@@ -1672,38 +1674,37 @@ func TestIsAuthenticated(t *testing.T) {
 }
 
 // TestTelemetryEndpoint_SecurityIntegration tests telemetry security
+// SEC-MAJOR-01: Telemetry endpoint now requires device authentication
 func TestTelemetryEndpoint_SecurityIntegration(t *testing.T) {
 	setupJWT(t)
 
-	// Simulate production config with device auth optional
+	// SEC-MAJOR-01: Telemetry endpoint no longer in public endpoints - requires DeviceAuthRequired
+	// This test verifies that telemetry is NOT automatically treated as public
 	config := &AuthConfig{
-		JWTSecret: "test-jwt-secret-key-for-testing-must-be-32-chars",
-		PublicEndpoints: []string{
-			"/api/v1/devices/telemetry", // SEC-MED-02: Intentionally public
-		},
-		PublicEndpointPolicy: "Telemetry endpoint is public for edge device data ingestion with rate limiting",
+		JWTSecret:          "test-jwt-secret-key-for-testing-must-be-32-chars",
+		PublicEndpoints:    []string{}, // No public endpoints - telemetry requires device auth
+		PublicEndpointPolicy: "All endpoints require authentication",
 	}
 
 	router := gin.New()
 	router.Use(AuthRequiredWithConfig(config))
 	router.POST("/api/v1/devices/telemetry", func(c *gin.Context) {
-		// Verify the request is marked as public
-		assert.True(t, IsPublicEndpointRequest(c))
-		// Verify policy is available for audit logging
-		assert.NotEmpty(t, GetPublicEndpointReason(c))
+		// With SEC-MAJOR-01, telemetry should NOT be marked as public
+		assert.False(t, IsPublicEndpointRequest(c))
 		c.JSON(http.StatusOK, gin.H{"status": "received"})
 	})
 	router.GET("/api/v1/devices", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"devices": []string{}})
 	})
 
-	// Telemetry should be accessible without auth
-	t.Run("telemetry without auth succeeds", func(t *testing.T) {
+	// SEC-MAJOR-01: Telemetry now requires authentication (JWT or Device Key)
+	t.Run("telemetry without auth fails", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/devices/telemetry", nil)
 		router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusOK, w.Code)
+		// Should require authentication (no longer public)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	// Other endpoints should still require auth
@@ -1761,10 +1762,11 @@ func BenchmarkAuthRequiredWithConfig_PublicEndpoint(b *testing.B) {
 }
 
 func BenchmarkIsPublicEndpoint(b *testing.B) {
-	publicEndpoints := DefaultAuthConfig().PublicEndpoints
+	// SEC-MAJOR-01: Use explicit public endpoints for benchmarking
+	publicEndpoints := []string{"/health", "/api/v1/public/*"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = isPublicEndpoint("/api/v1/devices/telemetry", publicEndpoints)
+		_ = isPublicEndpoint("/health", publicEndpoints)
 	}
 }

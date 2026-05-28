@@ -1,45 +1,78 @@
-# Security Documentation: Public Telemetry Endpoint
+# Security Documentation: Telemetry Endpoint Authentication
 
-## SEC-MED-02: /api/v1/devices/telemetry Endpoint Security Analysis
+## SEC-MAJOR-01: /api/v1/devices/telemetry Endpoint Security Analysis
 
 ### Overview
 
-This document explains the security design and justification for the `/api/v1/devices/telemetry` endpoint being intentionally public (no JWT authentication required).
+This document explains the security design for the `/api/v1/devices/telemetry` endpoint, which now **requires device authentication** via API Key.
+
+### Security Change Summary (SEC-MAJOR-01)
+
+**Previous State (SEC-MED-02)**: The endpoint was intentionally public with rate limiting as the primary defense.
+
+**Current State (SEC-MAJOR-01)**: The endpoint now **requires device authentication** using the `DeviceAuthRequired` middleware. Devices must provide valid API keys via `X-Device-Key` header or `device_key` query parameter.
 
 ### Endpoint Purpose
 
-The `/api/v1/devices/telemetry` endpoint is designed for **edge device data ingestion**. Industrial IoT devices deployed in manufacturing facilities need to upload real-time sensor data to the platform without requiring user authentication.
+The `/api/v1/devices/telemetry` endpoint is designed for **edge device data ingestion**. Industrial IoT devices deployed in manufacturing facilities upload real-time sensor data to the platform using device-specific API keys.
 
 ### Security Design
 
-#### Intentional Public Access Policy
-
-This endpoint is **intentionally public** with the following security measures:
+#### Mandatory Device Authentication (SEC-MAJOR-01)
 
 | Security Measure | Implementation |
 |------------------|----------------|
-| **Rate Limiting** | `TelemetryRateLimit()` middleware limits requests per IP |
+| **Device Authentication** | `DeviceAuthRequired(nil)` middleware validates API keys |
+| **Rate Limiting** | `TelemetryRateLimit()` middleware limits requests per device/IP |
 | **Input Validation** | `ValidateTelemetryData()` validates all input fields |
 | **Device ID Format Check** | UUID/safe-ID format validation required |
 | **Data Sanitization** | SQL injection detection on all string inputs |
-| **Origin Validation** | CORS headers restrict allowed origins |
 | **IP-Based Throttling** | Prevents abuse from single source |
 
 ### Security Controls Implemented
 
-#### 1. Rate Limiting (Primary Defense)
+#### 1. Device Authentication (Primary Defense - SEC-MAJOR-01)
 
 ```go
-// In setupHandlers()
-s.router.POST("/api/v1/devices/telemetry", middleware.TelemetryRateLimit(), s.telemetryHandler.IngestTelemetry)
+// In server_new.go
+s.router.POST("/api/v1/devices/telemetry",
+    middleware.TelemetryRateLimit(),
+    middleware.DeviceAuthRequired(nil), // SEC-MAJOR-01: Mandatory device auth
+    s.telemetryHandler.IngestTelemetry)
 ```
 
-The `TelemetryRateLimit()` middleware provides:
+The `DeviceAuthRequired(nil)` middleware:
+- Validates device API keys from `X-Device-Key` header or `device_key` query parameter
+- Supports multiple key formats:
+  - Direct API key matching `DEVICE_API_KEY` environment variable
+  - Device-specific key format: `deviceID:key`
+  - SHA-256 hashed key: `sha256(deviceID + ":" + secret)`
+- Returns `401 Unauthorized` for invalid or missing keys
+
+#### 2. API Key Configuration
+
+```go
+// Environment variable configuration
+DEVICE_API_KEY=your-secure-api-key-here
+
+// Generate device-specific keys
+key := middleware.GenerateDeviceKey("device-001", "your-secret")
+// Result: sha256("device-001:your-secret")
+```
+
+#### 3. Rate Limiting (Secondary Defense)
+
+```go
+// Rate limiting middleware
+middleware.TelemetryRateLimit()
+```
+
+The rate limiting provides:
 - Request per-second limits
 - Burst allowance for legitimate traffic spikes
 - IP-based identification for rate limit enforcement
 
-#### 2. Input Validation (SEC-MED-04)
+#### 4. Input Validation (SEC-MED-04)
 
 ```go
 // In telemetry_service.go
@@ -61,7 +94,7 @@ Device ID must be:
 - Maximum 100 characters
 - No special characters except dash and underscore
 
-#### 3. SQL Injection Detection (SEC-MED-05)
+#### 5. SQL Injection Detection (SEC-MED-05)
 
 ```go
 // Enhanced SQL injection detection
@@ -73,84 +106,88 @@ if security.ContainsSQLInjection(data.Message, nil) {
 }
 ```
 
-#### 4. Optional Device Authentication
+### Authentication Methods
 
-For production deployments requiring device-level authentication:
+Devices can authenticate using:
 
-```go
-// Optional: Enable device authentication
-config := &middleware.DeviceAuthConfig{
-    HeaderName: "X-Device-Key",
-    ValidateKey: validateDeviceKeyFunc,
-}
-s.router.POST("/api/v1/devices/telemetry", 
-    middleware.DeviceAuthRequired(config),
-    middleware.TelemetryRateLimit(),
-    s.telemetryHandler.IngestTelemetry)
-```
+1. **Direct API Key**: 
+   ```
+   X-Device-Key: your-api-key
+   ```
 
-Device authentication uses:
-- Device API keys (SHA-256 hashed)
-- Header-based or query parameter-based key transmission
-- Key validation against registered devices
+2. **Device-Specific Key**: 
+   ```
+   X-Device-Key: device-001:your-api-key
+   ```
+
+3. **SHA-256 Hashed Key**:
+   ```
+   X-Device-Key: a1b2c3d4... (sha256 hash)
+   ```
+
+4. **Query Parameter** (fallback):
+   ```
+   POST /api/v1/devices/telemetry?device_key=your-api-key
+   ```
 
 ### Recommended Security Configuration
 
 #### Development Environment
 
 ```env
-# Allow telemetry without device auth
-TELEMETRY_AUTH_ENABLED=false
+# Accept any key >= 8 characters (development mode)
+DEVICE_API_KEY=  # Empty = development mode
 TELEMETRY_RATE_LIMIT=1000  # requests per second
 ```
 
 #### Production Environment
 
 ```env
-# Enable device authentication for production
-TELEMETRY_AUTH_ENABLED=true
+# Secure API key required
+DEVICE_API_KEY=your-secure-256-bit-key-here
 TELEMETRY_RATE_LIMIT=100   # requests per second
-TELEMETRY_REQUIRE_DEVICE_KEY=true
 ```
 
 ### Threat Analysis
 
 | Threat | Mitigation |
 |--------|------------|
-| **Unauthorized Data Injection** | Rate limiting + optional device auth |
+| **Unauthorized Data Injection** | Device authentication (API key) + rate limiting |
 | **Data Flooding** | Per-IP rate limiting |
 | **Malicious Data** | Input validation + SQL injection detection |
-| **Data Poisoning** | Device ID validation + optional device auth |
+| **Data Poisoning** | Device authentication + device ID validation |
 | **Denial of Service** | Rate limiting + request timeout |
+| **Key Theft** | Rotate keys periodically, use HTTPS |
 
-### Alternative: Device Authentication
+### Device Key Management
 
-If device authentication is required for production:
-
-1. **Device Registration**: Register devices with API keys
-2. **Key Generation**: Use `GenerateDeviceKey(deviceID, secret)`
-3. **Key Validation**: Implement `ValidateKey` function in `DeviceAuthConfig`
-4. **Key Rotation**: Rotate device keys periodically
+1. **Key Generation**: Use `GenerateDeviceKey(deviceID, secret)`
+2. **Key Storage**: Store hashed keys in secure configuration
+3. **Key Rotation**: Rotate device keys periodically
+4. **Key Revocation**: Implement key revocation mechanism if needed
 
 ### Security Recommendations
 
-1. **Enable Rate Limiting**: Always use `TelemetryRateLimit()` middleware
-2. **Validate Input**: Use `ValidateTelemetryData()` for all incoming data
-3. **Consider Device Auth**: For production, enable device API key authentication
-4. **Monitor Traffic**: Log and monitor telemetry endpoint usage
-5. **IP Filtering**: Consider IP-based filtering for known device networks
+1. **Always Use Device Auth**: Required for all telemetry requests
+2. **Secure API Keys**: Use strong, unique API keys for production
+3. **HTTPS Required**: Always transmit keys over HTTPS
+4. **Rate Limiting**: Monitor and adjust rate limits based on traffic
+5. **Key Rotation**: Rotate keys periodically (recommended: 90 days)
+6. **Monitor Traffic**: Log and monitor telemetry endpoint usage
 
 ### Implementation Checklist
 
+- [x] Device authentication middleware applied (SEC-MAJOR-01)
 - [x] Rate limiting middleware applied
 - [x] Input validation for device_id format (SEC-MED-04)
 - [x] SQL injection detection (SEC-MED-05)
-- [x] Optional device authentication available
-- [x] Security documentation provided
+- [x] Security documentation updated
 - [x] CORS origin validation
+- [x] Telemetry endpoint removed from public endpoints list
 
 ### Related Security Issues
 
+- **SEC-HIGH-02**: Device authentication middleware implementation
 - **SEC-MED-01**: WebSocket authentication
 - **SEC-MED-04**: Device ID format validation
 - **SEC-MED-05**: SQL injection detection
