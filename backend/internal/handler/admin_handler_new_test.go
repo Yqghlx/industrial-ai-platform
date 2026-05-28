@@ -131,14 +131,21 @@ func TestAdminHandlerNew_CreateUser_Success(t *testing.T) {
 	router := gin.New()
 
 	mockAuthSvc := new(MockAuthService)
+	// SEC-HIGH-03: CreateUser calls Register with RegisterRequest object
+	registerReq := &model.RegisterRequest{
+		Username: "newuser",
+		Password: "StrongPass123!",
+		Email:    "new@example.com",
+		Role:     "admin",
+	}
+	mockAuthSvc.On("Register", mock.Anything, registerReq).Return(&model.User{ID: 1, Username: "newuser"}, "token", nil)
 
 	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
-
 	router.POST("/users", handler.CreateUser)
 
 	body := map[string]string{
 		"username": "newuser",
-		"password": "password123",
+		"password": "StrongPass123!", // SEC-HIGH-03: Password must meet strength requirements (8+ chars, uppercase, lowercase, number, special)
 		"email":    "new@example.com",
 		"role":     "admin",
 	}
@@ -155,7 +162,8 @@ func TestAdminHandlerNew_CreateUser_Success(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	assert.Equal(t, "User created (placeholder)", response["message"])
+	assert.Equal(t, "User created successfully", response["message"])
+	mockAuthSvc.AssertExpectations(t)
 }
 
 func TestAdminHandlerNew_CreateUser_MissingFields(t *testing.T) {
@@ -187,6 +195,9 @@ func TestAdminHandlerNew_DeleteUser(t *testing.T) {
 	router := gin.New()
 
 	mockAuthSvc := new(MockAuthService)
+	// SEC-HIGH-03: DeleteUser now calls GetUserByID to verify user exists before deletion
+	mockAuthSvc.On("GetUserByID", mock.Anything, 123).Return(&model.User{ID: 123, Username: "testuser"}, nil)
+	mockAuthSvc.On("DeleteUser", mock.Anything, 123).Return(nil)
 
 	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
 
@@ -202,8 +213,10 @@ func TestAdminHandlerNew_DeleteUser(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	assert.Equal(t, "User deleted (placeholder)", response["message"])
-	assert.Equal(t, "123", response["id"])
+	assert.Equal(t, "User deleted successfully", response["message"])
+	assert.Equal(t, float64(123), response["id"]) // JSON numbers are float64
+
+	mockAuthSvc.AssertExpectations(t)
 }
 
 func TestAdminHandlerNew_GetSystemStatus(t *testing.T) {
@@ -245,15 +258,21 @@ func TestAdminHandlerNew_CreateUser_WithOptionalFields(t *testing.T) {
 	router := gin.New()
 
 	mockAuthSvc := new(MockAuthService)
+	// SEC-HIGH-03: CreateUser calls Register with RegisterRequest object
+	registerReq := &model.RegisterRequest{
+		Username: "minimaluser",
+		Password: "MinimalPass1!",
+		Role:     "user", // default role
+	}
+	mockAuthSvc.On("Register", mock.Anything, registerReq).Return(&model.User{ID: 1, Username: "minimaluser"}, "token", nil)
 
 	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
-
 	router.POST("/users", handler.CreateUser)
 
 	// Test without email and role (optional fields)
 	body := map[string]string{
 		"username": "minimaluser",
-		"password": "password123",
+		"password": "MinimalPass1!", // SEC-HIGH-03: Password must meet strength requirements
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -264,6 +283,7 @@ func TestAdminHandlerNew_CreateUser_WithOptionalFields(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAuthSvc.AssertExpectations(t)
 }
 
 
