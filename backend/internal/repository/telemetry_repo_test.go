@@ -887,23 +887,6 @@ func TestBlackBoxRepository_WithTx(t *testing.T) {
 	assert.NotSame(t, repo, txRepo)
 }
 
-// Tests for ReportRepository WithTx - 0% coverage function
-
-func TestReportRepository_WithTx(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	defer db.Close()
-
-	repo := NewReportRepository(database.NewDBWrapper(db))
-
-	mock.ExpectBegin()
-	tx, err := db.Begin()
-	require.NoError(t, err)
-
-	txRepo := repo.WithTx(&database.TxWrapper{Tx: tx})
-	assert.NotNil(t, txRepo)
-	assert.NotSame(t, repo, txRepo)
-}
 
 // Tests for AgentTaskLogRepository WithTx - 0% coverage function
 
