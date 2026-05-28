@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -23,9 +24,10 @@ func getTestPort() string {
 		// Fallback to a common test port if random port fails
 		return ":18080"
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
-	return ":" + strings.TrimPrefix(listener.Addr().String(), "127.0.0.1:")
+	// Extract port from listener address
+	addr := listener.Addr().(*net.TCPAddr)
+	return fmt.Sprintf(":%d", addr.Port)
 }
 
 // testPort is a cached test port used across all tests in this file

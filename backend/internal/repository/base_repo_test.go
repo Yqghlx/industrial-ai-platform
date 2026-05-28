@@ -104,8 +104,8 @@ func TestNormalizePagination(t *testing.T) {
 		{"Valid_2_20", 2, 20, 2, 20},
 		{"InvalidPage_0_10", 0, 10, 1, 10},
 		{"InvalidPage_-1_10", -1, 10, 1, 10},
-		{"InvalidSize_1_0", 1, 0, 1, 50},
-		{"InvalidSize_1_-1", 1, -1, 1, 50},
+		{"InvalidSize_1_0", 1, 0, 1, 20},
+		{"InvalidSize_1_-1", 1, -1, 1, 20},
 	}
 
 	for _, tt := range tests {
@@ -125,9 +125,10 @@ func TestNormalizeLimit(t *testing.T) {
 	}{
 		{"Valid_10", 10, 10},
 		{"Valid_100", 100, 100},
-		{"Invalid_0", 0, 50},
-		{"Invalid_-1", -1, 50},
-		{"TooLarge_10000", 10000, 100},
+		{"Invalid_0", 0, 1000},
+		{"Invalid_-1", -1, 1000},
+		{"TooLarge_10001", 10001, 10000},
+		{"AtMaxLimit_10000", 10000, 10000},
 	}
 
 	for _, tt := range tests {

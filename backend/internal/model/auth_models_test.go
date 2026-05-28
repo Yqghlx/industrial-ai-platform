@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"industrial-ai-platform/pkg/constants"
+	"github.com/industrial-ai/platform/pkg/constants"
 )
 
 // TestValidatePassword tests password validation
@@ -25,37 +25,37 @@ func TestValidatePassword(t *testing.T) {
 			name:        "too short",
 			password:    "Abc@1",
 			wantErr:     true,
-			errContains: "长度不足",
+			errContains: "length too short",
 		},
 		{
 			name:        "missing uppercase",
 			password:    "admin@123456!",
 			wantErr:     true,
-			errContains: "大写字母",
+			errContains: "missing uppercase",
 		},
 		{
 			name:        "missing lowercase",
 			password:    "ADMIN@123456!",
 			wantErr:     true,
-			errContains: "小写字母",
+			errContains: "missing lowercase",
 		},
 		{
 			name:        "missing digit",
 			password:    "Admin@Password!",
 			wantErr:     true,
-			errContains: "数字",
+			errContains: "missing digit",
 		},
 		{
 			name:        "missing special",
 			password:    "Admin12345678",
 			wantErr:     true,
-			errContains: "特殊字符",
+			errContains: "missing special",
 		},
 		{
 			name:        "empty password",
 			password:    "",
 			wantErr:     true,
-			errContains: "长度不足",
+			errContains: "length too short",
 		},
 		{
 			name:     "complex valid",
@@ -66,7 +66,7 @@ func TestValidatePassword(t *testing.T) {
 			name:        "11 chars - just under minimum",
 			password:    "Admin@12345",
 			wantErr:     true,
-			errContains: "长度不足",
+			errContains: "length too short",
 		},
 		{
 			name:     "12 chars exactly",
@@ -113,17 +113,17 @@ func TestPasswordValidationError_Error(t *testing.T) {
 		{
 			name:     "single error",
 			errors:   []string{"长度不足"},
-			expected: "密码验证失败: 长度不足",
+			expected: "password validation failed: 长度不足",
 		},
 		{
 			name:     "multiple errors",
 			errors:   []string{"长度不足", "缺少大写字母", "缺少数字"},
-			expected: "密码验证失败: 长度不足, 缺少大写字母, 缺少数字",
+			expected: "password validation failed: 长度不足, 缺少大写字母, 缺少数字",
 		},
 		{
 			name:     "empty errors",
 			errors:   []string{},
-			expected: "密码验证失败: ",
+			expected: "password validation failed: ",
 		},
 	}
 

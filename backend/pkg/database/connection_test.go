@@ -29,7 +29,7 @@ func TestDefaultConnectionConfig(t *testing.T) {
 		config := DefaultConnectionConfig()
 
 		assert.NotNil(t, config)
-		assert.Equal(t, "disable", config.SSLMode)
+		assert.Equal(t, "require", config.SSLMode)
 		assert.Equal(t, 25, config.MaxOpenConns)
 		assert.Equal(t, 10, config.MaxIdleConns)
 		assert.Equal(t, 1800*time.Second, config.ConnMaxLifetime)
