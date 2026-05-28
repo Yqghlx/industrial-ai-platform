@@ -31,28 +31,99 @@ func TestNewAdminHandlerNew(t *testing.T) {
 
 func TestAdminHandlerNew_ListUsers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
 
-	mockAuthSvc := new(MockAuthService)
-	mockAuthSvc.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil)
+	tests := []struct {
+		name           string
+		query          string
+		expectedPage   int
+		expectedSize   int
+		setupMock      func(*MockAuthService)
+		expectedStatus int
+	}{
+		{
+			name:           "default_pagination",
+			query:          "",
+			expectedPage:   1,
+			expectedSize:   50,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "custom_pagination",
+			query:          "?page=2&page_size=20",
+			expectedPage:   2,
+			expectedSize:   20,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 2, 20).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "negative_page_uses_default",
+			query:          "?page=-1&page_size=20",
+			expectedPage:   1,
+			expectedSize:   20,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 20).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid_page_uses_default",
+			query:          "?page=abc&page_size=20",
+			expectedPage:   1,
+			expectedSize:   20,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 20).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "page_size_over_limit_uses_default",
+			query:          "?page=1&page_size=200",
+			expectedPage:   1,
+			expectedSize:   50,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "negative_page_size_uses_default",
+			query:          "?page=1&page_size=-10",
+			expectedPage:   1,
+			expectedSize:   50,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 50).Return([]model.User{}, 0, nil) },
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "service_error_returns_500",
+			query:          "",
+			expectedPage:   1,
+			expectedSize:   50,
+			setupMock:      func(m *MockAuthService) { m.On("ListUsers", mock.Anything, 1, 50).Return(nil, 0, assert.AnError) },
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
 
-	handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := gin.New()
+			mockAuthSvc := new(MockAuthService)
+			tt.setupMock(mockAuthSvc)
 
-	router.GET("/users", handler.ListUsers)
+			handler := NewAdminHandlerNew(mockAuthSvc, new(MockTelemetryService))
+			router.GET("/users", handler.ListUsers)
 
-	req := httptest.NewRequest(http.MethodGet, "/users", nil)
-	w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/users"+tt.query, nil)
+			w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+			router.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, tt.expectedStatus, w.Code)
 
-	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+			if tt.expectedStatus == http.StatusOK {
+				var response map[string]interface{}
+				json.Unmarshal(w.Body.Bytes(), &response)
 
-	assert.Equal(t, float64(0), response["total"])
-	assert.Equal(t, float64(1), response["page"])
-	assert.Equal(t, float64(50), response["page_size"])
+				assert.Equal(t, float64(0), response["total"])
+				assert.Equal(t, float64(tt.expectedPage), response["page"])
+				assert.Equal(t, float64(tt.expectedSize), response["page_size"])
+			}
+		})
+	}
 }
 
 func TestAdminHandlerNew_CreateUser_Success(t *testing.T) {
