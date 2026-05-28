@@ -734,10 +734,15 @@ func (r *AgentTaskLogRepository) List(ctx context.Context, limit int) ([]model.A
 }
 
 // Helper to unmarshal JSON
+// FIX-P0-04: 添加json.Unmarshal错误处理
 func unmarshalActions(actionsJSON string) []map[string]interface{} {
 	var actions []map[string]interface{}
 	if actionsJSON != "" {
-		json.Unmarshal([]byte(actionsJSON), &actions)
+		if err := json.Unmarshal([]byte(actionsJSON), &actions); err != nil {
+			// 解析失败时返回空数组，避免程序崩溃
+			logger.L().Warn("failed to unmarshal actions", zap.Error(err), zap.String("actionsJSON", actionsJSON))
+			return []map[string]interface{}{}
+		}
 	}
 	return actions
 }
