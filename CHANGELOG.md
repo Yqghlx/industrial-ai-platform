@@ -8,11 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Test coverage enhancement: handler/service packages 75.4% (2026-05-28)
+- Test coverage enhancement: handler/service packages 75.9% (2026-05-28)
 - Comprehensive test coverage for backend services (77%+ average)
 - AgentOptimizer test suite (GetCachedAnswer, CacheAnswer, AcquireSlot, ReleaseSlot)
 - GetDeviceContext test coverage
 - GetCSRFToken test coverage
+- Code audit report (CODE_AUDIT_REPORT.md)
+
+### Security
+- P0 bug fix: ReleaseSlot test error causing panic (已修复)
+- P2 bug fix: WebSocket broadcaster confirmed working (已确认)
+- P2 bug identified: JWT blacklist eviction strategy (需决策)
+- P2 bug identified: Tenant isolation missing in GetByID (需决策)
 - WebSocket real-time telemetry streaming
 - AI Agent integration with GLM-4-flash
 - Device fleet dashboard with live metrics
