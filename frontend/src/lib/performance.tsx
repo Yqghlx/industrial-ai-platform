@@ -72,6 +72,7 @@ class PerformanceMonitor {
   private observers: PerformanceObserver[] = [];
   private callbacks: MetricCallback[] = [];
   private componentMetrics: Map<string, ComponentPerformance> = new Map();
+  private loadHandler: (() => void) | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -168,7 +169,7 @@ class PerformanceMonitor {
    * 收集导航计时信息
    */
   private collectNavigationTiming() {
-    window.addEventListener('load', () => {
+    this.loadHandler = () => {
       setTimeout(() => {
         const timing = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
         if (timing) {
@@ -189,7 +190,8 @@ class PerformanceMonitor {
 
         this.notifyCallbacks();
       }, 0);
-    });
+    };
+    window.addEventListener('load', this.loadHandler);
   }
 
   /**
@@ -301,6 +303,10 @@ class PerformanceMonitor {
     this.observers.forEach(observer => observer.disconnect());
     this.observers = [];
     this.callbacks = [];
+    if (this.loadHandler) {
+      window.removeEventListener('load', this.loadHandler);
+      this.loadHandler = null;
+    }
   }
 }
 
