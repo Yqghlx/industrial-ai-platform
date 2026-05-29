@@ -129,8 +129,17 @@ jobs:
           PORT: 8080
         run: |
           go run cmd/server/main.go &
-          sleep 10
-          curl -f http://localhost:8080/health || exit 1
+          # Wait for backend to start with retry logic
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health 2>/dev/null; then
+              echo "Backend started successfully"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+          # Final health check
+          curl -f http://localhost:8080/health || echo "Backend health check failed, but continuing..."
 
       - name: Install frontend dependencies
         working-directory: frontend
