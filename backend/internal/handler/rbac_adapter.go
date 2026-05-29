@@ -30,6 +30,12 @@ type rbacServiceInternal interface {
 	ListPermissions(ctx context.Context) ([]model.Permission, error)
 	AssignPermissionToRole(ctx context.Context, roleID, permID int) error
 	RemovePermissionFromRole(ctx context.Context, roleID, permID int) error
+	CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error)
+	GetPermission(ctx context.Context, id int) (*model.Permission, error)
+	DeletePermission(ctx context.Context, id int) error
+	GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error)
+	CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error)
+	GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error)
 }
 
 // NewRBACServiceAdapter creates an adapter that wraps service.RBACServiceInterface
@@ -58,10 +64,10 @@ func (a *rbacServiceAdapter) GetRoleWithPermissions(ctx context.Context, id int)
 		return nil, err
 	}
 
-	// Convert to RoleResponse - RoleResponse contains Role and Permissions
+	permissions, _ := a.svc.GetRolePermissions(ctx, id)
 	return &model.RoleResponse{
 		Role:        *role,
-		Permissions: []model.Permission{}, // Permissions not available via this adapter
+		Permissions: permissions,
 	}, nil
 }
 
@@ -123,27 +129,19 @@ func (a *rbacServiceAdapter) GetUserRoles(ctx context.Context, userID int) ([]mo
 }
 
 func (a *rbacServiceAdapter) GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error) {
-	// Service layer doesn't have GetUserPermissions method
-	// Return empty list as placeholder
-	return []model.Permission{}, nil
+	return a.svc.GetUserPermissions(ctx, userID)
 }
 
 func (a *rbacServiceAdapter) CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error) {
-	// Service layer doesn't have CheckPermission method
-	// Return false with nil error as placeholder
-	return false, nil
+	return a.svc.CheckPermission(ctx, userID, resource, action)
 }
 
 func (a *rbacServiceAdapter) CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error) {
-	// Service layer doesn't have CreatePermission method
-	// Return nil with error indicating not implemented
-	return nil, ErrNotImplemented
+	return a.svc.CreatePermission(ctx, name, resource, action, description)
 }
 
 func (a *rbacServiceAdapter) GetPermission(ctx context.Context, id int) (*model.Permission, error) {
-	// Service layer doesn't have GetPermission method
-	// Return nil with error indicating not implemented
-	return nil, ErrNotImplemented
+	return a.svc.GetPermission(ctx, id)
 }
 
 func (a *rbacServiceAdapter) ListPermissions(ctx context.Context) ([]model.Permission, error) {
@@ -151,8 +149,7 @@ func (a *rbacServiceAdapter) ListPermissions(ctx context.Context) ([]model.Permi
 }
 
 func (a *rbacServiceAdapter) DeletePermission(ctx context.Context, id int) error {
-	// Service layer doesn't have DeletePermission method
-	return ErrNotImplemented
+	return a.svc.DeletePermission(ctx, id)
 }
 
 func (a *rbacServiceAdapter) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
@@ -164,6 +161,5 @@ func (a *rbacServiceAdapter) RemovePermissionFromRole(ctx context.Context, roleI
 }
 
 func (a *rbacServiceAdapter) GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error) {
-	// Service layer doesn't have GetRolePermissions method
-	return []model.Permission{}, nil
+	return a.svc.GetRolePermissions(ctx, roleID)
 }

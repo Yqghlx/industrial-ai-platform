@@ -205,6 +205,12 @@ type RBACServiceInterface interface {
 	ListPermissions(ctx context.Context) ([]model.Permission, error)
 	AssignPermissionToRole(ctx context.Context, roleID, permID int) error
 	RemovePermissionFromRole(ctx context.Context, roleID, permID int) error
+	CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error)
+	GetPermission(ctx context.Context, id int) (*model.Permission, error)
+	DeletePermission(ctx context.Context, id int) error
+	GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error)
+	CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error)
+	GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error)
 }
 
 // 确保 RBACService 实现 RBACServiceInterface

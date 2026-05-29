@@ -89,6 +89,48 @@ func (m *MockRBACServiceInternal) RemovePermissionFromRole(ctx context.Context, 
 	return args.Error(0)
 }
 
+func (m *MockRBACServiceInternal) CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error) {
+	args := m.Called(ctx, name, resource, action, description)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Permission), args.Error(1)
+}
+
+func (m *MockRBACServiceInternal) GetPermission(ctx context.Context, id int) (*model.Permission, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Permission), args.Error(1)
+}
+
+func (m *MockRBACServiceInternal) DeletePermission(ctx context.Context, id int) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRBACServiceInternal) GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Permission), args.Error(1)
+}
+
+func (m *MockRBACServiceInternal) CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error) {
+	args := m.Called(ctx, userID, resource, action)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRBACServiceInternal) GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error) {
+	args := m.Called(ctx, roleID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Permission), args.Error(1)
+}
+
 // ============== CreateRole Tests ==============
 
 func TestAdapter_CreateRole_Success(t *testing.T) {
@@ -182,6 +224,7 @@ func TestAdapter_GetRoleWithPermissions_Success(t *testing.T) {
 	}
 
 	mockSvc.On("GetRoleByID", mock.Anything, 1).Return(expectedRole, nil)
+	mockSvc.On("GetRolePermissions", mock.Anything, 1).Return([]model.Permission{}, nil)
 
 	roleResponse, err := adapter.GetRoleWithPermissions(ctx, 1)
 
@@ -551,12 +594,14 @@ func TestAdapter_GetUserPermissions_ReturnsEmpty(t *testing.T) {
 
 	ctx := context.Background()
 
-	// GetUserPermissions returns empty list as per implementation
+	mockSvc.On("GetUserPermissions", mock.Anything, 10).Return([]model.Permission{}, nil)
+
 	permissions, err := adapter.GetUserPermissions(ctx, 10)
 
 	require.NoError(t, err)
 	assert.Empty(t, permissions)
 	assert.Equal(t, []model.Permission{}, permissions)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== CheckPermission Tests ==============
@@ -567,43 +612,60 @@ func TestAdapter_CheckPermission_ReturnsFalse(t *testing.T) {
 
 	ctx := context.Background()
 
-	// CheckPermission returns false as per implementation
+	mockSvc.On("CheckPermission", mock.Anything, 10, "devices", "read").Return(false, nil)
+
 	allowed, err := adapter.CheckPermission(ctx, 10, "devices", "read")
 
 	require.NoError(t, err)
 	assert.False(t, allowed)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== CreatePermission Tests ==============
 
-func TestAdapter_CreatePermission_ReturnsNotImplemented(t *testing.T) {
+func TestAdapter_CreatePermission_Success(t *testing.T) {
 	mockSvc := new(MockRBACServiceInternal)
 	adapter := NewRBACServiceAdapter(mockSvc).(*rbacServiceAdapter)
 
 	ctx := context.Background()
+	expectedPerm := &model.Permission{
+		ID:          1,
+		Name:        "test.perm",
+		Resource:    "test",
+		Action:      "read",
+		Description: "Test permission",
+	}
 
-	// CreatePermission returns ErrNotImplemented
+	mockSvc.On("CreatePermission", mock.Anything, "test.perm", "test", "read", "Test permission").Return(expectedPerm, nil)
+
 	permission, err := adapter.CreatePermission(ctx, "test.perm", "test", "read", "Test permission")
 
-	require.Error(t, err)
-	assert.Equal(t, ErrNotImplemented, err)
-	assert.Nil(t, permission)
+	require.NoError(t, err)
+	assert.Equal(t, expectedPerm, permission)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== GetPermission Tests ==============
 
-func TestAdapter_GetPermission_ReturnsNotImplemented(t *testing.T) {
+func TestAdapter_GetPermission_Success(t *testing.T) {
 	mockSvc := new(MockRBACServiceInternal)
 	adapter := NewRBACServiceAdapter(mockSvc).(*rbacServiceAdapter)
 
 	ctx := context.Background()
+	expectedPerm := &model.Permission{
+		ID:       1,
+		Name:     "devices.read",
+		Resource: "devices",
+		Action:   "read",
+	}
 
-	// GetPermission returns ErrNotImplemented
+	mockSvc.On("GetPermission", mock.Anything, 1).Return(expectedPerm, nil)
+
 	permission, err := adapter.GetPermission(ctx, 1)
 
-	require.Error(t, err)
-	assert.Equal(t, ErrNotImplemented, err)
-	assert.Nil(t, permission)
+	require.NoError(t, err)
+	assert.Equal(t, expectedPerm, permission)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== ListPermissions Tests ==============
@@ -662,17 +724,18 @@ func TestAdapter_ListPermissions_Error(t *testing.T) {
 
 // ============== DeletePermission Tests ==============
 
-func TestAdapter_DeletePermission_ReturnsNotImplemented(t *testing.T) {
+func TestAdapter_DeletePermission_Success(t *testing.T) {
 	mockSvc := new(MockRBACServiceInternal)
 	adapter := NewRBACServiceAdapter(mockSvc).(*rbacServiceAdapter)
 
 	ctx := context.Background()
 
-	// DeletePermission returns ErrNotImplemented
+	mockSvc.On("DeletePermission", mock.Anything, 1).Return(nil)
+
 	err := adapter.DeletePermission(ctx, 1)
 
-	require.Error(t, err)
-	assert.Equal(t, ErrNotImplemented, err)
+	require.NoError(t, err)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== AssignPermissionToRole Tests ==============
@@ -747,12 +810,14 @@ func TestAdapter_GetRolePermissions_ReturnsEmpty(t *testing.T) {
 
 	ctx := context.Background()
 
-	// GetRolePermissions returns empty list as per implementation
+	mockSvc.On("GetRolePermissions", mock.Anything, 1).Return([]model.Permission{}, nil)
+
 	permissions, err := adapter.GetRolePermissions(ctx, 1)
 
 	require.NoError(t, err)
 	assert.Empty(t, permissions)
 	assert.Equal(t, []model.Permission{}, permissions)
+	mockSvc.AssertExpectations(t)
 }
 
 // ============== NewRBACServiceAdapter Tests ==============
