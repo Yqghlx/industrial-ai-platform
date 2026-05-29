@@ -431,17 +431,15 @@ func TestDeviceService_GetGraph_Success(t *testing.T) {
 
 	// Assertions
 	assert.NoError(t, err)
-	assert.NotNil(t, graph)
-	assert.NotNil(t, graph["nodes"])
-	assert.NotNil(t, graph["links"])
+	require.NotNil(t, graph)
+	assert.NotNil(t, graph.Nodes)
+	assert.NotNil(t, graph.Edges)
 
 	// Nodes should contain 3 devices
-	nodes := graph["nodes"].([]map[string]interface{})
-	assert.Len(t, nodes, 3)
+	assert.Len(t, graph.Nodes, 3)
 
-	// Links should contain relationships based on same location
-	links := graph["links"].([]map[string]interface{})
-	assert.GreaterOrEqual(t, len(links), 0) // May have links for co-located devices
+	// Edges should contain relationships based on same location
+	assert.GreaterOrEqual(t, len(graph.Edges), 0) // May have edges for co-located devices
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

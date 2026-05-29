@@ -173,9 +173,9 @@ func TestAlertHandler_GetTrend(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetTrendReport", mock.Anything, "30d").Return(map[string]interface{}{
-		"period": "30d",
-		"trend":  []map[string]interface{}{},
+	mockAlertSvc.On("GetTrendReport", mock.Anything, "30d").Return(&model.TrendReport{
+		Period: "30d",
+		Trend:  []model.TrendEntry{},
 	}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
@@ -205,7 +205,7 @@ func TestAlertHandler_GetRanking(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 20).Return([]map[string]interface{}{}, nil)
+	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 20).Return([]model.DeviceRankingEntry{}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -234,9 +234,9 @@ func TestAlertHandler_GetEfficiency(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(map[string]interface{}{
-		"avg_resolve_time": 0.0,
-		"ack_rate":         0.0,
+	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(&model.EfficiencyReport{
+		AvgResolveTime: 0.0,
+		AckRate:        0.0,
 	}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {

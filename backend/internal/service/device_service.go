@@ -242,7 +242,7 @@ func (s *DeviceService) CreateDeviceWithUser(ctx context.Context, device *model.
 // GetGraph returns device relationship graph
 // BE-P2-02: 使用常量替换魔法数字
 // FIX-019: 添加 Context 超时设置
-func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, error) {
+func (s *DeviceService) GetGraph(ctx context.Context) (*model.DeviceGraph, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
@@ -252,36 +252,35 @@ func (s *DeviceService) GetGraph(ctx context.Context) (map[string]interface{}, e
 		return nil, errors.NewDatabaseError(err.Error())
 	}
 
-	// Build graph structure
-	nodes := []map[string]interface{}{}
-	links := []map[string]interface{}{}
+	// 构造图结构：将设备列表转换为 GraphNode，基于位置关系生成 GraphEdge
+	graph := &model.DeviceGraph{
+		Nodes: make([]model.GraphNode, 0, len(devices)),
+		Edges: make([]model.GraphEdge, 0),
+	}
 
 	for _, d := range devices {
-		nodes = append(nodes, map[string]interface{}{
-			"id":     d.ID,
-			"name":   d.Name,
-			"type":   d.Type,
-			"status": d.Status,
+		graph.Nodes = append(graph.Nodes, model.GraphNode{
+			ID:     d.ID,
+			Name:   d.Name,
+			Type:   d.Type,
+			Status: d.Status,
 		})
 	}
 
-	// Create sample relationships based on location/type
-	for i := 0; i < len(nodes); i++ {
-		for j := i + 1; j < len(nodes); j++ {
+	// 根据相同位置创建设备关系边
+	for i := 0; i < len(devices); i++ {
+		for j := i + 1; j < len(devices); j++ {
 			if devices[i].Location == devices[j].Location {
-				links = append(links, map[string]interface{}{
-					"source": devices[i].ID,
-					"target": devices[j].ID,
-					"type":   "co-located",
+				graph.Edges = append(graph.Edges, model.GraphEdge{
+					Source: devices[i].ID,
+					Target: devices[j].ID,
+					Label:  "co-located",
 				})
 			}
 		}
 	}
 
-	return map[string]interface{}{
-		"nodes": nodes,
-		"links": links,
-	}, nil
+	return graph, nil
 }
 
 // BatchCreate creates multiple devices in a single database operation
@@ -398,8 +397,8 @@ func (s *DeviceService) BatchDelete(ctx context.Context, ids []string) error {
 }
 
 // GetDeviceStats 获取设备统计数据
-// 统计指标包括：告警总数、严重告警数、平均响应时间、在线天数、最后遥测时间
-func (s *DeviceService) GetDeviceStats(ctx context.Context, deviceID string) (map[string]interface{}, error) {
+// 统计指标包括：在线天数、故障次数、平均响应时间
+func (s *DeviceService) GetDeviceStats(ctx context.Context, deviceID string) (*model.DeviceStatsDetail, error) {
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
 
@@ -409,13 +408,12 @@ func (s *DeviceService) GetDeviceStats(ctx context.Context, deviceID string) (ma
 		return nil, errors.NewDeviceNotFoundError(deviceID)
 	}
 
-	stats := map[string]interface{}{
-		"device_id":                 deviceID,
-		"total_alerts":              0,
-		"critical_alerts":           0,
-		"avg_response_time_seconds": 0.0,
-		"uptime_days":               0,
-		"last_telemetry_at":         nil,
+	// 返回设备详细统计（后续可从遥测数据计算实际值）
+	stats := &model.DeviceStatsDetail{
+		DeviceID:      deviceID,
+		UptimeDays:    0,
+		FaultCount:    0,
+		AvgResponseMs: 0.0,
 	}
 
 	return stats, nil

@@ -269,3 +269,56 @@ func (p *PaginationParams) Defaults() {
 		p.Order = "desc"
 	}
 }
+
+// DeviceGraph 设备关系图
+type DeviceGraph struct {
+	Nodes []GraphNode `json:"nodes"`
+	Edges []GraphEdge `json:"edges"`
+}
+
+type GraphNode struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
+}
+
+type GraphEdge struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Label  string `json:"label"`
+}
+
+// DeviceStatsDetail 设备详细统计
+type DeviceStatsDetail struct {
+	DeviceID      string  `json:"device_id"`
+	UptimeDays    int     `json:"uptime_days"`
+	FaultCount    int     `json:"fault_count"`
+	AvgResponseMs float64 `json:"avg_response_ms"`
+}
+
+// TrendReport 告警趋势报告
+type TrendReport struct {
+	Period string       `json:"period"`
+	Trend  []TrendEntry `json:"trend"`
+}
+
+type TrendEntry struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+// DeviceRankingEntry 设备告警排行
+type DeviceRankingEntry struct {
+	DeviceID   string `json:"device_id"`
+	DeviceName string `json:"device_name"`
+	AlertCount int    `json:"alert_count"`
+}
+
+// EfficiencyReport 效率报告
+type EfficiencyReport struct {
+	AvgResolveTime float64 `json:"avg_resolve_time"`
+	AckRate        float64 `json:"ack_rate"`
+	TotalAlerts    int     `json:"total_alerts"`
+	ResolvedAlerts int     `json:"resolved_alerts"`
+}

@@ -47,9 +47,9 @@ func TestAlertHandlerNew_GetTrend_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetTrendReport", mock.Anything, "7d").Return(map[string]interface{}{
-		"period": "7d",
-		"trend":  []map[string]interface{}{},
+	mockAlertSvc.On("GetTrendReport", mock.Anything, "7d").Return(&model.TrendReport{
+		Period: "7d",
+		Trend:  []model.TrendEntry{},
 	}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
@@ -70,7 +70,7 @@ func TestAlertHandlerNew_GetRanking_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 10).Return([]map[string]interface{}{}, nil)
+	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 10).Return([]model.DeviceRankingEntry{}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -90,11 +90,11 @@ func TestAlertHandlerNew_GetEfficiency_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
-	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(map[string]interface{}{
-		"avg_resolve_time": 0.0,
-		"ack_rate":         0.0,
-		"total_alerts":     0,
-		"resolved_alerts":  0,
+	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(&model.EfficiencyReport{
+		AvgResolveTime: 0.0,
+		AckRate:        0.0,
+		TotalAlerts:    0,
+		ResolvedAlerts: 0,
 	}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})

@@ -66,7 +66,7 @@ func TestAlertService_GetTrendReport(t *testing.T) {
 	report, err := svc.GetTrendReport(ctx, "7d")
 	assert.NoError(t, err)
 	assert.NotNil(t, report)
-	assert.Equal(t, "7d", report["period"])
+	assert.Equal(t, "7d", report.Period)
 	mockAlertRepo.AssertExpectations(t)
 }
 

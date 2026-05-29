@@ -61,12 +61,12 @@ func (m *MockDeviceService) AutoRegisterDevice(ctx context.Context, deviceID str
 	return args.Get(0).(*model.Device), args.Error(1)
 }
 
-func (m *MockDeviceService) GetGraph(ctx context.Context) (map[string]interface{}, error) {
+func (m *MockDeviceService) GetGraph(ctx context.Context) (*model.DeviceGraph, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(*model.DeviceGraph), args.Error(1)
 }
 
 // MockAuthService 认证服务 Mock

@@ -742,7 +742,7 @@ func (s *AlertService) ToggleRule(ctx context.Context, id int) error {
 
 // GetTrendReport 按日期分组获取告警趋势报告
 // period 支持 "7d", "30d", "90d"，默认 7 天
-func (s *AlertService) GetTrendReport(ctx context.Context, period string) (map[string]interface{}, error) {
+func (s *AlertService) GetTrendReport(ctx context.Context, period string) (*model.TrendReport, error) {
 	// 解析 period 参数
 	days := 7
 	switch period {
@@ -756,42 +756,66 @@ func (s *AlertService) GetTrendReport(ctx context.Context, period string) (map[s
 		days = 7
 	}
 
-	trend, err := s.alertRepo.GetTrendData(ctx, days)
+	trendData, err := s.alertRepo.GetTrendData(ctx, days)
 	if err != nil {
 		return nil, fmt.Errorf("获取告警趋势数据失败: %w", err)
 	}
 
-	return map[string]interface{}{
-		"period": period,
-		"trend":  trend,
+	// 将 repository 返回的 map 数据转换为 TrendEntry 结构体
+	entries := make([]model.TrendEntry, 0, len(trendData))
+	for _, item := range trendData {
+		date, _ := item["date"].(string)
+		count, _ := item["count"].(int)
+		entries = append(entries, model.TrendEntry{
+			Date:  date,
+			Count: count,
+		})
+	}
+
+	return &model.TrendReport{
+		Period: period,
+		Trend:  entries,
 	}, nil
 }
 
 // GetDeviceRanking 按设备告警数量排名
-func (s *AlertService) GetDeviceRanking(ctx context.Context, limit int) ([]map[string]interface{}, error) {
+func (s *AlertService) GetDeviceRanking(ctx context.Context, limit int) ([]model.DeviceRankingEntry, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
-	ranking, err := s.alertRepo.GetDeviceRankingData(ctx, limit)
+	rankingData, err := s.alertRepo.GetDeviceRankingData(ctx, limit)
 	if err != nil {
 		return nil, fmt.Errorf("获取设备告警排名失败: %w", err)
 	}
 
-	return ranking, nil
+	// 将 repository 返回的 map 数据转换为 DeviceRankingEntry 结构体
+	entries := make([]model.DeviceRankingEntry, 0, len(rankingData))
+	for _, item := range rankingData {
+		deviceID, _ := item["device_id"].(string)
+		deviceName, _ := item["device_name"].(string)
+		alertCount, _ := item["alert_count"].(int)
+		entries = append(entries, model.DeviceRankingEntry{
+			DeviceID:   deviceID,
+			DeviceName: deviceName,
+			AlertCount: alertCount,
+		})
+	}
+
+	return entries, nil
 }
 
 // GetEfficiencyReport 获取告警处理效率报告
-func (s *AlertService) GetEfficiencyReport(ctx context.Context) (map[string]interface{}, error) {
+func (s *AlertService) GetEfficiencyReport(ctx context.Context) (*model.EfficiencyReport, error) {
 	data, err := s.alertRepo.GetEfficiencyData(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("获取告警处理效率数据失败: %w", err)
 	}
 
-	return map[string]interface{}{
-		"avg_resolve_time": data.AvgResolveTime,
-		"ack_rate":         data.AckRate,
-		"total_alerts":     data.TotalAlerts,
-		"resolved_alerts":  data.ResolvedAlerts,
+	return &model.EfficiencyReport{
+		AvgResolveTime: data.AvgResolveTime,
+		AckRate:        data.AckRate,
+		TotalAlerts:    data.TotalAlerts,
+		ResolvedAlerts: data.ResolvedAlerts,
 	}, nil
 }

@@ -101,22 +101,28 @@ func (m *MockAlertService) ToggleRule(ctx context.Context, id int) error {
 	return args.Error(0)
 }
 
-func (m *MockAlertService) GetTrendReport(ctx context.Context, period string) (map[string]interface{}, error) {
+func (m *MockAlertService) GetTrendReport(ctx context.Context, period string) (*model.TrendReport, error) {
 	args := m.Called(ctx, period)
-	data, _ := args.Get(0).(map[string]interface{})
-	return data, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.TrendReport), args.Error(1)
 }
 
-func (m *MockAlertService) GetDeviceRanking(ctx context.Context, limit int) ([]map[string]interface{}, error) {
+func (m *MockAlertService) GetDeviceRanking(ctx context.Context, limit int) ([]model.DeviceRankingEntry, error) {
 	args := m.Called(ctx, limit)
-	data, _ := args.Get(0).([]map[string]interface{})
-	return data, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.DeviceRankingEntry), args.Error(1)
 }
 
-func (m *MockAlertService) GetEfficiencyReport(ctx context.Context) (map[string]interface{}, error) {
+func (m *MockAlertService) GetEfficiencyReport(ctx context.Context) (*model.EfficiencyReport, error) {
 	args := m.Called(ctx)
-	data, _ := args.Get(0).(map[string]interface{})
-	return data, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.EfficiencyReport), args.Error(1)
 }
 
 // ============================================

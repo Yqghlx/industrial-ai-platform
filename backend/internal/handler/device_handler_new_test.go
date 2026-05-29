@@ -269,9 +269,9 @@ func TestDeviceHandlerNew_GetDeviceGraph_Success(t *testing.T) {
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, broadcastFunc)
 
-	graphData := map[string]interface{}{
-		"nodes": []interface{}{map[string]string{"id": "node-1"}},
-		"links": []interface{}{},
+	graphData := &model.DeviceGraph{
+		Nodes: []model.GraphNode{{ID: "node-1", Name: "Node 1", Type: "CNC", Status: "online"}},
+		Edges: []model.GraphEdge{},
 	}
 
 	mockDeviceSvc.On("GetGraph", mock.Anything).Return(graphData, nil)
@@ -535,13 +535,11 @@ func TestDeviceHandlerNew_GetDeviceStats_Placeholder(t *testing.T) {
 	mockTelemetrySvc := new(MockTelemetryService)
 
 	// 设置 mock 期望
-	mockDeviceSvc.On("GetDeviceStats", mock.Anything, "device-1").Return(map[string]interface{}{
-		"device_id":                 "device-1",
-		"total_alerts":              0,
-		"critical_alerts":           0,
-		"avg_response_time_seconds": 0.0,
-		"uptime_days":               0,
-		"last_telemetry_at":         nil,
+	mockDeviceSvc.On("GetDeviceStats", mock.Anything, "device-1").Return(&model.DeviceStatsDetail{
+		DeviceID:      "device-1",
+		UptimeDays:    0,
+		FaultCount:    0,
+		AvgResponseMs: 0.0,
 	}, nil)
 
 	broadcastFunc := func(msg model.WSMessage) {}

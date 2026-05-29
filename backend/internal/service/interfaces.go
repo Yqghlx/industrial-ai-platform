@@ -36,10 +36,10 @@ type DeviceServiceInterface interface {
 	AutoRegisterDevice(ctx context.Context, deviceID string) (*model.Device, error)
 
 	// GetGraph 获取设备关系图
-	GetGraph(ctx context.Context) (map[string]interface{}, error)
+	GetGraph(ctx context.Context) (*model.DeviceGraph, error)
 
 	// GetDeviceStats 获取设备统计数据
-	GetDeviceStats(ctx context.Context, deviceID string) (map[string]interface{}, error)
+	GetDeviceStats(ctx context.Context, deviceID string) (*model.DeviceStatsDetail, error)
 }
 
 // AuthServiceInterface 认证服务接口
@@ -130,9 +130,9 @@ type AlertManagementServiceInterface interface {
 
 // AlertReportServiceInterface 告警报告接口
 type AlertReportServiceInterface interface {
-	GetTrendReport(ctx context.Context, period string) (map[string]interface{}, error)
-	GetDeviceRanking(ctx context.Context, limit int) ([]map[string]interface{}, error)
-	GetEfficiencyReport(ctx context.Context) (map[string]interface{}, error)
+	GetTrendReport(ctx context.Context, period string) (*model.TrendReport, error)
+	GetDeviceRanking(ctx context.Context, limit int) ([]model.DeviceRankingEntry, error)
+	GetEfficiencyReport(ctx context.Context) (*model.EfficiencyReport, error)
 }
 
 // AgentServiceInterface Agent 服务接口
