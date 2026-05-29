@@ -132,34 +132,16 @@ func TestPermissionRepo_WithTx_Coverage(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-// TestPermissionRepo_GetByIDs_Coverage 测试批量获取权限
-func TestPermissionRepo_GetByIDs_Coverage(t *testing.T) {
-	// 空ID测试 - 这是可以测试的边界情况
-	t.Run("EmptyIDs", func(t *testing.T) {
-		db, _, err := sqlmock.New()
-		require.NoError(t, err)
-		defer db.Close()
+// TestPermissionRepo_GetByIDs_EmptyIDs 测试空ID列表的边界情况
+func TestPermissionRepo_GetByIDs_EmptyIDs(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
 
-		repo := NewPermissionRepo(database.NewDBWrapper(db))
-		perms, err := repo.GetByIDs([]int{})
-		assert.NoError(t, err)
-		assert.Empty(t, perms)
-	})
-
-	// 成功测试 - sqlmock不支持PostgreSQL数组参数，需要真实数据库
-	t.Run("Success", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($1)数组参数类型")
-	})
-
-	// 查询错误测试 - sqlmock不支持PostgreSQL数组参数
-	t.Run("QueryError", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($1)数组参数类型")
-	})
-}
-
-// TestPermissionRepo_GetByIDs_ScanError 测试扫描错误
-func TestPermissionRepo_GetByIDs_ScanError(t *testing.T) {
-	t.Skip("sqlmock不支持PostgreSQL ANY($1)数组参数类型")
+	repo := NewPermissionRepo(database.NewDBWrapper(db))
+	perms, err := repo.GetByIDs([]int{})
+	assert.NoError(t, err)
+	assert.Empty(t, perms)
 }
 
 // ============================================
@@ -409,30 +391,17 @@ func TestAlertRepository_UpdateStatus_Coverage(t *testing.T) {
 	}
 }
 
-// TestAlertRepository_GetRecentAlertsByDeviceBatch_Coverage 测试批量获取最近告警
-func TestAlertRepository_GetRecentAlertsByDeviceBatch_Coverage(t *testing.T) {
-	// 空规则ID测试 - 这是可以测试的边界情况
-	t.Run("EmptyRuleIDs", func(t *testing.T) {
-		db, _, err := sqlmock.New()
-		require.NoError(t, err)
-		defer db.Close()
+// TestAlertRepository_GetRecentAlertsByDeviceBatch_EmptyRuleIDs 测试空规则ID列表的边界情况
+func TestAlertRepository_GetRecentAlertsByDeviceBatch_EmptyRuleIDs(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
 
-		repo := NewAlertRepository(database.NewDBWrapper(db))
+	repo := NewAlertRepository(database.NewDBWrapper(db))
 
-		result, err := repo.GetRecentAlertsByDeviceBatch(context.Background(), "device-1", []int{}, 60)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
-	})
-
-	// 成功测试 - sqlmock不支持PostgreSQL数组参数
-	t.Run("Success", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($2)数组参数类型")
-	})
-
-	// 查询错误测试 - sqlmock不支持PostgreSQL数组参数
-	t.Run("QueryError", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($2)数组参数类型")
-	})
+	result, err := repo.GetRecentAlertsByDeviceBatch(context.Background(), "device-1", []int{}, 60)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
 }
 
 // TestAlertRepository_ArchiveOldAlerts_Coverage 测试归档旧告警
@@ -603,10 +572,8 @@ func TestAlertRepository_DeleteArchivedAlerts_Coverage(t *testing.T) {
 	}
 }
 
-// TestAlertRepository_GetAlertStatistics_Coverage 测试获取告警统计
-func TestAlertRepository_GetAlertStatistics_Coverage(t *testing.T) {
-	t.Skip("GetAlertStatistics需要真实数据库环境进行测试，sqlmock不支持复杂的多查询统计")
-}
+// TestAlertRepository_GetAlertStatistics 需要真实数据库环境进行测试
+// sqlmock不支持复杂的多查询统计，此测试应在集成测试中覆盖
 
 // ============================================
 // telemetry_repo.go - 补充测试
@@ -707,33 +674,6 @@ func TestWorkOrderRepository_CountByStatus_Coverage(t *testing.T) {
 		})
 	}
 }
-
-// TestTelemetryRepository_GetStatsBatch_Coverage 测试批量获取统计数据
-func TestTelemetryRepository_GetStatsBatch_Coverage(t *testing.T) {
-	// 设备ID测试 - 这是可以测试的边界情况
-	t.Run("EmptyDeviceIDs", func(t *testing.T) {
-		db, _, err := sqlmock.New()
-		require.NoError(t, err)
-		defer db.Close()
-
-		repo := NewTelemetryRepository(database.NewDBWrapper(db))
-
-		result, err := repo.GetStatsBatch(context.Background(), []string{}, time.Now().Add(-24*time.Hour), time.Now())
-		assert.NoError(t, err)
-		assert.Empty(t, result)
-	})
-
-	// 成功测试 - sqlmock不支持PostgreSQL数组参数
-	t.Run("Success", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($1)数组参数类型")
-	})
-
-	// 查询错误测试 - sqlmock不支持PostgreSQL数组参数
-	t.Run("QueryError", func(t *testing.T) {
-		t.Skip("sqlmock不支持PostgreSQL ANY($1)数组参数类型")
-	})
-}
-
 // ============================================
 // factory.go - 补充测试
 // ============================================

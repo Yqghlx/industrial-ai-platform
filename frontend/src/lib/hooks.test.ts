@@ -10,16 +10,10 @@ vi.useFakeTimers();
 // Mock localStorage
 const localStorageMock = {
   store: {} as Record<string, string>,
-  getItem: vi.fn((key: string) => localStorageMock.store[key] || null),
-  setItem: vi.fn((key: string, value: string) => {
-    localStorageMock.store[key] = value;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete localStorageMock.store[key];
-  }),
-  clear: vi.fn(() => {
-    localStorageMock.store = {};
-  }),
+  getItem: ((key: string) => localStorageMock.store[key] || null) as typeof Storage.prototype.getItem,
+  setItem: ((key: string, value: string) => { localStorageMock.store[key] = value; }) as typeof Storage.prototype.setItem,
+  removeItem: ((key: string) => { delete localStorageMock.store[key]; }) as typeof Storage.prototype.removeItem,
+  clear: (() => { localStorageMock.store = {}; }) as typeof Storage.prototype.clear,
 };
 
 vi.stubGlobal('localStorage', localStorageMock);
@@ -310,7 +304,7 @@ describe('useVirtualList', () => {
 
   it('should calculate correct visible range', () => {
     const items = Array.from({ length: 100 }, (_, i) => ({ id: i }));
-    
+
     const { result } = renderHook(() =>
       useVirtualList(items, {
         itemHeight: 50,
@@ -324,6 +318,155 @@ describe('useVirtualList', () => {
     expect(firstItem.index).toBeGreaterThanOrEqual(0);
     expect(firstItem.style.position).toBe('absolute');
     expect(firstItem.style.height).toBe(50);
+  });
+
+  it('每个 virtualItem 应包含正确的 item 数据、index 和 style', () => {
+    const items = Array.from({ length: 10 }, (_, i) => ({ id: i, name: `Item ${i}` }));
+
+    const { result } = renderHook(() =>
+      useVirtualList(items, {
+        itemHeight: 50,
+        containerHeight: 200,
+        overscan: 1,
+      })
+    );
+
+    // 验证每个 virtualItem 都有完整结构
+    for (const vi of result.current.virtualItems) {
+      expect(vi.item).toBeDefined();
+      expect(typeof vi.index).toBe('number');
+      expect(vi.style).toHaveProperty('position', 'absolute');
+      expect(vi.style).toHaveProperty('height', 50);
+      expect(vi.style).toHaveProperty('width', '100%');
+    }
+  });
+
+  it('不同 itemCount 时 totalHeight 应正确计算', () => {
+    // 小列表
+    const { result: smallResult, rerender: smallRerender } = renderHook(
+      ({ items, opts }) => useVirtualList(items, opts),
+      {
+        initialProps: {
+          items: Array.from({ length: 5 }, (_, i) => i),
+          opts: { itemHeight: 40, containerHeight: 200 },
+        },
+      }
+    );
+    expect(smallResult.current.totalHeight).toBe(5 * 40);
+
+    // 大列表
+    smallRerender({
+      items: Array.from({ length: 1000 }, (_, i) => i),
+      opts: { itemHeight: 40, containerHeight: 200 },
+    });
+    expect(smallResult.current.totalHeight).toBe(1000 * 40);
+  });
+
+  it('scrollToIndex 应更新 scrollTop 并改变可见范围', () => {
+    const items = Array.from({ length: 200 }, (_, i) => ({ id: i }));
+    const { result } = renderHook(() =>
+      useVirtualList(items, {
+        itemHeight: 50,
+        containerHeight: 200,
+        overscan: 2,
+      })
+    );
+
+    // 初始状态: 从顶部开始
+    const firstIndexBefore = result.current.virtualItems[0].index;
+    expect(firstIndexBefore).toBe(0);
+
+    // 滚动到 index 100
+    act(() => {
+      result.current.scrollToIndex(100);
+    });
+
+    // 滚动后, 起始 index 应远大于 0
+    const firstIndexAfter = result.current.virtualItems[0].index;
+    expect(firstIndexAfter).toBeGreaterThan(50);
+  });
+
+  it('overscan 参数影响可见范围大小', () => {
+    const items = Array.from({ length: 100 }, (_, i) => ({ id: i }));
+
+    // 无 overscan
+    const { result: noOverscan } = renderHook(() =>
+      useVirtualList(items, {
+        itemHeight: 50,
+        containerHeight: 200,
+        overscan: 0,
+      })
+    );
+
+    // 有 overscan
+    const { result: withOverscan } = renderHook(() =>
+      useVirtualList(items, {
+        itemHeight: 50,
+        containerHeight: 200,
+        overscan: 5,
+      })
+    );
+
+    // overscan 越大，可见项越多
+    expect(withOverscan.current.virtualItems.length).toBeGreaterThan(
+      noOverscan.current.virtualItems.length
+    );
+  });
+
+  it('空列表时 scrollToIndex 不应抛出错误', () => {
+    const { result } = renderHook(() =>
+      useVirtualList([], {
+        itemHeight: 50,
+        containerHeight: 200,
+      })
+    );
+
+    expect(() => {
+      act(() => {
+        result.current.scrollToIndex(0);
+      });
+    }).not.toThrow();
+  });
+
+  it('容器高度变化时应重新计算可见范围', () => {
+    const items = Array.from({ length: 100 }, (_, i) => ({ id: i }));
+
+    const { result, rerender } = renderHook(
+      ({ items, opts }) => useVirtualList(items, opts),
+      {
+        initialProps: {
+          items,
+          opts: { itemHeight: 50, containerHeight: 200, overscan: 0 },
+        },
+      }
+    );
+
+    const countSmall = result.current.virtualItems.length;
+
+    // 增大容器高度
+    rerender({
+      items,
+      opts: { itemHeight: 50, containerHeight: 600, overscan: 0 },
+    });
+
+    const countLarge = result.current.virtualItems.length;
+    expect(countLarge).toBeGreaterThan(countSmall);
+  });
+
+  it('virtualItem 的 style.top 应按 itemHeight 等间距排列', () => {
+    const items = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const { result } = renderHook(() =>
+      useVirtualList(items, {
+        itemHeight: 40,
+        containerHeight: 200,
+        overscan: 0,
+      })
+    );
+
+    // 每个 item 的 top 应等于 index * itemHeight
+    for (const vi of result.current.virtualItems) {
+      expect(vi.style.top).toBe(vi.index * 40);
+    }
   });
 });
 

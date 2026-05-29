@@ -703,9 +703,9 @@ func TestCacheServiceIntegration_Warmup(t *testing.T) {
 	})
 
 	t.Run("warmupAsync executes in background", func(t *testing.T) {
-		// Skip: data race with loaderCalled variable
-		// loaderCalled is written by async goroutine and read by test goroutine
-		t.Skip("Skipping test due to data race")
+		// 已知问题: loaderCalled 变量被异步 goroutine 写入、测试 goroutine 读取，存在数据竞争
+		// TODO: 使用 atomic.Bool 或 sync.Mutex 修复后启用此测试
+		t.Skip("跳过: loaderCalled 变量存在数据竞争，需要使用 atomic 操作修复")
 	})
 }
 
@@ -815,7 +815,6 @@ func TestCacheServiceIntegration_Expiration(t *testing.T) {
 	})
 }
 
-func TestCacheServiceIntegration_ConcurrentAccess(t *testing.T) {
-	// Skip: data race due to stats.Hits/Misses being modified under RLock
-	t.Skip("Skipping test due to data race in cache stats")
-}
+// TestCacheServiceIntegration_ConcurrentAccess 并发访问测试
+// 已知问题: stats.Hits/Misses 在 RLock 下被修改，存在数据竞争
+// TODO: 修复 stats 字段的并发安全问题后启用此测试

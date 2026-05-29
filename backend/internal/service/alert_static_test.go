@@ -163,8 +163,4 @@ func TestAlertService_mustAtoi(t *testing.T) {
 	assert.Equal(t, 0, result)
 }
 
-func TestAlertService_severityToPriority_IfAvailable(t *testing.T) {
-	// This is a private method, test indirectly through other methods
-	// Or skip if not exported
-	t.Skip("severityToPriority is a private method")
-}
+// severityToPriority 是私有方法，通过 TestSeverityToPriority 和 CreateAlert 等公开方法间接测试

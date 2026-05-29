@@ -570,6 +570,8 @@ func TestTelemetryRepository_ContextCancellation(t *testing.T) {
 // Tests for GetStatsBatch - 0% coverage function
 
 func TestTelemetryRepository_GetStatsBatch_Success(t *testing.T) {
+	// 需要真实数据库: sqlmock 不支持 pq.Array 参数类型，无法模拟 PostgreSQL ANY($1) 数组查询
+	// 此测试应在集成测试中覆盖（tests/integration/）
 	t.Skip("sqlmock不支持pq.Array参数类型，需要真实数据库测试")
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -626,6 +628,7 @@ func TestTelemetryRepository_GetStatsBatch_EmptyDeviceIDs(t *testing.T) {
 }
 
 func TestTelemetryRepository_GetStatsBatch_QueryError(t *testing.T) {
+	// 需要真实数据库: sqlmock 不支持 pq.Array 参数类型
 	t.Skip("sqlmock不支持pq.Array参数类型，需要真实数据库测试")
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -678,6 +681,7 @@ func TestTelemetryRepository_GetStatsBatch_ScanError(t *testing.T) {
 }
 
 func TestTelemetryRepository_GetStatsBatch_RowsError(t *testing.T) {
+	// 需要真实数据库: sqlmock 不支持 pq.Array 参数类型
 	t.Skip("sqlmock不支持pq.Array参数类型，需要真实数据库测试")
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -707,6 +711,7 @@ func TestTelemetryRepository_GetStatsBatch_RowsError(t *testing.T) {
 }
 
 func TestTelemetryRepository_GetStatsBatch_PartialResults(t *testing.T) {
+	// 需要真实数据库: sqlmock 不支持 pq.Array 参数类型
 	t.Skip("sqlmock不支持pq.Array参数类型，需要真实数据库测试")
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

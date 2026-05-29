@@ -1,9 +1,7 @@
 package middleware
 
 import (
-	"bytes"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -348,70 +346,9 @@ func TestLogger_SpecialCharacters(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-// Capture output test
-func TestLogger_OutputCapture(t *testing.T) {
-	// Skip: Logger now uses structured logging (zap), not stdout
-	t.Skip("Logger uses structured logging, stdout capture no longer applicable")
-
-	gin.SetMode(gin.TestMode)
-
-	// Capture stdout
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	router := gin.New()
-	router.Use(Logger())
-	router.GET("/test", func(c *gin.Context) {
-		c.Set("request_id", "test-req-id")
-		c.JSON(200, gin.H{"ok": true})
-	})
-
-	req := httptest.NewRequest("GET", "/test?param=value", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stdout = old
-
-	output := buf.String()
-	assert.Contains(t, output, "200")
-	assert.Contains(t, output, "GET")
-	assert.Contains(t, output, "/test")
-}
-
-func TestRecovery_OutputCapture(t *testing.T) {
-	// Skip: Recovery now uses structured logging (zap), not stdout
-	t.Skip("Recovery uses structured logging, stdout capture no longer applicable")
-
-	gin.SetMode(gin.TestMode)
-
-	// Capture stdout
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	router := gin.New()
-	router.Use(Recovery())
-	router.GET("/test", func(c *gin.Context) {
-		panic("test panic output")
-	})
-
-	req := httptest.NewRequest("GET", "/test", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stdout = old
-
-	output := buf.String()
-	assert.Contains(t, output, "PANIC RECOVERED")
-	assert.Contains(t, output, "test panic output")
-}
+// 注意: Logger 和 Recovery 中间件已改用 zap 结构化日志
+// stdout 捕获测试不再适用，已删除相关的 OutputCapture 测试
+// 日志输出应通过 zap 的 observer 或 sink 进行测试
 
 // Multiple errors test
 func TestLogger_MultipleErrors(t *testing.T) {

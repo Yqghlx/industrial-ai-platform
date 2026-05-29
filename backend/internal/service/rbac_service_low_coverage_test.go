@@ -70,19 +70,6 @@ func TestRBACService_DeletePermission_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// ============================================
-// SeedPermissionsOnly Tests - Simplified
-// ============================================
-
-func TestRBACService_SeedPermissionsOnly_Basic(t *testing.T) {
-	svc, _, _ := newTestRBACServiceWithRBACRepo(t)
-	ctx := context.Background()
-
-	// SeedPermissionsOnly requires many mocks, just verify it doesn't panic
-	// This test is for coverage of the method signature
-	_ = svc
-	_ = ctx
-}
 
 // ============================================
 // GetRoleWithPermissions Tests - Fixed
