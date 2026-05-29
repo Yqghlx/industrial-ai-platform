@@ -70,6 +70,9 @@ type AuthServiceInterface interface {
 	// DeleteUser 删除用户
 	// SEC-HIGH-03: 新增删除用户方法
 	DeleteUser(ctx context.Context, userID int) error
+
+	// EnsureDefaultAdmin 确保默认管理员存在
+	EnsureDefaultAdmin(ctx context.Context, password string) error
 }
 
 // UserServiceInterface 用户服务接口
@@ -96,24 +99,37 @@ type HealthServiceInterface interface {
 	CheckHealth(ctx context.Context) *HealthCheckResponse
 }
 
-// AlertServiceInterface 告警服务接口
+// AlertServiceInterface 告警服务组合接口
+// 包含规则管理、告警管理和报告三个细分接口
 type AlertServiceInterface interface {
-	EvaluateRules(ctx context.Context, data *model.TelemetryData) error
+	AlertRuleServiceInterface
+	AlertManagementServiceInterface
+	AlertReportServiceInterface
+}
+
+// AlertRuleServiceInterface 告警规则管理接口
+type AlertRuleServiceInterface interface {
 	CreateRule(ctx context.Context, rule *model.AlertRule) error
 	UpdateRule(ctx context.Context, rule *model.AlertRule) error
 	DeleteRule(ctx context.Context, id int) error
 	GetRules(ctx context.Context) ([]model.AlertRule, error)
 	GetRuleByID(ctx context.Context, id int) (*model.AlertRule, error)
 	ToggleRule(ctx context.Context, id int) error
+	InitializeDefaultRules(ctx context.Context) error
+}
+
+// AlertManagementServiceInterface 告警管理接口
+type AlertManagementServiceInterface interface {
+	EvaluateRules(ctx context.Context, data *model.TelemetryData) error
 	GetAlerts(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error)
-	// GetAlertsWithFilter 支持更多过滤条件的告警查询
-	// P0-03: 将过滤条件传递到数据库层
 	GetAlertsWithFilter(ctx context.Context, status, severity, deviceID string, page, pageSize int) ([]model.Alert, int, error)
 	GetAlertByID(ctx context.Context, id int) (*model.Alert, error)
 	ResolveAlert(ctx context.Context, id int) error
 	AcknowledgeAlert(ctx context.Context, id int) error
-	InitializeDefaultRules(ctx context.Context) error
-	// 报告相关方法（占位实现）
+}
+
+// AlertReportServiceInterface 告警报告接口
+type AlertReportServiceInterface interface {
 	GetTrendReport(ctx context.Context, period string) (map[string]interface{}, error)
 	GetDeviceRanking(ctx context.Context, limit int) ([]map[string]interface{}, error)
 	GetEfficiencyReport(ctx context.Context) (map[string]interface{}, error)
@@ -193,24 +209,46 @@ type TenantServiceInterface interface {
 }
 
 // RBACServiceInterface RBAC服务接口
+// 组合接口，包含所有细分接口。RBACService 实现此完整接口。
+// 消费者应依赖所需的细分接口而非此臃肿接口（ISP 原则）。
 type RBACServiceInterface interface {
+	RoleServiceInterface
+	PermissionServiceInterface
+	RolePermissionServiceInterface
+	UserRoleServiceInterface
+}
+
+// RoleServiceInterface 角色管理接口
+type RoleServiceInterface interface {
 	CreateRole(ctx context.Context, role *model.Role) (*model.Role, error)
 	UpdateRole(ctx context.Context, role *model.Role) (*model.Role, error)
 	DeleteRole(ctx context.Context, id int) error
 	GetRoleByID(ctx context.Context, id int) (*model.Role, error)
 	ListRoles(ctx context.Context) ([]model.Role, error)
-	AssignRoleToUser(ctx context.Context, userID, roleID int) error
-	RemoveRoleFromUser(ctx context.Context, userID, roleID int) error
-	ListUserRoles(ctx context.Context, userID int) ([]model.Role, error)
-	ListPermissions(ctx context.Context) ([]model.Permission, error)
-	AssignPermissionToRole(ctx context.Context, roleID, permID int) error
-	RemovePermissionFromRole(ctx context.Context, roleID, permID int) error
+}
+
+// PermissionServiceInterface 权限管理接口
+type PermissionServiceInterface interface {
 	CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error)
 	GetPermission(ctx context.Context, id int) (*model.Permission, error)
 	DeletePermission(ctx context.Context, id int) error
+	ListPermissions(ctx context.Context) ([]model.Permission, error)
+}
+
+// RolePermissionServiceInterface 角色权限关联接口
+type RolePermissionServiceInterface interface {
+	AssignPermissionToRole(ctx context.Context, roleID, permID int) error
+	RemovePermissionFromRole(ctx context.Context, roleID, permID int) error
+	GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error)
+}
+
+// UserRoleServiceInterface 用户角色管理接口
+type UserRoleServiceInterface interface {
+	AssignRoleToUser(ctx context.Context, userID, roleID int) error
+	RemoveRoleFromUser(ctx context.Context, userID, roleID int) error
+	ListUserRoles(ctx context.Context, userID int) ([]model.Role, error)
 	GetUserPermissions(ctx context.Context, userID int) ([]model.Permission, error)
 	CheckPermission(ctx context.Context, userID int, resource, action string) (bool, error)
-	GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error)
 }
 
 // 确保 RBACService 实现 RBACServiceInterface

@@ -2,9 +2,7 @@ package handler
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -84,13 +82,6 @@ type HTTPServerNew struct {
 	jwtSecret     string
 	adminPassword string
 	startTime     time.Time
-
-	// Repositories
-	deviceRepo repository.DeviceRepositoryInterface
-	userRepo   repository.UserRepositoryInterface
-	alertRepo  repository.AlertRepositoryInterface
-	tenantRepo repository.TenantRepositoryInterface
-	rbacRepo   repository.RBACRepositoryInterface
 
 	// Services
 	authSvc      service.AuthServiceInterface
@@ -208,7 +199,6 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	userRepo := repository.NewUserRepository(dbpkg.NewDBWrapper(db))
 	alertRepo := repository.NewAlertRepository(dbpkg.NewDBWrapper(db))
 	tenantRepo := repository.NewTenantRepo(dbpkg.NewDBWrapper(db))
-	rbacRepo := repository.NewRBACRepository(dbpkg.NewDBWrapper(db))
 	ruleRepo := repository.NewRuleRepository(dbpkg.NewDBWrapper(db))
 	notificationRepo := repository.NewNotificationRepository(dbpkg.NewDBWrapper(db))
 	workOrderRepo := repository.NewWorkOrderRepository(dbpkg.NewDBWrapper(db))
@@ -341,11 +331,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		jwtSecret:     cfg.JWTSecret,
 		adminPassword: cfg.AdminPassword,
 		startTime:     time.Now(),
-		deviceRepo:    deviceRepo,
-		userRepo:      userRepo,
-		alertRepo:     alertRepo,
-		tenantRepo:    tenantRepo,
-		rbacRepo:      rbacRepo,
+
 		authSvc:       authSvc,
 		userSvc:       userSvc,
 		deviceSvc:     deviceSvc,
@@ -594,37 +580,11 @@ func (s *HTTPServerNew) initDatabase() {
 	s.createDefaultAdmin(ctx)
 }
 
-// createDefaultAdmin creates default admin user
+// createDefaultAdmin 创建默认管理员（委托给 AuthService）
 func (s *HTTPServerNew) createDefaultAdmin(ctx context.Context) {
-	_, err := s.userRepo.GetByUsername(ctx, "admin")
-	if err == nil {
-		return
+	if err := s.authSvc.EnsureDefaultAdmin(ctx, s.adminPassword); err != nil {
+		logger.L().Error("创建默认管理员失败", zap.Error(err))
 	}
-
-	password := s.adminPassword
-	if password == "" {
-		password = generateRandomPassword(16)
-	}
-
-	passwordHash, err := service.HashPassword(password)
-	if err != nil {
-		logger.L().Error("Failed to hash admin password", zap.Error(err))
-		return
-	}
-
-	admin := &model.User{
-		Username: "admin",
-		Password: passwordHash,
-		Email:    "admin@industrial.ai",
-		Role:     "admin",
-	}
-
-	if err := s.userRepo.Create(ctx, admin); err != nil {
-		logger.L().Error("Failed to create default admin", zap.Error(err))
-		return
-	}
-
-	logger.L().Info("Created default admin user")
 }
 
 // healthCheck handles health check
@@ -676,15 +636,6 @@ func getRequestContext(c *gin.Context) (context.Context, context.CancelFunc) {
 // 	PageSize int
 // }
 
-// generateRandomPassword generates random password
-func generateRandomPassword(length int) string {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		// 密码安全性不可妥协，crypto/rand 失败时直接终止
-		logger.L().Fatal("Failed to generate secure random password, refusing to use insecure fallback", zap.Error(err))
-	}
-	return hex.EncodeToString(bytes)[:length]
-}
 
 // ============================================
 // Backward Compatibility Methods
@@ -762,6 +713,11 @@ func (c *compatAuthSvc) ListUsers(ctx context.Context, page, pageSize int) ([]mo
 // SEC-HIGH-03: 新增删除用户方法
 func (c *compatAuthSvc) DeleteUser(ctx context.Context, userID int) error {
 	return fmt.Errorf("delete user not supported in compat mode")
+}
+
+// EnsureDefaultAdmin - compat模式不支持
+func (c *compatAuthSvc) EnsureDefaultAdmin(ctx context.Context, password string) error {
+	return fmt.Errorf("ensure default admin not supported in compat mode")
 }
 
 // getCacheStatus wrapper for backward compat

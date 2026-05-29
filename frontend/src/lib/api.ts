@@ -354,6 +354,41 @@ class ApiClient {
     return this.request<MessageResponse>('PUT', `/rules/${id}/toggle`, { enabled });
   }
 
+  // Alerts
+  async getAlerts(params?: { status?: string; severity?: string; page?: number; page_size?: number }): Promise<{ data: unknown[]; total?: number }> {
+    const queryParams: Record<string, string> = {};
+    if (params?.status) queryParams.status = params.status;
+    if (params?.severity) queryParams.severity = params.severity;
+    if (params?.page) queryParams.page = String(params.page);
+    if (params?.page_size) queryParams.page_size = String(params.page_size);
+    return this.request<{ data: unknown[]; total?: number }>('GET', '/alerts', undefined, queryParams);
+  }
+
+  async getAlertStats(): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>('GET', '/alerts/stats');
+  }
+
+  async resolveAlert(id: number): Promise<MessageResponse> {
+    return this.request<MessageResponse>('PUT', `/alerts/${id}/resolve`);
+  }
+
+  async acknowledgeAlert(id: number): Promise<MessageResponse> {
+    return this.request<MessageResponse>('PUT', `/alerts/${id}/acknowledge`);
+  }
+
+  // Alert Reports
+  async getTrendReport(days: number = 7): Promise<{ data: unknown[] }> {
+    return this.request<{ data: unknown[] }>('GET', '/alerts/report/trend', undefined, { days: String(days) });
+  }
+
+  async getRankingReport(limit: number = 10): Promise<{ data: unknown[] }> {
+    return this.request<{ data: unknown[] }>('GET', '/alerts/report/ranking', undefined, { limit: String(limit) });
+  }
+
+  async getEfficiencyReport(): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>('GET', '/alerts/report/efficiency');
+  }
+
   // Agent
   async agentQuery(query: string, deviceId?: string): Promise<AgentResponse> {
     return this.request<AgentResponse>(

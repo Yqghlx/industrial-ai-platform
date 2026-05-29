@@ -3,6 +3,7 @@ import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { api } from '../lib/api';
 import {
   AlertTriangle,
   CheckCircle,
@@ -165,20 +166,13 @@ export default function AlertsPage() {
   // Fetch alerts
   const fetchAlerts = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (severityFilter !== 'all') params.append('severity', severityFilter);
+      const params: { status?: string; severity?: string } = {};
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (severityFilter !== 'all') params.severity = severityFilter;
 
-      const response = await fetch(`/api/v1/alerts?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch alerts');
-
-      const data = await response.json();
-      // FE-P1: 限制数组大小，防止内存泄漏
-      const alertsData = (data.alerts || data.data || []).slice(0, MAX_ALERTS_ENTRIES);
-      setAlerts(alertsData);
+      const data = await api.getAlerts(params);
+      const alertsData = ((data as { alerts?: unknown[]; data?: unknown[] }).alerts || (data as { data?: unknown[] }).data || []).slice(0, MAX_ALERTS_ENTRIES);
+      setAlerts(alertsData as AlertType[]);
     } catch {
       showToast({ type: 'error', message: t('errors.unknown') });
     }
@@ -187,14 +181,8 @@ export default function AlertsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/alerts/stats', {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch stats');
-
-      const data = await response.json();
-      setStats(data);
+      const data = await api.getAlertStats();
+      setStats(data as unknown as AlertStats);
     } catch {
       console.error('Failed to fetch alert stats');
       showToast({ type: 'error', message: t('errors.loadFailedAlertStats') });
@@ -298,14 +286,9 @@ export default function AlertsPage() {
   // Resolve alert
   const handleResolve = async (alertId: number) => {
     try {
-      const response = await fetch(`/api/v1/alerts/${alertId}/resolve`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      });
+      await api.resolveAlert(alertId);
 
-      if (!response.ok) throw new Error('Failed to resolve alert');
-
-      setAlerts(prev => prev.map(a => 
+      setAlerts(prev => prev.map(a =>
         a.id === alertId ? { ...a, status: 'resolved', resolved_at: new Date().toISOString() } : a
       ));
       fetchStats();
@@ -319,12 +302,7 @@ export default function AlertsPage() {
   // Acknowledge alert
   const handleAcknowledge = async (alertId: number) => {
     try {
-      const response = await fetch(`/api/v1/alerts/${alertId}/acknowledge`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to acknowledge alert');
+      await api.acknowledgeAlert(alertId);
 
       setAlerts(prev => prev.map(a => 
         a.id === alertId ? { ...a, status: 'acknowledged' } : a

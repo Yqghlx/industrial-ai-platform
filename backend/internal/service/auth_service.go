@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -254,5 +256,48 @@ func (s *AuthService) DeleteUser(ctx context.Context, userID int) error {
 		return errors.NewDatabaseError(err.Error())
 	}
 
+	return nil
+}
+
+// generateRandomPassword 生成加密安全的随机密码
+func generateRandomPassword(length int) string {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		// 密码安全性不可妥协，crypto/rand 失败时直接终止
+		logger.L().Fatal("生成安全随机密码失败", zap.Error(err))
+	}
+	return hex.EncodeToString(bytes)[:length]
+}
+
+// EnsureDefaultAdmin 确保默认管理员存在，不存在则创建
+func (s *AuthService) EnsureDefaultAdmin(ctx context.Context, password string) error {
+	_, err := s.userRepo.GetByUsername(ctx, "admin")
+	if err == nil {
+		return nil
+	}
+
+	if password == "" {
+		password = generateRandomPassword(16)
+	}
+
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		logger.L().Error("管理员密码哈希失败", zap.Error(err))
+		return err
+	}
+
+	admin := &model.User{
+		Username: "admin",
+		Password: passwordHash,
+		Email:    "admin@industrial.ai",
+		Role:     "admin",
+	}
+
+	if err := s.userRepo.Create(ctx, admin); err != nil {
+		logger.L().Error("创建默认管理员失败", zap.Error(err))
+		return err
+	}
+
+	logger.L().Info("已创建默认管理员用户")
 	return nil
 }

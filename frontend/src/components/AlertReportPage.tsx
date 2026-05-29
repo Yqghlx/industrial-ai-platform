@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '../i18n';
 import { useToast } from './Toast';
 import Skeleton from './Skeleton';
+import { api } from '../lib/api';
 import {
   TrendingUp,
   BarChart3,
@@ -61,31 +62,22 @@ export default function AlertReportPage() {
       if (!token) return;
 
       // Fetch trend data
-      const trendRes = await fetch(`/api/v1/alerts/report/trend?days=${trendDays}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (trendRes.ok) {
-        const trendJson = await trendRes.json();
-        setTrendData(trendJson.data || []);
-      }
+      try {
+        const trendJson = await api.getTrendReport(trendDays);
+        setTrendData((trendJson.data || []) as TrendData[]);
+      } catch { /* 降级处理 */ }
 
       // Fetch ranking data
-      const rankRes = await fetch('/api/v1/alerts/report/ranking?limit=10', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (rankRes.ok) {
-        const rankJson = await rankRes.json();
-        setRankingData(rankJson.data || []);
-      }
+      try {
+        const rankJson = await api.getRankingReport(10);
+        setRankingData((rankJson.data || []) as DeviceRank[]);
+      } catch { /* 降级处理 */ }
 
       // Fetch efficiency data
-      const effRes = await fetch('/api/v1/alerts/report/efficiency', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (effRes.ok) {
-        const effJson = await effRes.json();
-        setEfficiencyData(effJson);
-      }
+      try {
+        const effJson = await api.getEfficiencyReport();
+        setEfficiencyData(effJson as unknown as Efficiency);
+      } catch { /* 降级处理 */ }
     } catch {
       showToast({ type: 'error', message: t('errors.unknown') });
     } finally {

@@ -65,22 +65,6 @@ func TestGetRequestContext_HasTimeout(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestGenerateRandomPassword(t *testing.T) {
-	password1 := generateRandomPassword(16)
-	password2 := generateRandomPassword(16)
-
-	assert.Len(t, password1, 16)
-	assert.Len(t, password2, 16)
-	assert.NotEqual(t, password1, password2) // Should be random
-}
-
-func TestGenerateRandomPassword_DifferentLengths(t *testing.T) {
-	password8 := generateRandomPassword(8)
-	password32 := generateRandomPassword(32)
-
-	assert.Len(t, password8, 8)
-	assert.Len(t, password32, 32)
-}
 
 // generateFallbackPassword 已被移除：crypto/rand 失败时直接 Fatal，
 // 不再使用可预测的弱密码降级路径。相关测试已删除。

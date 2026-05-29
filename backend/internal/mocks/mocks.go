@@ -146,6 +146,12 @@ func (m *MockAuthService) DeleteUser(ctx context.Context, userID int) error {
 	return args.Error(0)
 }
 
+// EnsureDefaultAdmin mock 实现
+func (m *MockAuthService) EnsureDefaultAdmin(ctx context.Context, password string) error {
+	args := m.Called(ctx, password)
+	return args.Error(0)
+}
+
 // ============================================
 // Mock AlertService
 // ============================================
