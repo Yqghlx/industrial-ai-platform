@@ -2,7 +2,7 @@
  * API Client for Industrial AI Platform
  * 
  * FE-P3-04: Added comprehensive documentation for API client
- * FE-P3-03: Token storage uses localStorage with 'token' key consistently
+ * FE-P3-03: Token storage uses sessionStorage with 'token' key consistently
  * SEC-LOW-02: Use sessionStorage instead of localStorage for better security
  * 
  * @description Handles all API requests with authentication, timeout support,
@@ -68,7 +68,7 @@ class TimeoutError extends Error {
  * @description Main API client with authentication token management,
  * request cancellation, and timeout handling.
  * 
- * Token Storage: Uses localStorage with key 'token' for consistency.
+ * Token Storage: Uses sessionStorage with key 'token' for consistency.
  * (FE-P3-03: Unified token storage)
  */
 class ApiClient {

@@ -44,7 +44,8 @@ type WebSocketManager struct {
 	broadcast     chan model.WSMessage
 	heartbeat     chan struct{}
 	compressor    *wscompression.Compressor
-	stopHeartbeat chan struct{} // P0: stop channel for ticker goroutine
+	stopHeartbeat chan struct{} // 心跳 ticker 退出信号
+	stopBroadcast chan struct{} // 广播循环退出信号
 }
 
 // NewWebSocketManager creates a new WebSocket manager
@@ -54,7 +55,8 @@ func NewWebSocketManager(compressor *wscompression.Compressor) *WebSocketManager
 		broadcast:     make(chan model.WSMessage, 100),
 		heartbeat:     make(chan struct{}),
 		compressor:    compressor,
-		stopHeartbeat: make(chan struct{}), // P0: initialize stop channel
+		stopHeartbeat: make(chan struct{}),
+		stopBroadcast: make(chan struct{}),
 	}
 }
 
@@ -110,6 +112,8 @@ func (m *WebSocketManager) Start() {
 					}
 				}
 				m.clientsMu.RUnlock()
+			case <-m.stopBroadcast:
+				return
 			}
 		}
 	}()
@@ -138,6 +142,7 @@ func (m *WebSocketManager) ClientCount() int {
 // Stop gracefully stops the WebSocket manager and releases resources
 // P0: Added to prevent goroutine leak
 func (m *WebSocketManager) Stop() {
+	close(m.stopBroadcast)
 	close(m.stopHeartbeat)
 }
 
@@ -210,6 +215,8 @@ func (s *Server) startBroadcaster() {
 					}
 				}
 				s.wsClientsMu.RUnlock()
+			case <-s.stopTicker:
+				return
 			}
 		}
 	}()
