@@ -72,9 +72,41 @@ jobs:
     name: Frontend Test & Build
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: industrial_ai
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: industrial_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: backend/go.sum
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -83,7 +115,24 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install backend dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: Start backend service
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://industrial_ai:test_password@localhost:5432/industrial_ai?sslmode=disable
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test_jwt_secret_for_e2e_testing
+          ADMIN_PASSWORD: test_admin_password
+          PORT: 8080
+        run: |
+          go run cmd/server/main.go &
+          sleep 10
+          curl -f http://localhost:8080/health || exit 1
+
+      - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
@@ -101,7 +150,7 @@ jobs:
         env:
           VITE_API_URL: http://localhost:8080
 
-      - name: Run E2E tests (optional)
+      - name: Run E2E tests
         working-directory: frontend
         timeout-minutes: 5
         run: |
