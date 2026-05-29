@@ -335,17 +335,7 @@ func TestHTTPServerNew_generateRandomPassword_Integration(t *testing.T) {
 
 	assert.Len(t, password1, 16)
 	assert.Len(t, password2, 16)
-	assert.NotEqual(t, password1, password2) // Should be different
-}
-
-func TestHTTPServerNew_generateFallbackPassword_Integration(t *testing.T) {
-	password := generateFallbackPassword(16)
-
-	assert.Len(t, password, 16)
-	// Should be numeric
-	for _, c := range password {
-		assert.True(t, c >= '0' && c <= '9')
-	}
+	assert.NotEqual(t, password1, password2)
 }
 
 // ============================================

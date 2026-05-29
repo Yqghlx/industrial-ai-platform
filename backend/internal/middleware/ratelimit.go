@@ -19,8 +19,10 @@ type TokenBucket struct {
 
 // RateLimiter manages rate limiters per key
 type RateLimiter struct {
-	buckets map[string]*TokenBucket
-	mu      sync.RWMutex
+	buckets        map[string]*TokenBucket
+	mu             sync.RWMutex
+	maxBuckets     int           // bucket 数量上限，防止内存无限增长
+	fallbackBucket *TokenBucket  // 预分配的降级 bucket，避免每次请求分配新对象
 }
 
 // Global limiter manager - singleton pattern to prevent goroutine leaks
@@ -150,13 +152,21 @@ func (tb *TokenBucket) LastUsed() time.Time {
 }
 
 // NewRateLimiter creates a new rate limiter
-func NewRateLimiter() *RateLimiter {
+// maxBuckets 限制最大 bucket 数量，防止内存无限增长（默认 10000）
+func NewRateLimiter(maxBuckets ...int) *RateLimiter {
+	limit := 10000
+	if len(maxBuckets) > 0 && maxBuckets[0] > 0 {
+		limit = maxBuckets[0]
+	}
 	return &RateLimiter{
-		buckets: make(map[string]*TokenBucket),
+		buckets:        make(map[string]*TokenBucket),
+		maxBuckets:     limit,
+		fallbackBucket: NewTokenBucket(30, 0.5),
 	}
 }
 
 // GetBucket gets or creates a bucket for a key
+// 当 bucket 数量达到上限时，返回一个共享的降级 bucket，防止内存无限增长
 func (rl *RateLimiter) GetBucket(key string, capacity, refillRate float64) *TokenBucket {
 	rl.mu.RLock()
 	bucket, exists := rl.buckets[key]
@@ -172,6 +182,11 @@ func (rl *RateLimiter) GetBucket(key string, capacity, refillRate float64) *Toke
 	// Double check
 	if bucket, exists := rl.buckets[key]; exists {
 		return bucket
+	}
+
+	// bucket 数量达到上限时返回预分配的降级 bucket
+	if len(rl.buckets) >= rl.maxBuckets {
+		return rl.fallbackBucket
 	}
 
 	bucket = NewTokenBucket(capacity, refillRate)
@@ -268,10 +283,19 @@ func RateLimitWithContext(_ context.Context, capacity int, refillRate float64, n
 
 // DefaultRateLimit 全局默认速率限制
 // SEC-MEDIUM-04: 添加全局默认限流，防止未配置限流的端点被滥用
-func DefaultRateLimit() gin.HandlerFunc {
+// 使用生产安全的默认值：60/min, 1 token/s
+// 可通过 ServerConfig 中的 RateLimitCapacity 和 RateLimitRefillRate 覆盖
+func DefaultRateLimit(capacity int, refillRate float64) gin.HandlerFunc {
+	// 提供生产安全的默认值
+	if capacity <= 0 {
+		capacity = 60
+	}
+	if refillRate <= 0 {
+		refillRate = 1.0
+	}
 	return RateLimitWithConfig(RateLimitConfig{
-		Capacity:   60, // 每分钟 60 次
-		RefillRate: 1,  // 每秒补充 1 个令牌
+		Capacity:   capacity,
+		RefillRate: refillRate,
 		Name:       "default_global",
 	})
 }

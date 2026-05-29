@@ -14,12 +14,30 @@ import (
 	"go.uber.org/zap"
 )
 
-// FIX-058: Server 结构体拆分
-// 将 WebSocket 相关处理逻辑从 server.go 拆分到此文件
-// WebSocket 处理逻辑独立，便于维护和扩展
+// wsWriteTimeout WebSocket 写操作超时时间
+const wsWriteTimeout = 10 * time.Second
+
+// writeWithDeadline 在写超时保护下执行写操作，成功后清除超时
+func writeWithDeadline(conn *websocket.Conn, writeFn func() error) error {
+	conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+	if err := writeFn(); err != nil {
+		return err
+	}
+	conn.SetWriteDeadline(time.Time{})
+	return nil
+}
+
+// removeConnFromMap 安全地从连接集合中删除并关闭连接（需在 RLock 内调用，函数内部处理锁升级）
+func removeConnFromMap(conn *websocket.Conn, clients map[*websocket.Conn]bool, mu *sync.RWMutex) {
+	conn.Close()
+	mu.RUnlock()
+	mu.Lock()
+	delete(clients, conn)
+	mu.Unlock()
+	mu.RLock()
+}
 
 // WebSocketManager manages WebSocket connections
-// FIX-058: 封装 WebSocket 管理逻辑
 type WebSocketManager struct {
 	clients       map[*websocket.Conn]bool
 	clientsMu     sync.RWMutex
@@ -62,37 +80,33 @@ func (m *WebSocketManager) Broadcast(msg model.WSMessage) {
 
 // Start starts the WebSocket broadcast loop
 func (m *WebSocketManager) Start() {
-	// Broadcast loop
 	go func() {
 		for {
 			select {
 			case msg := <-m.broadcast:
 				m.clientsMu.RLock()
 				for conn := range m.clients {
-					// Use compression for broadcasting messages
-					err := m.compressor.WriteCompressed(conn, msg)
+					err := writeWithDeadline(conn, func() error {
+						return m.compressor.WriteCompressed(conn, msg)
+					})
 					if err != nil {
 						logger.L().Error("WebSocket write error", zap.Error(err))
-						conn.Close()
-						m.clientsMu.RUnlock()
-						m.clientsMu.Lock()
-						delete(m.clients, conn)
-						m.clientsMu.Unlock()
-						m.clientsMu.RLock()
+						removeConnFromMap(conn, m.clients, &m.clientsMu)
 					}
 				}
 				m.clientsMu.RUnlock()
 			case <-m.heartbeat:
-				// Heartbeat ping (usually small, no compression needed)
 				m.clientsMu.RLock()
 				for conn := range m.clients {
-					// Heartbeat messages are small, use regular JSON
-					err := conn.WriteJSON(model.WSMessage{
-						Type:      "ping",
-						Timestamp: time.Now(),
+					err := writeWithDeadline(conn, func() error {
+						return conn.WriteJSON(model.WSMessage{
+							Type:      "ping",
+							Timestamp: time.Now(),
+						})
 					})
 					if err != nil {
 						logger.L().Error("WebSocket ping error", zap.Error(err))
+						removeConnFromMap(conn, m.clients, &m.clientsMu)
 					}
 				}
 				m.clientsMu.RUnlock()
@@ -100,16 +114,15 @@ func (m *WebSocketManager) Start() {
 		}
 	}()
 
-	// Heartbeat ticker - P0: use select with stop channel to prevent goroutine leak
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop() // Ensure ticker resources are released
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
 				m.heartbeat <- struct{}{}
 			case <-m.stopHeartbeat:
-				return // Exit goroutine when stop signal received
+				return
 			}
 		}
 	}()
@@ -166,7 +179,6 @@ func (s *Server) handleWebSocket(c *gin.Context) {
 }
 
 // startBroadcaster starts the WebSocket broadcast loop
-// FIX-058: 从 server.go 移动到此文件
 func (s *Server) startBroadcaster() {
 	go func() {
 		for {
@@ -174,30 +186,27 @@ func (s *Server) startBroadcaster() {
 			case msg := <-s.broadcastChan:
 				s.wsClientsMu.RLock()
 				for conn := range s.wsClients {
-					// Use compression for broadcasting messages
-					err := s.wsCompressor.WriteCompressed(conn, msg)
+					err := writeWithDeadline(conn, func() error {
+						return s.wsCompressor.WriteCompressed(conn, msg)
+					})
 					if err != nil {
 						logger.L().Error("WebSocket write error", zap.Error(err))
-						conn.Close()
-						s.wsClientsMu.RUnlock()
-						s.wsClientsMu.Lock()
-						delete(s.wsClients, conn)
-						s.wsClientsMu.Unlock()
-						s.wsClientsMu.RLock()
+						removeConnFromMap(conn, s.wsClients, &s.wsClientsMu)
 					}
 				}
 				s.wsClientsMu.RUnlock()
 			case <-s.heartbeatChan:
-				// Heartbeat ping (usually small, no compression needed)
 				s.wsClientsMu.RLock()
 				for conn := range s.wsClients {
-					// Heartbeat messages are small, use regular JSON
-					err := conn.WriteJSON(model.WSMessage{
-						Type:      "ping",
-						Timestamp: time.Now(),
+					err := writeWithDeadline(conn, func() error {
+						return conn.WriteJSON(model.WSMessage{
+							Type:      "ping",
+							Timestamp: time.Now(),
+						})
 					})
 					if err != nil {
 						logger.L().Error("WebSocket ping error", zap.Error(err))
+						removeConnFromMap(conn, s.wsClients, &s.wsClientsMu)
 					}
 				}
 				s.wsClientsMu.RUnlock()
@@ -205,7 +214,6 @@ func (s *Server) startBroadcaster() {
 		}
 	}()
 
-	// Start heartbeat ticker
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -221,15 +229,12 @@ func (s *Server) startBroadcaster() {
 }
 
 // broadcast sends a message to all WebSocket clients
-// FIX-058: 从 server.go 移动到此文件
-// broadcast sends a message to all WebSocket clients
 // nolint:unused -- API compatibility
 func (s *Server) broadcast(msg model.WSMessage) {
 	s.broadcastChan <- msg
 }
 
 // addWSClient adds a WebSocket client
-// FIX-058: 从 server.go 移动到此文件
 func (s *Server) addWSClient(conn *websocket.Conn) {
 	s.wsClientsMu.Lock()
 	s.wsClients[conn] = true
@@ -237,7 +242,6 @@ func (s *Server) addWSClient(conn *websocket.Conn) {
 }
 
 // removeWSClient removes a WebSocket client
-// FIX-058: 从 server.go 移动到此文件
 func (s *Server) removeWSClient(conn *websocket.Conn) {
 	s.wsClientsMu.Lock()
 	delete(s.wsClients, conn)
@@ -246,9 +250,6 @@ func (s *Server) removeWSClient(conn *websocket.Conn) {
 }
 
 // getWSCompressionStats handles getting WebSocket compression statistics
-// FIX-058: 从 server.go 移动到此文件
-// getWSCompressionStats handles WebSocket compression stats
-// FIX-058: 从 server.go 移动到此文件
 func (s *Server) getWSCompressionStats(c *gin.Context) { // nolint:unused
 	if s.wsCompressor == nil {
 		c.JSON(http.StatusOK, gin.H{

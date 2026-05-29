@@ -3,10 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/industrial-ai/platform/pkg/constants"
@@ -22,6 +20,9 @@ type TelemetryService struct {
 	alertRepo     *repository.AlertRepository
 	workOrderRepo *repository.WorkOrderRepository
 	alertSvc      *AlertService
+	// broadcastFn WebSocket 广播函数，由 handler 层注入
+	// 如果为 nil，广播消息将被静默丢弃（兼容旧调用方式）
+	broadcastFn func(msg model.WSMessage)
 }
 
 // NewTelemetryService creates a new telemetry service
@@ -38,6 +39,20 @@ func NewTelemetryService(
 		alertRepo:     alertRepo,
 		workOrderRepo: workOrderRepo,
 		alertSvc:      alertSvc,
+	}
+}
+
+// SetBroadcastFn 设置 WebSocket 广播函数
+// 由 handler 层在创建 TelemetryService 后调用，注入实际的广播实现
+func (s *TelemetryService) SetBroadcastFn(fn func(msg model.WSMessage)) {
+	s.broadcastFn = fn
+}
+
+// broadcast 安全地执行 WebSocket 广播
+// 如果 broadcastFn 未设置，静默丢弃消息（不阻塞业务逻辑）
+func (s *TelemetryService) broadcast(msg model.WSMessage) {
+	if s.broadcastFn != nil {
+		s.broadcastFn(msg)
 	}
 }
 
@@ -78,7 +93,7 @@ func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData
 	}
 
 	// Broadcast via WebSocket
-	Broadcast(model.WSMessage{
+	s.broadcast(model.WSMessage{
 		Type:      "telemetry",
 		Payload:   data,
 		Timestamp: time.Now(),
@@ -158,87 +173,6 @@ func (s *TelemetryService) GetStats(ctx context.Context, deviceID string, start,
 	return stats, nil
 }
 
-// WebSocket connection manager
-// BE-P2-02: 使用常量替换魔法数字
-// FIX-059: 移除 init() goroutine
-// 使用 sync.Once 确保 broadcaster 只启动一次，避免在 init() 中启动 goroutine
-// broadcaster 应在需要时显式调用 StartWSBroadcaster()，而不是在 init() 中自动启动
-
-var (
-	wsClients   = make(map[*websocket.Conn]bool)
-	wsClientsMu sync.RWMutex
-	wsBroadcast = make(chan model.WSMessage, constants.WSBroadcastChannelSize)
-
-	// FIX-059: 使用 sync.Once 确保 broadcaster 只启动一次
-	broadcasterStarted sync.Once
-	broadcasterStopped chan struct{} // 用于停止 broadcaster
-)
-
-// AddWSClient adds a WebSocket client
-func AddWSClient(conn *websocket.Conn) {
-	wsClientsMu.Lock()
-	wsClients[conn] = true
-	wsClientsMu.Unlock()
-}
-
-// RemoveWSClient removes a WebSocket client
-func RemoveWSClient(conn *websocket.Conn) {
-	wsClientsMu.Lock()
-	delete(wsClients, conn)
-	wsClientsMu.Unlock()
-	conn.Close()
-}
-
-// Broadcast sends a message to all WebSocket clients
-func Broadcast(msg model.WSMessage) {
-	select {
-	case wsBroadcast <- msg:
-	default:
-		// Channel full, drop message
-	}
-}
-
-// StartWSBroadcaster starts the WebSocket broadcaster
-// FIX-059: 使用 sync.Once 确保 broadcaster 只启动一次
-// 不再在 init() 中启动 goroutine，改为显式调用
-func StartWSBroadcaster() {
-	broadcasterStarted.Do(func() {
-		broadcasterStopped = make(chan struct{})
-		go func() {
-			for {
-				select {
-				case msg := <-wsBroadcast:
-					wsClientsMu.RLock()
-					for conn := range wsClients {
-						if err := conn.WriteJSON(msg); err != nil {
-							go RemoveWSClient(conn)
-						}
-					}
-					wsClientsMu.RUnlock()
-				case <-broadcasterStopped:
-					// Broadcaster stopped
-					return
-				}
-			}
-		}()
-	})
-}
-
-// StopWSBroadcaster stops the WebSocket broadcaster
-// FIX-059: 提供停止 broadcaster 的方法
-func StopWSBroadcaster() {
-	if broadcasterStopped != nil {
-		close(broadcasterStopped)
-	}
-}
-
-// GetWSClientCount returns the number of connected WebSocket clients
-func GetWSClientCount() int {
-	wsClientsMu.RLock()
-	defer wsClientsMu.RUnlock()
-	return len(wsClients)
-}
-
 // ParseTimeRange parses time range from string
 func ParseTimeRange(rangeStr string) (start, end time.Time) {
 	end = time.Now()
@@ -269,18 +203,6 @@ func GetTimeRanges() []map[string]string {
 		{"value": "30d", "label": "最近 30 天"},
 	}
 }
-
-// FIX-059: 移除 init() 中的 goroutine 启动
-// init() 函数应该同步完成，不应该在其中启动 goroutine
-// 原来的 init() 调用 StartWSBroadcaster() 启动了 goroutine，这是不安全的做法
-// 现在改为显式调用 StartWSBroadcaster()，使用 sync.Once 确保只启动一次
-//
-// 已删除的 init() 函数内容:
-// func init() {
-//     StartWSBroadcaster()  // 这会启动 goroutine，不安全
-// }
-//
-// 如需使用 WebSocket broadcaster，请在服务器初始化时显式调用 service.StartWSBroadcaster()
 
 // InitTelemetryService initializes the telemetry service
 func InitTelemetryService(alertSvc *AlertService, telemetryRepo *repository.TelemetryRepository, deviceRepo *repository.DeviceRepository) *TelemetryService {
@@ -376,17 +298,14 @@ func (s *TelemetryService) GetSystemStatus(ctx context.Context) (*model.SystemSt
 
 	start := time.Now()
 
-	// Simple DB ping
-	_, err := s.deviceRepo.Count(ctx)
+	// 一次查询同时获取设备计数和数据库延迟
+	deviceCount, err := s.deviceRepo.Count(ctx)
 	dbLatency := time.Since(start).Milliseconds()
 
 	dbStatus := "healthy"
 	if err != nil {
 		dbStatus = "unhealthy"
-	}
-
-	deviceCount, err := s.deviceRepo.Count(ctx)
-	if err != nil {
+		deviceCount = 0
 		logger.L().Error("Failed to count devices", zap.Error(err))
 	}
 

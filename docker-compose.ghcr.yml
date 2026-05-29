@@ -1,5 +1,8 @@
 # Industrial AI Platform - GitHub Container Registry Deployment
 # Use pre-built images from GHCR
+#
+# 使用前必须设置以下环境变量（或在 .env 文件中配置）：
+#   POSTGRES_PASSWORD, JWT_SECRET, ADMIN_PASSWORD, REDIS_PASSWORD
 
 version: '3.8'
 
@@ -33,10 +36,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-industrial_ai}?sslmode=disable
-      - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin@123456}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?必须设置 POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-industrial_ai}?sslmode=disable
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?必须设置 REDIS_PASSWORD}@redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:?必须设置 JWT_SECRET（至少32个字符）}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?必须设置 ADMIN_PASSWORD}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
       - LLM_MODEL=${LLM_MODEL:-glm-5}
@@ -65,17 +68,18 @@ services:
     container_name: industrial-ai-postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?必须设置 POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-industrial_ai}
+    # 仅绑定到本地，不对外暴露
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - industrial-ai-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -86,19 +90,25 @@ services:
   redis:
     image: redis:7-alpine
     container_name: industrial-ai-redis
+    # 仅绑定到本地，不对外暴露
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - industrial-ai-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    command: redis-server --appendonly yes --maxmemory 256mb
+    command:
+      - redis-server
+      - --appendonly yes
+      - --maxmemory 256mb
+      - --maxmemory-policy allkeys-lru
+      - --requirepass ${REDIS_PASSWORD:?必须设置 REDIS_PASSWORD}
 
 networks:
   industrial-ai-network:

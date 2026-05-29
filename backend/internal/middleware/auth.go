@@ -314,7 +314,9 @@ func GetUserRole(c *gin.Context) string {
 // GetTenantID extracts tenant ID from context
 func GetTenantID(c *gin.Context) string {
 	if tenantID, exists := c.Get("tenant_id"); exists {
-		return tenantID.(string)
+		if id, ok := tenantID.(string); ok {
+			return id
+		}
 	}
 	return ""
 }
@@ -322,7 +324,9 @@ func GetTenantID(c *gin.Context) string {
 // GetTokenID extracts token ID from context
 func GetTokenID(c *gin.Context) string {
 	if tokenID, exists := c.Get("token_id"); exists {
-		return tokenID.(string)
+		if id, ok := tokenID.(string); ok {
+			return id
+		}
 	}
 	return ""
 }

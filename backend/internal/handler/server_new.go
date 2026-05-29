@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"net/http"
 	"os"
 	"strings"
@@ -56,6 +55,16 @@ type ServerConfig struct {
 	// In production: must be explicitly configured
 	// In development: defaults to localhost if not set
 	AllowedOrigins []string
+
+	// 数据库连接池配置（对应 config.Config 中的 DB 字段）
+	DBMaxOpenConns    int           // 数据库最大打开连接数（默认 25）
+	DBMaxIdleConns    int           // 数据库最大空闲连接数（默认 10）
+	DBConnMaxLifetime time.Duration // 数据库连接最大生命周期（默认 15 分钟）
+	DBConnMaxIdleTime time.Duration // 数据库空闲连接最大存活时间（默认 10 分钟）
+
+	// 全局限流配置（对应 config.Config 中的 RateLimit 字段）
+	RateLimitCapacity   int     // 全局限流桶容量（默认 60）
+	RateLimitRefillRate float64 // 全局限流令牌补充速率，每秒补充令牌数（默认 1）
 }
 
 // Server is alias for HTTPServerNew for backward compatibility
@@ -118,6 +127,10 @@ type HTTPServerNew struct {
 
 	// Cache
 	cache cache.CacheService
+
+	// 限流配置
+	rateLimitCapacity   int
+	rateLimitRefillRate float64
 }
 
 // NewHTTPServerNew creates a new HTTP server (new architecture)
@@ -145,10 +158,36 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		return nil, err
 	}
 
-	// Configure connection pool
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	// 配置数据库连接池 - 使用 ServerConfig 中的值，提供安全的默认值
+	// 默认值：MaxOpen=25, MaxIdle=10, Lifetime=15min, IdleTime=10min
+	maxOpenConns := cfg.DBMaxOpenConns
+	if maxOpenConns <= 0 {
+		maxOpenConns = 25
+	}
+	maxIdleConns := cfg.DBMaxIdleConns
+	if maxIdleConns <= 0 {
+		maxIdleConns = 10
+	}
+	connMaxLifetime := cfg.DBConnMaxLifetime
+	if connMaxLifetime <= 0 {
+		connMaxLifetime = 15 * time.Minute
+	}
+	connMaxIdleTime := cfg.DBConnMaxIdleTime
+	if connMaxIdleTime <= 0 {
+		connMaxIdleTime = 10 * time.Minute
+	}
+
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
+
+	logger.L().Info("[DB] 连接池配置",
+		zap.Int("maxOpenConns", maxOpenConns),
+		zap.Int("maxIdleConns", maxIdleConns),
+		zap.Duration("connMaxLifetime", connMaxLifetime),
+		zap.Duration("connMaxIdleTime", connMaxIdleTime),
+	)
 
 	// Initialize cache
 	cacheConfig := &cache.Config{
@@ -280,16 +319,12 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	}
 	wsCompressor := wscompression.NewCompressor(wsCompressorConfig)
 
-	// Broadcast function placeholder
-	broadcastFn := func(msg model.WSMessage) {
-		logger.L().Info("[WS] Broadcast", zap.String("type", msg.Type))
-	}
-
+	// 创建 Server 实例（broadcastChan 在此处初始化）
 	s := &HTTPServerNew{
 		db:            db,
 		router:        router,
 		wsUpgrader:    wsUpgrader,
-		broadcastFn:   broadcastFn,
+		broadcastFn:   nil, // 后面设置，因为依赖 s.broadcastChan
 		jwtSecret:     cfg.JWTSecret,
 		adminPassword: cfg.AdminPassword,
 		startTime:     time.Now(),
@@ -314,8 +349,24 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		broadcastChan: make(chan model.WSMessage, 100),
 		heartbeatChan: make(chan struct{}),
 		wsCompressor:  wsCompressor,
-		stopTicker:    make(chan struct{}),
+		stopTicker:         make(chan struct{}),
+		rateLimitCapacity:  cfg.RateLimitCapacity,
+		rateLimitRefillRate: cfg.RateLimitRefillRate,
 	}
+
+	// 设置 broadcastFn：将消息发送到 Server 的 broadcastChan
+	// 必须在 s 创建之后设置，因为依赖 s.broadcastChan
+	s.broadcastFn = func(msg model.WSMessage) {
+		select {
+		case s.broadcastChan <- msg:
+		default:
+			logger.L().Warn("[WS] Broadcast channel full, dropping message", zap.String("type", msg.Type))
+		}
+	}
+
+	// 将 broadcastFn 注入到 service 层，使业务层的广播消息能到达 WebSocket 客户端
+	telemetrySvc.SetBroadcastFn(s.broadcastFn)
+	alertSvc.SetBroadcastFn(s.broadcastFn)
 
 	// Setup middleware
 	s.setupMiddleware(corsOrigins)
@@ -349,7 +400,7 @@ func (s *HTTPServerNew) setupMiddleware(corsOrigins []string) {
 	s.router.Use(middleware.PrometheusMiddleware())
 	s.router.Use(middleware.CORS(corsOrigins))
 	// SEC-MEDIUM-04: 全局速率限制 - 作为最后一层，避免影响其他中间件
-	s.router.Use(middleware.DefaultRateLimit())
+	s.router.Use(middleware.DefaultRateLimit(s.rateLimitCapacity, s.rateLimitRefillRate))
 }
 
 // setupHandlers sets up all handlers
@@ -615,25 +666,10 @@ func getRequestContext(c *gin.Context) (context.Context, context.CancelFunc) {
 func generateRandomPassword(length int) string {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
-		logger.L().Error("Failed to generate password", zap.Error(err))
-		return generateFallbackPassword(length)
+		// 密码安全性不可妥协，crypto/rand 失败时直接终止
+		logger.L().Fatal("Failed to generate secure random password, refusing to use insecure fallback", zap.Error(err))
 	}
 	return hex.EncodeToString(bytes)[:length]
-}
-
-// generateFallbackPassword generates fallback password
-func generateFallbackPassword(length int) string {
-	base := time.Now().UnixNano()
-	result := ""
-	for i := 0; i < length; i++ {
-		digit := big.NewInt(base % 10)
-		result += digit.String()
-		base = base / 10
-		if base == 0 {
-			base = time.Now().UnixNano()
-		}
-	}
-	return result
 }
 
 // ============================================

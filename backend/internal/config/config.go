@@ -207,8 +207,8 @@ func LoadFromEnv() *Config {
 	if v := os.Getenv("RATE_LIMIT_ENABLED"); v == "false" {
 		rateLimitEnabled = false
 	}
-	rateLimitRequestsPerSecond := parseEnvInt("RATE_LIMIT_REQUESTS_PER_SECOND", 100)
-	rateLimitBurst := parseEnvInt("RATE_LIMIT_BURST", 200)
+	rateLimitRequestsPerSecond := parseEnvInt("RATE_LIMIT_REQUESTS_PER_SECOND", 1)
+	rateLimitBurst := parseEnvInt("RATE_LIMIT_BURST", 60)
 	rateLimitWindow := parseEnvInt("RATE_LIMIT_WINDOW", 60)
 
 	// FIX-040: Parse WAF configuration

@@ -487,7 +487,21 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(url.toString(), { headers });
+    // 导出文件通常耗时较长，使用 120 秒超时
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), { headers, signal: controller.signal });
+    } catch (err) {
+      if (controller.signal.aborted) {
+        throw new TimeoutError('导出请求超时，请缩小时间范围后重试');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const error = await response.json();

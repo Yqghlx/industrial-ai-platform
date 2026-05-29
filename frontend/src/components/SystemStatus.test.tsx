@@ -1,79 +1,60 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
-// Mock dependencies
-vi.mock('../i18n', () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
+vi.mock('./AuthContext', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('./Toast', () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 vi.mock('../lib/api', () => ({
   default: {
     getSystemStatus: vi.fn().mockResolvedValue({
       database: 'healthy',
-      redis: 'healthy',
-      uptime: 1000,
+      version: '1.0.0',
+      uptime: '10 days',
+      db_latency_ms: 5,
+      user_count: 10,
+      device_count: 50,
+      timestamp: new Date().toISOString(),
     }),
   },
 }));
-
-vi.mock('./Skeleton', () => ({
-  default: () => <div data-testid="skeleton" />,
-}));
-
-vi.mock('./Toast', () => ({
-  useToast: () => ({
-    showToast: vi.fn(),
-  }),
-}));
-
+vi.mock('../i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }));
 vi.mock('lucide-react', () => ({
-  Database: () => <div data-testid="database-icon" />,
-  Activity: () => <div data-testid="activity-icon" />,
-  Server: () => <div data-testid="server-icon" />,
-  Clock: () => <div data-testid="clock-icon" />,
-  CheckCircle: () => <div data-testid="check-icon" />,
-  AlertCircle: () => <div data-testid="alert-icon" />,
+  Database: () => <span>Database</span>,
+  Activity: () => <span>Activity</span>,
+  Server: () => <span>Server</span>,
+  Clock: () => <span>Clock</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+  AlertCircle: () => <span>AlertCircle</span>,
 }));
 
-// Import after mocks
 import SystemStatus from './SystemStatus';
 
 describe('SystemStatus', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders system status component', async () => {
-    render(<SystemStatus />);
-
+  it('renders system status page with header', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <SystemStatus />
+      </MemoryRouter>
+    );
     await waitFor(() => {
-      expect(screen.getByText(/nav.system/i)).toBeInTheDocument();
+      // 验证页面标题已渲染（i18n key）
+      expect(container.textContent).toContain('nav.system');
+      // 验证刷新按钮已渲染
+      expect(container.textContent).toContain('common.refresh');
     });
   });
 
-  it('shows loading skeleton initially', () => {
-    render(<SystemStatus />);
-
-    // Should show skeleton or loading state
-    expect(screen.getByText(/nav.system/i)).toBeInTheDocument();
-  });
-
-  it('has refresh button', async () => {
-    render(<SystemStatus />);
-
+  it('displays system status data after loading', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <SystemStatus />
+      </MemoryRouter>
+    );
     await waitFor(() => {
-      const refreshBtn = screen.getByRole('button', { name: /common.refresh/i });
-      expect(refreshBtn).toBeInTheDocument();
-    });
-  });
-
-  it('loads status data from API', async () => {
-    render(<SystemStatus />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/nav.system/i)).toBeInTheDocument();
+      // 验证 API 返回的数据已渲染
+      expect(container.textContent).toContain('1.0.0');
+      expect(container.textContent).toContain('10 days');
+      expect(container.textContent).toContain('system.healthy');
     });
   });
 });

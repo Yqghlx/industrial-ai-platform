@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/industrial-ai/platform/internal/config"
 	"github.com/industrial-ai/platform/internal/handler"
@@ -13,9 +14,15 @@ func main() {
 
 	// Create server config
 	serverCfg := handler.ServerConfig{
-		Port:        cfg.Port,
-		DatabaseURL: cfg.DatabaseURL,
-		JWTSecret:   cfg.JWTSecret,
+		Port:                 cfg.Port,
+		DatabaseURL:          cfg.DatabaseURL,
+		JWTSecret:            cfg.JWTSecret,
+		DBMaxOpenConns:       cfg.DBMaxOpenConns,
+		DBMaxIdleConns:       cfg.DBMaxIdleConns,
+		DBConnMaxLifetime:    time.Duration(cfg.DBConnMaxLifetime) * time.Second,
+		DBConnMaxIdleTime:    time.Duration(cfg.DBConnMaxIdleTime) * time.Second,
+		RateLimitCapacity:    cfg.RateLimitBurst,
+		RateLimitRefillRate:  float64(cfg.RateLimitRequestsPerSecond),
 	}
 
 	// Create and start server

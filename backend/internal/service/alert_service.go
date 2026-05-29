@@ -37,6 +37,9 @@ type AlertService struct {
 	deviceRepo       repository.DeviceRepositoryInterface
 	notifyManager    *notify.NotifyManager
 	config           AlertServiceConfig
+	// broadcastFn WebSocket 广播函数，由 handler 层注入
+	// 如果为 nil，广播消息将被静默丢弃（兼容旧调用方式）
+	broadcastFn func(msg model.WSMessage)
 }
 
 // NewAlertService creates a new alert service
@@ -60,6 +63,20 @@ func NewAlertService(
 		deviceRepo:       deviceRepo,
 		config:           config,
 		notifyManager:    notify.NewNotifyManager(config.FeishuWebhook, config.NotifyEnabled),
+	}
+}
+
+// SetBroadcastFn 设置 WebSocket 广播函数
+// 由 handler 层在创建 AlertService 后调用，注入实际的广播实现
+func (s *AlertService) SetBroadcastFn(fn func(msg model.WSMessage)) {
+	s.broadcastFn = fn
+}
+
+// broadcast 安全地执行 WebSocket 广播
+// 如果 broadcastFn 未设置，静默丢弃消息（不阻塞业务逻辑）
+func (s *AlertService) broadcast(msg model.WSMessage) {
+	if s.broadcastFn != nil {
+		s.broadcastFn(msg)
 	}
 }
 
@@ -221,7 +238,7 @@ func (s *AlertService) triggerActions(ctx context.Context, data *model.Telemetry
 	}
 
 	// Broadcast alert via WebSocket
-	Broadcast(model.WSMessage{
+	s.broadcast(model.WSMessage{
 		Type: "alert",
 		Payload: map[string]interface{}{
 			"id":        alert.ID,

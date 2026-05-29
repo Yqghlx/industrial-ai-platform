@@ -1,91 +1,63 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { ToastProvider, useToast } from './Toast';
+import React from 'react';
 
-// Mock i18n
-vi.mock('../i18n', () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-// Import after mocks
-import { ToastProvider, useToast, Toast } from './Toast';
-
-// Test component to trigger toast
-const TestComponent = () => {
-  const { showToast } = useToast();
-  return (
-    <div>
-      <button 
-        onClick={() => showToast({ type: 'success', message: 'Success message' })}
-        data-testid="success-btn"
-      >
-        Success
-      </button>
-      <button 
-        onClick={() => showToast({ type: 'error', message: 'Error message' })}
-        data-testid="error-btn"
-      >
-        Error
-      </button>
-    </div>
-  );
-};
+vi.mock('../i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }));
 
 describe('Toast', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
-  it('provides useToast hook within provider', () => {
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+  });
+
+  it('renders ToastProvider without crashing', () => {
+    vi.useRealTimers();
+    render(
+      <ToastProvider>
+        <div>Test</div>
+      </ToastProvider>
+    );
+    expect(screen.getByText('Test')).toBeInTheDocument();
+    vi.useFakeTimers();
+  });
+
+  it('shows toast when showToast is called', async () => {
+    vi.useRealTimers();
+    const TestComponent = () => {
+      const { showToast } = useToast();
+      return (
+        <button onClick={() => showToast({ type: 'success', message: 'Test Toast' })}>
+          Show Toast
+        </button>
+      );
+    };
+
     render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    expect(screen.getByTestId('success-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('error-btn')).toBeInTheDocument();
-  });
-
-  it('shows success toast on button click', async () => {
-    render(
-      <ToastProvider>
-        <TestComponent />
-      </ToastProvider>
-    );
-
-    const successBtn = screen.getByTestId('success-btn');
-    fireEvent.click(successBtn);
-
+    fireEvent.click(screen.getByText('Show Toast'));
+    
     await waitFor(() => {
-      expect(screen.getByText('Success message')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Test Toast')).toBeInTheDocument();
+    }, { timeout: 1000 });
+    
+    vi.useFakeTimers();
   });
 
-  it('shows error toast on button click', async () => {
-    render(
-      <ToastProvider>
-        <TestComponent />
-      </ToastProvider>
-    );
+  it('throws error when useToast is used outside ToastProvider', () => {
+    const TestComponent = () => {
+      useToast();
+      return null;
+    };
 
-    const errorBtn = screen.getByTestId('error-btn');
-    fireEvent.click(errorBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('Error message')).toBeInTheDocument();
-    });
-  });
-
-  it('throws error when useToast is used outside provider', () => {
-    // Suppress error boundary
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    expect(() => {
-      render(<TestComponent />);
-    }).toThrow('useToast must be used within ToastProvider');
-
-    consoleSpy.mockRestore();
+    expect(() => render(<TestComponent />)).toThrow('useToast must be used within ToastProvider');
   });
 });

@@ -82,23 +82,8 @@ func TestGenerateRandomPassword_DifferentLengths(t *testing.T) {
 	assert.Len(t, password32, 32)
 }
 
-func TestGenerateFallbackPassword(t *testing.T) {
-	password := generateFallbackPassword(16)
-
-	assert.Len(t, password, 16)
-	// Should be numeric
-	for _, c := range password {
-		assert.True(t, c >= '0' && c <= '9')
-	}
-}
-
-func TestGenerateFallbackPassword_DifferentLengths(t *testing.T) {
-	password8 := generateFallbackPassword(8)
-	password16 := generateFallbackPassword(16)
-
-	assert.Len(t, password8, 8)
-	assert.Len(t, password16, 16)
-}
+// generateFallbackPassword 已被移除：crypto/rand 失败时直接 Fatal，
+// 不再使用可预测的弱密码降级路径。相关测试已删除。
 
 // ============================================
 // Backward Compatibility Tests

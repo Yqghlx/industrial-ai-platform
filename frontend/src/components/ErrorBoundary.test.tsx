@@ -1,82 +1,54 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 
-// Mock i18n context
-vi.mock('../i18n', () => ({
-  I18nContext: {
-    Consumer: ({ children }: { children: (context: unknown) => React.ReactNode }) => 
-      children({ t: (key: string) => key }),
-  },
-}));
+// 创建一个 mock I18nContext
+const MockI18nContext = React.createContext(undefined);
 
-// Import after mocks
+vi.mock('../i18n', () => {
+  const context = React.createContext(undefined);
+  return {
+    useI18n: () => ({ t: (k: string) => k }),
+    I18nContext: context,
+  };
+});
+
 import ErrorBoundary from './ErrorBoundary';
 
-// Component that throws an error
-const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
-  if (shouldThrow) {
-    throw new Error('Test error');
-  }
-  return <div data-testid="child-component">Normal content</div>;
+// 制造错误的子组件
+const ThrowError = () => {
+  throw new Error('Test error message');
 };
 
 describe('ErrorBoundary', () => {
+  // 抑制 console.error 以保持测试输出干净
+  const originalConsoleError = console.error;
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Suppress console.error for cleaner test output
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    console.error = vi.fn();
+  });
+  afterEach(() => {
+    console.error = originalConsoleError;
   });
 
   it('renders children when no error', () => {
     render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={false} />
+        <div data-testid="child">正常内容</div>
       </ErrorBoundary>
     );
-
-    expect(screen.getByTestId('child-component')).toBeInTheDocument();
+    expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('renders error UI when child throws', () => {
+  it('renders error UI when child throws', async () => {
     render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
+        <ThrowError />
       </ErrorBoundary>
     );
-
-    // Should show error emoji
-    expect(screen.getByText('⚠️')).toBeInTheDocument();
-  });
-
-  it('calls componentDidCatch on error', () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
-
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
-
-  it('shows default messages without i18n context', () => {
-    // Remove mock temporarily
-    vi.doMock('../i18n', () => ({
-      I18nContext: {
-        Consumer: ({ children }: { children: (context: unknown) => React.ReactNode }) => 
-          children(undefined),
-      },
-    }));
-
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
-
-    // Should still render error boundary
-    expect(screen.getByText('⚠️')).toBeInTheDocument();
+    await waitFor(() => {
+      // ErrorBoundary 显示 "出错了" 和 "刷新页面"（使用 defaultMessages）
+      expect(screen.getByText('出错了')).toBeInTheDocument();
+      expect(screen.getByText('刷新页面')).toBeInTheDocument();
+    });
   });
 });

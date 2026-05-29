@@ -51,6 +51,14 @@ func main() {
 		WSCompressionEnabled: appCfg.WSCompressionEnabled,
 		WSCompressionLevel:   appCfg.WSCompressionLevel,
 		WSCompressionMinSize: appCfg.WSCompressionMinSize,
+		// 数据库连接池配置
+		DBMaxOpenConns:    appCfg.DBMaxOpenConns,
+		DBMaxIdleConns:    appCfg.DBMaxIdleConns,
+		DBConnMaxLifetime: time.Duration(appCfg.DBConnMaxLifetime) * time.Second,
+		DBConnMaxIdleTime: time.Duration(appCfg.DBConnMaxIdleTime) * time.Second,
+		// 全局限流配置
+		RateLimitCapacity:   appCfg.RateLimitBurst,
+		RateLimitRefillRate: float64(appCfg.RateLimitRequestsPerSecond),
 	}
 
 	// P2-01: Get server host from config for logging

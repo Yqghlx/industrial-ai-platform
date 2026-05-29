@@ -1,5 +1,8 @@
 # 生产环境 HTTPS Docker Compose 配置
 # 使用方式: docker-compose -f docker-compose.yml -f docker-compose.prod-ssl.yml up -d
+#
+# 注意：基础 docker-compose.yml 已将 PostgreSQL 和 Redis 端口绑定到 127.0.0.1
+# 数据层端口不对外暴露，后端通过 Docker 内部网络访问
 
 version: '3.8'
 

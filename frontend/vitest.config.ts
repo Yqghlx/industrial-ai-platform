@@ -13,11 +13,18 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'src/test/',
+        'src/**/*.d.ts',
+        'src/types/**',
       ],
+      all: true,
+      lines: 70,
+      functions: 70,
+      branches: 70,
+      statements: 70,
     },
   },
 });

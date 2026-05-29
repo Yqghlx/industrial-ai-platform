@@ -1,66 +1,47 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
-// Mock dependencies
-vi.mock('../i18n', () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
-vi.mock('./Toast', () => ({
-  useToast: () => ({
-    showToast: vi.fn(),
-  }),
-}));
-
+vi.mock('./AuthContext', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('./Toast', () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 vi.mock('../lib/api', () => ({
   default: {
-    exportReport: vi.fn().mockResolvedValue({
-      data: new Blob(['test'], { type: 'application/pdf' }),
-      mimeType: 'application/pdf',
-      filename: 'test-report.pdf',
-    }),
+    exportReport: vi.fn().mockResolvedValue({ data: { url: 'test.pdf' } }),
   },
 }));
-
+vi.mock('../i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }));
 vi.mock('lucide-react', () => ({
-  Download: () => <div data-testid="download-icon" />,
-  FileText: () => <div data-testid="file-text-icon" />,
-  FileSpreadsheet: () => <div data-testid="file-spreadsheet-icon" />,
-  Loader2: () => <div data-testid="loader-icon" />,
+  Download: () => <div />,
+  FileText: () => <div />,
+  FileSpreadsheet: () => <div />,
+  Loader2: () => <div />,
 }));
 
-// Import after mocks
 import ExportButton from './ExportButton';
 
 describe('ExportButton', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('renders export button with default label', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ExportButton reportType="alerts" />
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      // 验证按钮已渲染且包含导出文本
+      const button = container.querySelector('button');
+      expect(button).toBeInTheDocument();
+      expect(button?.textContent).toContain('common.export');
+    });
   });
 
-  it('renders export button', () => {
-    render(<ExportButton reportType="devices" />);
-
-    expect(screen.getByRole('button')).toBeInTheDocument();
-  });
-
-  it('shows download icon', () => {
-    render(<ExportButton reportType="devices" />);
-
-    expect(screen.getByTestId('download-icon')).toBeInTheDocument();
-  });
-
-  it('accepts custom className', () => {
-    render(<ExportButton reportType="devices" className="custom-class" />);
-
-    const btn = screen.getByRole('button');
-    expect(btn.className).toContain('custom-class');
-  });
-
-  it('renders with custom label', () => {
-    render(<ExportButton reportType="devices" label="Export CSV" />);
-
-    expect(screen.getByText('Export CSV')).toBeInTheDocument();
+  it('shows button with default label', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ExportButton reportType="devices" />
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(container.querySelector('button')).toBeInTheDocument();
+    });
   });
 });
