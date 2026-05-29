@@ -158,7 +158,11 @@ func (s *RBACService) SeedDefaultRolesAndPermissions(ctx context.Context, tenant
 	}
 
 	for _, role := range defaultRoles {
-		_, err := s.CreateRole(ctx, tenantID, role.name, role.displayName, role.description)
+		_, err := s.CreateRole(ctx, &model.Role{
+			Name:        role.name,
+			Description: role.description,
+			TenantID:    tenantID,
+		})
 		if err != nil {
 			// Ignore if role already exists
 			continue

@@ -63,10 +63,15 @@ func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *Servi
 		factory.tenantService = NewTenantService(tenantRepo)
 	}
 
-	// RBACService: 接口方法签名与实现不匹配，暂时跳过
-	// 注意：RBACService.CreateRole签名是 (ctx, tenantID, name...) 而接口期望 (ctx, *model.Role)
-	// 这是一个预先存在的问题，可通过 SetRBACService 方法手动注入
-	// TODO: 统一RBACService接口签名后可在此处初始化
+	// RBACService: 使用 RBACRepository 初始化
+	rbacRepo, rbacErr := repoFactory.GetRBACRepository()
+	if rbacErr == nil && rbacRepo != nil {
+		factory.rbacService = NewRBACServiceWithRBACRepo(
+			rbacRepo,
+			repoFactory.GetUserRepository(),
+			nil, // tenantRepo 已在上面获取，此处传 nil
+		)
+	}
 
 	// 2. AlertService（带配置）
 	alertSvc := NewAlertService(

@@ -37,6 +37,12 @@ type AlertRepositoryInterface interface {
 	DeleteArchivedAlerts(ctx context.Context, daysOld int) (int, error)
 	// GetAlertStatistics 获取告警统计信息
 	GetAlertStatistics(ctx context.Context) (*AlertStatistics, error)
+	// GetTrendData 按日期分组获取告警趋势数据
+	GetTrendData(ctx context.Context, days int) ([]map[string]interface{}, error)
+	// GetDeviceRankingData 按设备分组获取告警数量排名
+	GetDeviceRankingData(ctx context.Context, limit int) ([]map[string]interface{}, error)
+	// GetEfficiencyData 获取告警处理效率数据（平均解决时间和确认率）
+	GetEfficiencyData(ctx context.Context) (*AlertEfficiencyData, error)
 }
 
 // AlertStatistics 告警统计信息
@@ -51,4 +57,12 @@ type AlertStatistics struct {
 	AvgResolveTime int `json:"avg_resolve_time_seconds"` // 平均解决时间（秒）
 	CriticalCount  int `json:"critical_count"`
 	WarningCount   int `json:"warning_count"`
+}
+
+// AlertEfficiencyData 告警处理效率数据
+type AlertEfficiencyData struct {
+	AvgResolveTime float64 `json:"avg_resolve_time"` // 平均解决时间（秒）
+	TotalAlerts    int     `json:"total_alerts"`     // 告警总数
+	ResolvedAlerts int     `json:"resolved_alerts"`  // 已确认/解决的告警数
+	AckRate        float64 `json:"ack_rate"`          // 确认率（0-1）
 }

@@ -37,6 +37,9 @@ type DeviceServiceInterface interface {
 
 	// GetGraph 获取设备关系图
 	GetGraph(ctx context.Context) (map[string]interface{}, error)
+
+	// GetDeviceStats 获取设备统计数据
+	GetDeviceStats(ctx context.Context, deviceID string) (map[string]interface{}, error)
 }
 
 // AuthServiceInterface 认证服务接口
@@ -173,6 +176,8 @@ type NotificationServiceInterface interface {
 type BlackBoxServiceInterface interface {
 	Create(ctx context.Context, record *model.BlackBoxRecord) error
 	List(ctx context.Context, deviceID string, page, pageSize int) ([]model.BlackBoxRecord, int, error)
+	// GetRecordByID 根据 ID 获取单条黑匣子记录
+	GetRecordByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error)
 }
 
 // TenantServiceInterface 租户服务接口
@@ -201,3 +206,6 @@ type RBACServiceInterface interface {
 	AssignPermissionToRole(ctx context.Context, roleID, permID int) error
 	RemovePermissionFromRole(ctx context.Context, roleID, permID int) error
 }
+
+// 确保 RBACService 实现 RBACServiceInterface
+var _ RBACServiceInterface = (*RBACService)(nil)

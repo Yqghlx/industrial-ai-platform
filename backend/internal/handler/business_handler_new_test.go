@@ -571,6 +571,13 @@ func TestBusinessHandlerNew_GetWorkOrder_Placeholder(t *testing.T) {
 	mockReportSvc := new(MockReportService)
 	mockAlertSvc := new(MockAlertService)
 
+	// 设置 mock 期望
+	mockWorkOrderSvc.On("GetByID", mock.Anything, 123).Return(&model.WorkOrder{
+		ID:     123,
+		Title:  "测试工单",
+		Status: "pending",
+	}, nil)
+
 	broadcastFunc := func(msg model.WSMessage) {}
 
 	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
@@ -583,6 +590,7 @@ func TestBusinessHandlerNew_GetWorkOrder_Placeholder(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockWorkOrderSvc.AssertExpectations(t)
 }
 
 func TestBusinessHandlerNew_ExportDevices_Placeholder(t *testing.T) {
@@ -667,6 +675,13 @@ func TestBusinessHandlerNew_GetBlackBoxData_Placeholder(t *testing.T) {
 	mockReportSvc := new(MockReportService)
 	mockAlertSvc := new(MockAlertService)
 
+	// 设置 mock 期望
+	mockBlackBoxSvc.On("GetRecordByID", mock.Anything, int64(123)).Return(&model.BlackBoxRecord{
+		ID:       123,
+		DeviceID: "device-1",
+		Summary:  "测试黑匣子记录",
+	}, nil)
+
 	broadcastFunc := func(msg model.WSMessage) {}
 
 	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
@@ -679,6 +694,7 @@ func TestBusinessHandlerNew_GetBlackBoxData_Placeholder(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockBlackBoxSvc.AssertExpectations(t)
 }
 
 func TestBusinessHandlerNew_ListWorkOrders_ServiceError(t *testing.T) {

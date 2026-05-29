@@ -49,33 +49,29 @@ func NewRBACServiceWithRBACRepo(
 }
 
 // CreateRole creates a new role
+// 接受 *model.Role 参数，从 role 对象中提取字段调用 repo
 // FIX-019: 添加 Context 超时设置
-func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayName, description string) (*model.Role, error) {
+func (s *RBACService) CreateRole(ctx context.Context, role *model.Role) (*model.Role, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
 
 	// Check if role already exists
 	if s.roleRepo != nil {
-		existing, err := s.roleRepo.GetByName(ctx, tenantID, name)
+		existing, err := s.roleRepo.GetByName(ctx, role.TenantID, role.Name)
 		if err == nil && existing != nil {
 			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeConflict, "Role already exists", "")
 		}
 	} else if s.rbacRepo != nil {
-		existing, err := s.rbacRepo.GetRoleByName(ctx, name)
+		existing, err := s.rbacRepo.GetRoleByName(ctx, role.Name)
 		if err == nil && existing != nil {
 			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeConflict, "Role already exists", "")
 		}
 	}
 
-	role := &model.Role{
-		Name:        name,
-		Description: description,
-		TenantID:    tenantID,
-		IsSystem:    false,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
+	role.IsSystem = false
+	role.CreatedAt = time.Now()
+	role.UpdatedAt = time.Now()
 
 	var err error
 	if s.roleRepo != nil {
@@ -91,9 +87,9 @@ func (s *RBACService) CreateRole(ctx context.Context, tenantID, name, displayNam
 	return role, nil
 }
 
-// GetRole retrieves a role by ID
+// GetRoleByID retrieves a role by ID
 // FIX-019: 添加 Context 超时设置
-func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) {
+func (s *RBACService) GetRoleByID(ctx context.Context, id int) (*model.Role, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
@@ -114,6 +110,11 @@ func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) 
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 	return role, nil
+}
+
+// GetRole 是 GetRoleByID 的别名，保持向后兼容
+func (s *RBACService) GetRole(ctx context.Context, id int) (*model.Role, error) {
+	return s.GetRoleByID(ctx, id)
 }
 
 // GetRoleWithPermissions retrieves a role with its permissions
@@ -152,9 +153,33 @@ func (s *RBACService) GetRoleWithPermissions(ctx context.Context, id int) (*mode
 	return result, nil
 }
 
-// ListRoles retrieves all roles for a tenant
+// ListRoles retrieves all roles（无参数版本，用于匹配 RBACServiceInterface）
 // FIX-019: 添加 Context 超时设置
-func (s *RBACService) ListRoles(ctx context.Context, tenantID string) ([]model.Role, error) {
+func (s *RBACService) ListRoles(ctx context.Context) ([]model.Role, error) {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
+	var roles []model.Role
+	var err error
+
+	// 查询所有角色，不按租户过滤
+	if s.roleRepo != nil {
+		// roleRepo.ListByTenant 传入空字符串可获取所有角色
+		roles, err = s.roleRepo.ListByTenant(ctx, "")
+	} else if s.rbacRepo != nil {
+		roles, err = s.rbacRepo.ListRoles(ctx, "")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list roles: %w", err)
+	}
+	return roles, nil
+}
+
+// ListRolesByTenant retrieves all roles for a specific tenant（带租户过滤版本，保持兼容）
+// FIX-019: 添加 Context 超时设置
+func (s *RBACService) ListRolesByTenant(ctx context.Context, tenantID string) ([]model.Role, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
@@ -175,35 +200,29 @@ func (s *RBACService) ListRoles(ctx context.Context, tenantID string) ([]model.R
 }
 
 // UpdateRole updates a role
+// 接受 *model.Role 参数，从 role 对象中提取字段更新
 // FIX-019: 添加 Context 超时设置
-func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string]interface{}) error {
+func (s *RBACService) UpdateRole(ctx context.Context, role *model.Role) (*model.Role, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
 
-	var role *model.Role
 	var err error
 
+	// 验证角色存在
 	if s.roleRepo != nil {
-		role, err = s.roleRepo.GetByID(ctx, id)
+		_, err = s.roleRepo.GetByID(ctx, role.ID)
 	} else if s.rbacRepo != nil {
-		role, err = s.rbacRepo.GetRoleByID(ctx, id)
+		_, err = s.rbacRepo.GetRoleByID(ctx, role.ID)
 	}
 
 	if err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
-			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
-		return fmt.Errorf("failed to get role: %w", err)
+		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 
-	// Apply updates
-	if name, ok := updates["name"].(string); ok {
-		role.Name = name
-	}
-	if description, ok := updates["description"].(string); ok {
-		role.Description = description
-	}
 	role.UpdatedAt = time.Now()
 
 	if s.roleRepo != nil {
@@ -213,10 +232,10 @@ func (s *RBACService) UpdateRole(ctx context.Context, id int, updates map[string
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to update role: %w", err)
+		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
 
-	return nil
+	return role, nil
 }
 
 // DeleteRole deletes a role by ID
@@ -259,7 +278,42 @@ func (s *RBACService) DeleteRole(ctx context.Context, id int) error {
 	return nil
 }
 
-// AssignRole assigns a role to a user
+// AssignRoleToUser assigns a role to a user（无 tenantID 版本，匹配 RBACServiceInterface）
+// FIX-019: 添加 Context 超时设置
+func (s *RBACService) AssignRoleToUser(ctx context.Context, userID, roleID int) error {
+	// FIX-019: 确保 context 有超时
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+
+	// Verify role exists
+	var err error
+	if s.roleRepo != nil {
+		_, err = s.roleRepo.GetByID(ctx, roleID)
+	} else if s.rbacRepo != nil {
+		_, err = s.rbacRepo.GetRoleByID(ctx, roleID)
+	}
+
+	if err != nil {
+		if errors.Is(err, repository.ErrRoleNotFound) {
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
+		}
+		return fmt.Errorf("failed to verify role: %w", err)
+	}
+
+	if s.roleRepo != nil {
+		err = s.roleRepo.AssignRoleToUser(ctx, userID, roleID, "")
+	} else if s.rbacRepo != nil {
+		err = s.rbacRepo.AssignRoleToUser(ctx, userID, roleID, "")
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to assign role: %w", err)
+	}
+
+	return nil
+}
+
+// AssignRole assigns a role to a user with tenant context（带租户版本，保持向后兼容）
 // FIX-019: 添加 Context 超时设置
 func (s *RBACService) AssignRole(ctx context.Context, userID, roleID int, tenantID string) error {
 	// FIX-019: 确保 context 有超时
@@ -312,6 +366,11 @@ func (s *RBACService) RemoveRoleFromUser(ctx context.Context, userID, roleID int
 		return fmt.Errorf("failed to remove role from user: %w", err)
 	}
 	return nil
+}
+
+// ListUserRoles retrieves all roles for a user（匹配 RBACServiceInterface）
+func (s *RBACService) ListUserRoles(ctx context.Context, userID int) ([]model.Role, error) {
+	return s.GetUserRoles(ctx, userID)
 }
 
 // GetUserRoles retrieves all roles for a user

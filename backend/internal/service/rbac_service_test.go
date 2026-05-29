@@ -90,7 +90,7 @@ func TestRBACService_CreateRole_Success(t *testing.T) {
 		WithArgs("custom-role", "A custom role", "", false, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(10))
 
-	role, err := svc.CreateRole(ctx, "", "custom-role", "", "A custom role")
+	role, err := svc.CreateRole(ctx, &model.Role{Name: "custom-role", Description: "A custom role"})
 	assert.NoError(t, err)
 	assert.NotNil(t, role)
 	assert.Equal(t, "custom-role", role.Name)
@@ -107,7 +107,7 @@ func TestRBACService_CreateRole_AlreadyExists(t *testing.T) {
 		WithArgs("admin").
 		WillReturnRows(rows)
 
-	role, err := svc.CreateRole(ctx, "", "admin", "", "Admin role")
+	role, err := svc.CreateRole(ctx, &model.Role{Name: "admin", Description: "Admin role"})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Role already exists")
 	assert.Nil(t, role)
@@ -124,7 +124,7 @@ func TestRBACService_CreateRole_DBError(t *testing.T) {
 	mock.ExpectQuery(`INSERT INTO roles`).
 		WillReturnError(errors.New("db error"))
 
-	role, err := svc.CreateRole(ctx, "", "new-role", "", "desc")
+	role, err := svc.CreateRole(ctx, &model.Role{Name: "new-role", Description: "desc"})
 	assert.Error(t, err)
 	assert.Nil(t, role)
 }
@@ -177,10 +177,10 @@ func TestRBACService_ListRoles_Success(t *testing.T) {
 		AddRow(2, "viewer", "Viewer", "t1", false, testTime, testTime)
 
 	mock.ExpectQuery(`SELECT .* FROM roles`).
-		WithArgs("t1").
+		WithArgs("").
 		WillReturnRows(rows)
 
-	roles, err := svc.ListRoles(ctx, "t1")
+	roles, err := svc.ListRoles(ctx)
 	assert.NoError(t, err)
 	assert.Len(t, roles, 2)
 }
@@ -190,10 +190,10 @@ func TestRBACService_ListRoles_DBError(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectQuery(`SELECT .* FROM roles`).
-		WithArgs("t1").
+		WithArgs("").
 		WillReturnError(errors.New("db error"))
 
-	roles, err := svc.ListRoles(ctx, "t1")
+	roles, err := svc.ListRoles(ctx)
 	assert.Error(t, err)
 	assert.Nil(t, roles)
 }
@@ -217,10 +217,7 @@ func TestRBACService_UpdateRole_Success(t *testing.T) {
 		WithArgs("new-name", "new desc", sqlmock.AnyArg(), 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := svc.UpdateRole(ctx, 1, map[string]interface{}{
-		"name":        "new-name",
-		"description": "new desc",
-	})
+	_, err := svc.UpdateRole(ctx, &model.Role{ID: 1, Name: "new-name", Description: "new desc"})
 	assert.NoError(t, err)
 }
 
@@ -232,7 +229,7 @@ func TestRBACService_UpdateRole_NotFound(t *testing.T) {
 		WithArgs(999).
 		WillReturnError(repository.ErrRoleNotFound)
 
-	err := svc.UpdateRole(ctx, 999, map[string]interface{}{"name": "x"})
+	_, err := svc.UpdateRole(ctx, &model.Role{ID: 999, Name: "x"})
 	assert.Contains(t, err.Error(), "Role not found")
 }
 

@@ -115,6 +115,13 @@ func (s *BlackBoxService) Create(ctx context.Context, record *model.BlackBoxReco
 	return s.blackBoxRepo.Create(ctx, record)
 }
 
+// GetRecordByID 根据 ID 获取单条黑匣子记录
+func (s *BlackBoxService) GetRecordByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error) {
+	ctx, cancel := ensureContextTimeout(ctx)
+	defer cancel()
+	return s.blackBoxRepo.GetByID(ctx, id)
+}
+
 // TelemetryService补充方法
 // FIX-019: 添加 Context 超时设置
 func (s *TelemetryService) GetLatestByDevice(ctx context.Context, deviceID string, limit int) ([]model.TelemetryData, error) {

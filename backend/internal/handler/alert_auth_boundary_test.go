@@ -47,6 +47,10 @@ func TestAlertHandlerNew_GetTrend_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetTrendReport", mock.Anything, "7d").Return(map[string]interface{}{
+		"period": "7d",
+		"trend":  []map[string]interface{}{},
+	}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -57,8 +61,8 @@ func TestAlertHandlerNew_GetTrend_Error(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	// Handler might return 200 with empty result
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandlerNew_GetRanking_Error(t *testing.T) {
@@ -66,6 +70,7 @@ func TestAlertHandlerNew_GetRanking_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 10).Return([]map[string]interface{}{}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -76,8 +81,8 @@ func TestAlertHandlerNew_GetRanking_Error(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	// Handler might return 200
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandlerNew_GetEfficiency_Error(t *testing.T) {
@@ -85,6 +90,12 @@ func TestAlertHandlerNew_GetEfficiency_Error(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(map[string]interface{}{
+		"avg_resolve_time": 0.0,
+		"ack_rate":         0.0,
+		"total_alerts":     0,
+		"resolved_alerts":  0,
+	}, nil)
 
 	handler := NewAlertHandler(mockAlertSvc, func(msg model.WSMessage) {})
 
@@ -95,8 +106,8 @@ func TestAlertHandlerNew_GetEfficiency_Error(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	// Handler might return 200
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandlerNew_CreateRule_BadJSON(t *testing.T) {

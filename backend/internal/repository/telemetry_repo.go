@@ -472,6 +472,8 @@ func (r *NotificationRepository) MarkRead(ctx context.Context, id int) error {
 type BlackBoxRepositoryInterface interface {
 	Create(ctx context.Context, record *model.BlackBoxRecord) error
 	List(ctx context.Context, deviceID string, page, pageSize int) ([]model.BlackBoxRecord, int, error)
+	// GetByID 根据 ID 获取单条黑匣子记录
+	GetByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error)
 }
 
 // BlackBoxRepository handles black box record data access
@@ -555,6 +557,29 @@ func (r *BlackBoxRepository) List(ctx context.Context, deviceID string, page, pa
 		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
 	}
 	return records, total, nil
+}
+
+// GetByID 根据 ID 获取单条黑匣子记录
+func (r *BlackBoxRepository) GetByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error) {
+	query := `
+		SELECT id, device_id, trigger_type, start_time, end_time, summary, created_at
+		FROM blackbox_records
+		WHERE id = $1
+	`
+	var record model.BlackBoxRecord
+	var summary sql.NullString
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&record.ID, &record.DeviceID, &record.TriggerType, &record.StartTime,
+		&record.EndTime, &summary, &record.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("black box record not found: %d", id)
+		}
+		return nil, err
+	}
+	record.Summary = summary.String
+	return &record, nil
 }
 
 // ReportRepositoryInterface defines the interface for report repository

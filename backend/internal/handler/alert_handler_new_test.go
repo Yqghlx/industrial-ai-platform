@@ -173,6 +173,10 @@ func TestAlertHandler_GetTrend(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetTrendReport", mock.Anything, "30d").Return(map[string]interface{}{
+		"period": "30d",
+		"trend":  []map[string]interface{}{},
+	}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -193,6 +197,7 @@ func TestAlertHandler_GetTrend(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &response)
 
 	assert.Equal(t, "30d", response["period"])
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandler_GetRanking(t *testing.T) {
@@ -200,6 +205,7 @@ func TestAlertHandler_GetRanking(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetDeviceRanking", mock.Anything, 20).Return([]map[string]interface{}{}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -220,6 +226,7 @@ func TestAlertHandler_GetRanking(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &response)
 
 	assert.Equal(t, float64(20), response["limit"])
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandler_GetEfficiency(t *testing.T) {
@@ -227,6 +234,10 @@ func TestAlertHandler_GetEfficiency(t *testing.T) {
 	router := gin.New()
 
 	mockAlertSvc := new(mocks.MockAlertService)
+	mockAlertSvc.On("GetEfficiencyReport", mock.Anything).Return(map[string]interface{}{
+		"avg_resolve_time": 0.0,
+		"ack_rate":         0.0,
+	}, nil)
 	broadcastChan := make(chan model.WSMessage, 100)
 	broadcastFunc := func(msg model.WSMessage) {
 		broadcastChan <- msg
@@ -246,7 +257,8 @@ func TestAlertHandler_GetEfficiency(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 
-	assert.Contains(t, response, "efficiency")
+	assert.Contains(t, response, "avg_resolve_time")
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestAlertHandler_ListAlerts_ServiceError(t *testing.T) {

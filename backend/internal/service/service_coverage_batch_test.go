@@ -57,16 +57,17 @@ func TestAlertService_GetTrendReport(t *testing.T) {
 	svc := &AlertService{alertRepo: mockAlertRepo}
 
 	ctx := context.Background()
-	now := time.Now()
 
-	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{
-		{ID: 1, Severity: "high", TriggeredAt: now},
-		{ID: 2, Severity: "medium", TriggeredAt: now.Add(-24 * time.Hour)},
-	}, 2, nil)
+	mockAlertRepo.On("GetTrendData", mock.Anything, 7).Return([]map[string]interface{}{
+		{"date": "2026-05-22", "count": 5},
+		{"date": "2026-05-23", "count": 3},
+	}, nil)
 
 	report, err := svc.GetTrendReport(ctx, "7d")
 	assert.NoError(t, err)
 	assert.NotNil(t, report)
+	assert.Equal(t, "7d", report["period"])
+	mockAlertRepo.AssertExpectations(t)
 }
 
 func TestAlertService_GetDeviceRanking(t *testing.T) {
@@ -75,14 +76,14 @@ func TestAlertService_GetDeviceRanking(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{
-		{ID: 1, DeviceID: "CNC-001", Severity: "high"},
-		{ID: 2, DeviceID: "CNC-002", Severity: "low"},
-	}, 2, nil)
+	mockAlertRepo.On("GetDeviceRankingData", mock.Anything, 10).Return([]map[string]interface{}{
+		{"device_id": "CNC-001", "device_name": "CNC机床1", "alert_count": 5},
+	}, nil)
 
 	ranking, err := svc.GetDeviceRanking(ctx, 10)
 	assert.NoError(t, err)
 	assert.NotNil(t, ranking)
+	mockAlertRepo.AssertExpectations(t)
 }
 
 func TestAlertService_GetEfficiencyReport(t *testing.T) {
@@ -91,12 +92,17 @@ func TestAlertService_GetEfficiencyReport(t *testing.T) {
 
 	ctx := context.Background()
 
-	mockAlertRepo.On("CountActive", mock.MatchedBy(func(ctx context.Context) bool { return true })).Return(5, nil)
-	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "", 1, 100).Return([]model.Alert{}, 0, nil)
+	mockAlertRepo.On("GetEfficiencyData", mock.Anything).Return(&repository.AlertEfficiencyData{
+		AvgResolveTime: 3600.0,
+		TotalAlerts:    120,
+		ResolvedAlerts: 102,
+		AckRate:        0.85,
+	}, nil)
 
 	report, err := svc.GetEfficiencyReport(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, report)
+	mockAlertRepo.AssertExpectations(t)
 }
 
 func TestAlertService_CreateRule(t *testing.T) {

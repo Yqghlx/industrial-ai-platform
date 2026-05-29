@@ -150,38 +150,46 @@ func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 	})
 }
 
-// GetTrend 获取告警趋势报告（占位实现）
+// GetTrend 获取告警趋势报告
 func (h *AlertHandler) GetTrend(c *gin.Context) {
+	ctx := c.Request.Context()
 	period := c.DefaultQuery("period", "7d")
 
-	// 占位实现 - 实际需要扩展 AlertServiceInterface
-	c.JSON(200, gin.H{
-		"period":  period,
-		"trend":   []interface{}{},
-		"message": "GetTrend requires AlertServiceInterface extension",
-	})
+	result, err := h.alertSvc.GetTrendReport(ctx, period)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(200, result)
 }
 
-// GetRanking 获取告警设备排名（占位实现）
+// GetRanking 获取告警设备排名
 func (h *AlertHandler) GetRanking(c *gin.Context) {
+	ctx := c.Request.Context()
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
-	// 占位实现 - 实际需要扩展 AlertServiceInterface
+	ranking, err := h.alertSvc.GetDeviceRanking(ctx, limit)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
 	c.JSON(200, gin.H{
-		"data":    []interface{}{},
-		"limit":   limit,
-		"message": "GetRanking requires AlertServiceInterface extension",
+		"data":  ranking,
+		"limit": limit,
 	})
 }
 
-// GetEfficiency 获取告警处理效率（占位实现）
+// GetEfficiency 获取告警处理效率
 func (h *AlertHandler) GetEfficiency(c *gin.Context) {
-	// 占位实现 - 实际需要扩展 AlertServiceInterface
-	c.JSON(200, gin.H{
-		"efficiency": map[string]interface{}{
-			"avg_resolve_time": 0,
-			"ack_rate":         0,
-		},
-		"message": "GetEfficiency requires AlertServiceInterface extension",
-	})
+	ctx := c.Request.Context()
+
+	result, err := h.alertSvc.GetEfficiencyReport(ctx)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(200, result)
 }

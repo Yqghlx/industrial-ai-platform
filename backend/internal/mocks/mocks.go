@@ -69,6 +69,14 @@ func (m *MockDeviceService) GetGraph(ctx context.Context) (map[string]interface{
 	return args.Get(0).(map[string]interface{}), args.Error(1)
 }
 
+func (m *MockDeviceService) GetDeviceStats(ctx context.Context, deviceID string) (map[string]interface{}, error) {
+	args := m.Called(ctx, deviceID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]interface{}), args.Error(1)
+}
+
 // ============================================
 // Mock AuthService
 // ============================================

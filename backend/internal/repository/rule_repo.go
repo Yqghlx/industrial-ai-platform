@@ -574,3 +574,103 @@ func (r *AlertRepository) GetAlertStatistics(ctx context.Context) (*AlertStatist
 
 	return stats, nil
 }
+
+// GetTrendData 按日期分组获取告警趋势数据
+func (r *AlertRepository) GetTrendData(ctx context.Context, days int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT DATE(triggered_at) as date, COUNT(*) as count
+		FROM alerts
+		WHERE triggered_at > NOW() - INTERVAL '1 day' * $1
+		GROUP BY DATE(triggered_at)
+		ORDER BY DATE(triggered_at)
+	`
+	rows, err := r.db.Query(ctx, query, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []map[string]interface{}
+	for rows.Next() {
+		var date time.Time
+		var count int
+		if err := rows.Scan(&date, &count); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]interface{}{
+			"date":  date.Format("2006-01-02"),
+			"count": count,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return result, nil
+}
+
+// GetDeviceRankingData 按设备分组获取告警数量排名
+func (r *AlertRepository) GetDeviceRankingData(ctx context.Context, limit int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT a.device_id, COALESCE(d.name, a.device_id) as device_name, COUNT(*) as alert_count
+		FROM alerts a
+		LEFT JOIN devices d ON a.device_id = d.id
+		GROUP BY a.device_id, d.name
+		ORDER BY alert_count DESC
+		LIMIT $1
+	`
+	rows, err := r.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []map[string]interface{}
+	for rows.Next() {
+		var deviceID, deviceName string
+		var alertCount int
+		if err := rows.Scan(&deviceID, &deviceName, &alertCount); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]interface{}{
+			"device_id":   deviceID,
+			"device_name": deviceName,
+			"alert_count": alertCount,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return result, nil
+}
+
+// GetEfficiencyData 获取告警处理效率数据（平均解决时间和确认率）
+func (r *AlertRepository) GetEfficiencyData(ctx context.Context) (*AlertEfficiencyData, error) {
+	data := &AlertEfficiencyData{}
+
+	// 查询平均解决时间
+	err := r.db.QueryRow(ctx, `
+		SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - triggered_at))), 0)
+		FROM alerts
+		WHERE resolved_at IS NOT NULL
+	`).Scan(&data.AvgResolveTime)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查询总数和已确认/已解决数量
+	err = r.db.QueryRow(ctx, `
+		SELECT COUNT(*) as total,
+		       COUNT(*) FILTER (WHERE status IN ('acknowledged', 'resolved')) as resolved
+		FROM alerts
+	`).Scan(&data.TotalAlerts, &data.ResolvedAlerts)
+	if err != nil {
+		return nil, err
+	}
+
+	// 计算确认率
+	if data.TotalAlerts > 0 {
+		data.AckRate = float64(data.ResolvedAlerts) / float64(data.TotalAlerts)
+	}
+
+	return data, nil
+}

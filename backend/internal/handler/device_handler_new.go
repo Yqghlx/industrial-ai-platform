@@ -278,32 +278,35 @@ func (h *DeviceHandlerNew) GetDeviceTelemetry(c *gin.Context) {
 }
 
 // GetDeviceStats 获取设备统计
-// MINOR-02: 占位实现 - TODO: 实现计划
-// 实现步骤：
-// 1. 扩展 DeviceServiceInterface 添加 GetDeviceStats 方法
-// 2. 实现统计逻辑：故障率、平均响应时间、在线时长等
-// 3. 添加缓存支持避免频繁计算
 func (h *DeviceHandlerNew) GetDeviceStats(c *gin.Context) {
+	ctx := c.Request.Context()
 	deviceID := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{
-		"device_id": deviceID,
-		"stats":     map[string]interface{}{},
-		"message":   "GetDeviceStats requires DeviceServiceInterface extension",
-	})
+
+	stats, err := h.deviceSvc.GetDeviceStats(ctx, deviceID)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
 
 // GetRule 获取单个规则
-// MINOR-02: 占位实现 - TODO: 实现计划
-// 实现步骤：
-// 1. 扩展 AlertServiceInterface 添加 GetRule 方法
-// 2. 实现规则查询逻辑，包含关联设备信息
-// 3. 添加权限验证确保用户有权访问该规则
+// 调用 AlertService.GetRuleByID 查询规则详情
 func (h *DeviceHandlerNew) GetRule(c *gin.Context) {
+	ctx := c.Request.Context()
 	ruleID := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{
-		"id":      ruleID,
-		"message": "GetRule requires AlertServiceInterface extension",
-	})
+	var id int
+	if _, err := fmt.Sscanf(ruleID, "%d", &id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的规则ID"})
+		return
+	}
+	rule, err := h.alertSvc.GetRuleByID(ctx, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rule)
 }
 
 // UpdateRule 更新规则
@@ -331,17 +334,20 @@ func (h *DeviceHandlerNew) UpdateRule(c *gin.Context) {
 }
 
 // ToggleRule 启用/禁用规则
-// MINOR-02: 占位实现 - TODO: 实现计划
-// 实现步骤：
-// 1. 扩展 AlertServiceInterface 添加 ToggleRule 方法
-// 2. 实现规则状态切换逻辑
-// 3. 添加审计日志记录规则变更
+// 调用 AlertService.ToggleRule 切换规则启用状态
 func (h *DeviceHandlerNew) ToggleRule(c *gin.Context) {
+	ctx := c.Request.Context()
 	ruleID := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Rule toggled (placeholder)",
-		"id":      ruleID,
-	})
+	var id int
+	if _, err := fmt.Sscanf(ruleID, "%d", &id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的规则ID"})
+		return
+	}
+	if err := h.alertSvc.ToggleRule(ctx, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "规则状态已切换", "id": id})
 }
 
 // DeleteRule 删除规则

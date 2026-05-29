@@ -304,32 +304,41 @@ func (h *BusinessHandlerNew) GetAlertStats(c *gin.Context) {
 }
 
 // GetWorkOrder 获取单个工单
-// MINOR-02: 占位实现 - TODO: 实现计划
-// 实现步骤：
-// 1. 扩展 WorkOrderService 掷加 GetWorkOrder 方法
-// 2. 实现工单详情查询，包含关联设备和告警信息
-// 3. 添加操作历史记录展示
+// 调用 WorkOrderService.GetByID 查询工单详情
 func (h *BusinessHandlerNew) GetWorkOrder(c *gin.Context) {
+	ctx := c.Request.Context()
 	orderID := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{
-		"id":      orderID,
-		"message": "GetWorkOrder requires WorkOrderService extension",
-	})
+	var id int
+	if _, err := fmt.Sscanf(orderID, "%d", &id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的工单ID"})
+		return
+	}
+	order, err := h.workOrderSvc.GetByID(ctx, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, order)
 }
 
 // GetBlackBoxData 获取黑匣子数据
-// MINOR-02: 占位实现 - TODO: 实现计划
-// 实现步骤：
-// 1. 扩展 BlackBoxService 添加 GetData 方法
-// 2. 实现黑匣子数据查询和解析逻辑
-// 3. 添加数据导出功能支持
 func (h *BusinessHandlerNew) GetBlackBoxData(c *gin.Context) {
+	ctx := c.Request.Context()
 	recordID := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{
-		"id":      recordID,
-		"data":    []interface{}{},
-		"message": "GetBlackBoxData requires BlackBoxService extension",
-	})
+
+	var id int64
+	if _, err := fmt.Sscanf(recordID, "%d", &id); err != nil {
+		response.BadRequest(c, "无效的黑匣子记录ID")
+		return
+	}
+
+	record, err := h.blackBoxSvc.GetRecordByID(ctx, id)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, record)
 }
 
 // ExportDevices 导出设备数据（占位实现）

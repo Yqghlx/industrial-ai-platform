@@ -534,6 +534,16 @@ func TestDeviceHandlerNew_GetDeviceStats_Placeholder(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
 
+	// 设置 mock 期望
+	mockDeviceSvc.On("GetDeviceStats", mock.Anything, "device-1").Return(map[string]interface{}{
+		"device_id":                 "device-1",
+		"total_alerts":              0,
+		"critical_alerts":           0,
+		"avg_response_time_seconds": 0.0,
+		"uptime_days":               0,
+		"last_telemetry_at":         nil,
+	}, nil)
+
 	broadcastFunc := func(msg model.WSMessage) {}
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, broadcastFunc)
@@ -546,6 +556,7 @@ func TestDeviceHandlerNew_GetDeviceStats_Placeholder(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockDeviceSvc.AssertExpectations(t)
 }
 
 func TestDeviceHandlerNew_GetRule_Placeholder(t *testing.T) {
@@ -556,6 +567,12 @@ func TestDeviceHandlerNew_GetRule_Placeholder(t *testing.T) {
 	mockAlertSvc := new(MockAlertService)
 	mockAuthSvc := new(MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
+
+	// 设置 mock 期望
+	mockAlertSvc.On("GetRuleByID", mock.Anything, 1).Return(&model.AlertRule{
+		ID:   1,
+		Name: "测试规则",
+	}, nil)
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
@@ -569,6 +586,7 @@ func TestDeviceHandlerNew_GetRule_Placeholder(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }
 
 func TestDeviceHandlerNew_UpdateRule_Success(t *testing.T) {
@@ -617,6 +635,9 @@ func TestDeviceHandlerNew_ToggleRule_Placeholder(t *testing.T) {
 	mockAuthSvc := new(MockAuthService)
 	mockTelemetrySvc := new(MockTelemetryService)
 
+	// 设置 mock 期望
+	mockAlertSvc.On("ToggleRule", mock.Anything, 1).Return(nil)
+
 	broadcastFunc := func(msg model.WSMessage) {}
 
 	handler := NewDeviceHandlerNew(mockDeviceSvc, mockAlertSvc, mockAuthSvc, mockTelemetrySvc, broadcastFunc)
@@ -629,4 +650,5 @@ func TestDeviceHandlerNew_ToggleRule_Placeholder(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	mockAlertSvc.AssertExpectations(t)
 }

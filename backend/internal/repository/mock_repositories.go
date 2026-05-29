@@ -240,6 +240,30 @@ func (m *MockAlertRepository) GetAlertStatistics(ctx context.Context) (*AlertSta
 	return args.Get(0).(*AlertStatistics), args.Error(1)
 }
 
+func (m *MockAlertRepository) GetTrendData(ctx context.Context, days int) ([]map[string]interface{}, error) {
+	args := m.Called(ctx, days)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]map[string]interface{}), args.Error(1)
+}
+
+func (m *MockAlertRepository) GetDeviceRankingData(ctx context.Context, limit int) ([]map[string]interface{}, error) {
+	args := m.Called(ctx, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]map[string]interface{}), args.Error(1)
+}
+
+func (m *MockAlertRepository) GetEfficiencyData(ctx context.Context) (*AlertEfficiencyData, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*AlertEfficiencyData), args.Error(1)
+}
+
 // MockRuleRepository implements RuleRepositoryInterface for testing
 type MockRuleRepository struct {
 	mock.Mock
@@ -561,7 +585,7 @@ func (m *MockBlackBoxRepository) List(ctx context.Context, deviceID string, page
 	return args.Get(0).([]model.BlackBoxRecord), args.Get(1).(int), args.Error(2)
 }
 
-func (m *MockBlackBoxRepository) GetByID(ctx context.Context, id int) (*model.BlackBoxRecord, error) {
+func (m *MockBlackBoxRepository) GetByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

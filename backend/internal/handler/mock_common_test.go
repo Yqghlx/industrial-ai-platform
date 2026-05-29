@@ -118,6 +118,14 @@ func (m *MockDeviceService) UpdateStatus(ctx context.Context, id, status string)
 	return args.Error(0)
 }
 
+func (m *MockDeviceService) GetDeviceStats(ctx context.Context, deviceID string) (map[string]interface{}, error) {
+	args := m.Called(ctx, deviceID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]interface{}), args.Error(1)
+}
+
 // MockUserService 模拟用户服务 (用于 Auth Handler)
 type MockUserService struct {
 	mock.Mock
@@ -712,6 +720,14 @@ func (m *MockBlackBoxService) List(ctx context.Context, deviceID string, page, p
 	args := m.Called(ctx, deviceID, page, pageSize)
 	records, _ := args.Get(0).([]model.BlackBoxRecord)
 	return records, args.Get(1).(int), args.Error(2)
+}
+
+func (m *MockBlackBoxService) GetRecordByID(ctx context.Context, id int64) (*model.BlackBoxRecord, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.BlackBoxRecord), args.Error(1)
 }
 
 // MockExportService 模拟导出服务
