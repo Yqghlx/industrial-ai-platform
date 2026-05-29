@@ -101,7 +101,13 @@ test-results/
 
 # Backend binary (use go build -o bin/)
 backend/industrial_ai_backend
+backend/server
+backend/platform
 .secrets.tmp
+
+# .NET build output
+**/obj/
+**/bin/
 
 # Secrets - never commit generated secrets
 infra/k8s/secrets-generated.yaml
