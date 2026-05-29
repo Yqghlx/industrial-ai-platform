@@ -159,7 +159,7 @@ jobs:
         env:
           VITE_API_URL: http://localhost:8080
 
-      - name: Run E2E tests
+      - name: Run E2E tests (optional)
         working-directory: frontend
         timeout-minutes: 5
         run: |
