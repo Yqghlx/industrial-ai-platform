@@ -740,28 +740,58 @@ func (s *AlertService) ToggleRule(ctx context.Context, id int) error {
 	return s.ruleRepo.ToggleEnabled(ctx, id, !rule.Enabled)
 }
 
-// GetTrendReport returns alert trend report (placeholder)
+// GetTrendReport 按日期分组获取告警趋势报告
+// period 支持 "7d", "30d", "90d"，默认 7 天
 func (s *AlertService) GetTrendReport(ctx context.Context, period string) (map[string]interface{}, error) {
-	// 占位实现 - 后续可实现真实统计
+	// 解析 period 参数
+	days := 7
+	switch period {
+	case "30d":
+		days = 30
+	case "90d":
+		days = 90
+	case "7d":
+		days = 7
+	default:
+		days = 7
+	}
+
+	trend, err := s.alertRepo.GetTrendData(ctx, days)
+	if err != nil {
+		return nil, fmt.Errorf("获取告警趋势数据失败: %w", err)
+	}
+
 	return map[string]interface{}{
-		"period":  period,
-		"trend":   []interface{}{},
-		"message": "Trend report requires full implementation",
+		"period": period,
+		"trend":  trend,
 	}, nil
 }
 
-// GetDeviceRanking returns device ranking by alert count (placeholder)
+// GetDeviceRanking 按设备告警数量排名
 func (s *AlertService) GetDeviceRanking(ctx context.Context, limit int) ([]map[string]interface{}, error) {
-	// 占位实现 - 后续可实现真实统计
-	return []map[string]interface{}{}, nil
+	if limit <= 0 {
+		limit = 10
+	}
+
+	ranking, err := s.alertRepo.GetDeviceRankingData(ctx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("获取设备告警排名失败: %w", err)
+	}
+
+	return ranking, nil
 }
 
-// GetEfficiencyReport returns alert handling efficiency (placeholder)
+// GetEfficiencyReport 获取告警处理效率报告
 func (s *AlertService) GetEfficiencyReport(ctx context.Context) (map[string]interface{}, error) {
-	// 占位实现 - 后续可实现真实统计
+	data, err := s.alertRepo.GetEfficiencyData(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("获取告警处理效率数据失败: %w", err)
+	}
+
 	return map[string]interface{}{
-		"avg_resolve_time": 0,
-		"ack_rate":         0,
-		"message":          "Efficiency report requires full implementation",
+		"avg_resolve_time": data.AvgResolveTime,
+		"ack_rate":         data.AckRate,
+		"total_alerts":     data.TotalAlerts,
+		"resolved_alerts":  data.ResolvedAlerts,
 	}, nil
 }

@@ -102,6 +102,7 @@ type HTTPServerNew struct {
 	rbacSvc      *service.RBACService
 	exportSvc    *service.ExportService
 	reportSvc    service.ReportServiceInterface
+	workOrderSvc service.WorkOrderServiceInterface
 	cacheSvc     *cache_service.CacheServiceIntegration
 	agentSvc     service.AgentServiceInterface
 
@@ -225,6 +226,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
 	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
 	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
+	workOrderSvc := service.NewWorkOrderService(workOrderRepo)
 
 	// Initialize AgentService for AI features
 	taskLogRepo := repository.NewAgentTaskLogRepository(dbpkg.NewDBWrapper(db))
@@ -342,6 +344,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		rbacSvc:       rbacSvc,
 		exportSvc:     exportSvc,
 		reportSvc:     reportSvc,
+		workOrderSvc:  workOrderSvc,
 		cacheSvc:      cacheSvc,
 		agentSvc:      agentSvc,
 		cache:         cacheSvc.GetCache(),
@@ -408,11 +411,11 @@ func (s *HTTPServerNew) setupHandlers() {
 	// Initialize handlers
 	s.alertHandler = NewAlertHandler(s.alertSvc, s.broadcastFn)
 	s.deviceHandler = NewDeviceHandlerNew(s.deviceSvc, s.alertSvc, s.authSvc, s.telemetrySvc, s.broadcastFn)
-	s.businessHandler = NewBusinessHandlerNew(nil, nil, nil, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
+	s.businessHandler = NewBusinessHandlerNew(s.workOrderSvc, nil, nil, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
 	s.telemetryHandler = NewTelemetryHandlerNew(s.telemetrySvc, s.agentSvc)
 	s.authHandler = NewAuthHandlerNew(s.authSvc, s.userSvc)
 	s.tenantHandler = NewTenantHandler(s.tenantSvc)
-	s.rbacHandler = NewRBACHandler(s.rbacSvc)
+	s.rbacHandler = NewRBACHandler(NewRBACServiceAdapter(s.rbacSvc))
 	s.adminHandler = NewAdminHandlerNew(s.authSvc, s.telemetrySvc)
 	s.healthHandler = NewHealthHandlerNew(s.startTime)
 	s.exportHandler = NewExportHandler(s.exportSvc)

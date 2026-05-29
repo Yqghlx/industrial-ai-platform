@@ -102,10 +102,7 @@ func TestTelemetryService_GetSystemStatus(t *testing.T) {
 	svc := NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, nil)
 	ctx := context.Background()
 
-	// GetSystemStatus calls deviceRepo.Count twice:
-	// 1. First for DB ping
-	// 2. Second for device count
-	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
+	// GetSystemStatus 调用 deviceRepo.Count 获取设备计数
 	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(10))
 
 	status, err := svc.GetSystemStatus(ctx)

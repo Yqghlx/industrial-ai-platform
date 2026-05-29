@@ -400,8 +400,7 @@ func TestTelemetryService_GetSystemStatus_Success(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// Expect device count query (twice - for DB ping and for count)
-	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
+	// Expect device count query
 	mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
 
 	// Execute GetSystemStatus
@@ -433,7 +432,6 @@ func TestTelemetryService_GetSystemStatus_UnhealthyDB(t *testing.T) {
 	ctx := context.Background()
 
 	// Expect device count query returning error
-	mock.ExpectQuery("SELECT COUNT").WillReturnError(sql.ErrConnDone)
 	mock.ExpectQuery("SELECT COUNT").WillReturnError(sql.ErrConnDone)
 
 	// Execute GetSystemStatus
