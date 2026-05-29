@@ -11,7 +11,7 @@ vi.useFakeTimers();
 const localStorageMock = {
   store: {} as Record<string, string>,
   getItem: ((key: string) => localStorageMock.store[key] || null) as typeof Storage.prototype.getItem,
-  setItem: ((key: string, value: string) => { localStorageMock.store[key] = value; }) as typeof Storage.prototype.setItem,
+  setItem: vi.fn(((key: string, value: string) => { localStorageMock.store[key] = value; })) as unknown as typeof Storage.prototype.setItem,
   removeItem: ((key: string) => { delete localStorageMock.store[key]; }) as typeof Storage.prototype.removeItem,
   clear: (() => { localStorageMock.store = {}; }) as typeof Storage.prototype.clear,
 };
