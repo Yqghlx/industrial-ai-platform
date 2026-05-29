@@ -111,3 +111,6 @@ backend/platform
 
 # Secrets - never commit generated secrets
 infra/k8s/secrets-generated.yaml
+
+# 临时评审文件
+REVIEW.md

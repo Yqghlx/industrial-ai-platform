@@ -133,8 +133,6 @@ func (h *HealthHandler) DetailedHealthCheck(c *gin.Context) {
 	defer cancel()
 
 	checks := map[string]interface{}{}
-	// nolint:ineffassign
-	status := "healthy"
 	allHealthy := true
 
 	// 数据库检查
@@ -162,9 +160,8 @@ func (h *HealthHandler) DetailedHealthCheck(c *gin.Context) {
 	sysResult := h.checkSystemHealth()
 	checks["system"] = sysResult
 
-	if allHealthy {
-		status = "healthy"
-	} else {
+	status := "healthy"
+	if !allHealthy {
 		status = "degraded"
 	}
 

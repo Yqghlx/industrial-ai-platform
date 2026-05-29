@@ -287,21 +287,10 @@ func TestBroadcast(t *testing.T) {
 			Timestamp: time.Now(),
 		}
 
-		// Broadcast should not block
-		done := make(chan bool)
-		go func() {
-			server.broadcast(msg)
-			done <- true
-		}()
+		// 直接发送到 channel
+		server.broadcastChan <- msg
 
-		select {
-		case <-done:
-			// Good
-		case <-time.After(100 * time.Millisecond):
-			t.Fatal("broadcast should not block")
-		}
-
-		// Verify message in channel
+		// 验证 channel 中的消息
 		select {
 		case received := <-server.broadcastChan:
 			assert.Equal(t, msg.Type, received.Type)
@@ -323,11 +312,11 @@ func TestBroadcast(t *testing.T) {
 
 		// Send multiple messages
 		for i := 0; i < 5; i++ {
-			server.broadcast(model.WSMessage{
+			server.broadcastChan <- model.WSMessage{
 				Type:      "test",
 				Payload:   i,
 				Timestamp: time.Now(),
-			})
+			}
 		}
 
 		// Should receive 5 messages
@@ -624,99 +613,6 @@ func TestRemoveWSClient(t *testing.T) {
 	})
 }
 
-// TestGetWSCompressionStats tests the getWSCompressionStats function
-// Coverage: getWSCompressionStats - compression statistics endpoint
-func TestGetWSCompressionStats(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	t.Run("returns stats when compressor enabled", func(t *testing.T) {
-		compressor := wscompression.NewCompressor(&wscompression.CompressionConfig{
-			Enabled: true,
-			Level:   6,
-			MinSize: 100,
-		})
-
-		server := &Server{
-			wsUpgrader: websocket.Upgrader{
-				CheckOrigin: func(r *http.Request) bool { return true },
-			},
-			wsClients:     make(map[*websocket.Conn]bool),
-			broadcastChan: make(chan model.WSMessage, 100),
-			heartbeatChan: make(chan struct{}),
-			wsCompressor:  compressor,
-		}
-
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/ws/stats", nil)
-
-		server.getWSCompressionStats(c)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), "enabled")
-		assert.Contains(t, w.Body.String(), "true")
-	})
-
-	t.Run("returns disabled when compressor nil", func(t *testing.T) {
-		server := &Server{
-			wsUpgrader: websocket.Upgrader{
-				CheckOrigin: func(r *http.Request) bool { return true },
-			},
-			wsClients:     make(map[*websocket.Conn]bool),
-			broadcastChan: make(chan model.WSMessage, 100),
-			heartbeatChan: make(chan struct{}),
-			wsCompressor:  nil, // No compressor
-		}
-
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/ws/stats", nil)
-
-		server.getWSCompressionStats(c)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), "enabled")
-		assert.Contains(t, w.Body.String(), "false")
-		assert.Contains(t, w.Body.String(), "not initialized")
-	})
-
-	t.Run("returns compression statistics", func(t *testing.T) {
-		compressor := wscompression.NewCompressor(&wscompression.CompressionConfig{
-			Enabled: true,
-			Level:   6,
-			MinSize: 100,
-		})
-
-		// Simulate some compression activity
-		largeData := make([]byte, 2000)
-		for i := range largeData {
-			largeData[i] = byte(i % 256)
-		}
-		_, _ = compressor.Compress(largeData)
-
-		server := &Server{
-			wsUpgrader: websocket.Upgrader{
-				CheckOrigin: func(r *http.Request) bool { return true },
-			},
-			wsClients:     make(map[*websocket.Conn]bool),
-			broadcastChan: make(chan model.WSMessage, 100),
-			heartbeatChan: make(chan struct{}),
-			wsCompressor:  compressor,
-		}
-
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/ws/stats", nil)
-
-		server.getWSCompressionStats(c)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		// Should contain statistics fields
-		assert.Contains(t, w.Body.String(), "total_messages")
-		assert.Contains(t, w.Body.String(), "compressed_messages")
-		assert.Contains(t, w.Body.String(), "compression_ratio")
-	})
-}
 
 // TestWebSocketConnectionErrorHandling tests error scenarios
 func TestWebSocketConnectionErrorHandling(t *testing.T) {

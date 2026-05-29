@@ -1,7 +1,11 @@
 name: Backend CI
 
 on:
-  workflow_dispatch:  # Manual trigger only (paused)
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
   GO_VERSION: '1.25'
@@ -89,7 +93,7 @@ jobs:
         with:
           files: backend/coverage.out
           flags: backend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
       - name: Archive coverage report
         uses: actions/upload-artifact@v4

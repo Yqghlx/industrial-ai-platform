@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/pkg/logger"
-	"github.com/industrial-ai/platform/pkg/wscompression"
 	"go.uber.org/zap"
 )
 
@@ -35,115 +33,6 @@ func removeConnFromMap(conn *websocket.Conn, clients map[*websocket.Conn]bool, m
 	delete(clients, conn)
 	mu.Unlock()
 	mu.RLock()
-}
-
-// WebSocketManager manages WebSocket connections
-type WebSocketManager struct {
-	clients       map[*websocket.Conn]bool
-	clientsMu     sync.RWMutex
-	broadcast     chan model.WSMessage
-	heartbeat     chan struct{}
-	compressor    *wscompression.Compressor
-	stopHeartbeat chan struct{} // 心跳 ticker 退出信号
-	stopBroadcast chan struct{} // 广播循环退出信号
-}
-
-// NewWebSocketManager creates a new WebSocket manager
-func NewWebSocketManager(compressor *wscompression.Compressor) *WebSocketManager {
-	return &WebSocketManager{
-		clients:       make(map[*websocket.Conn]bool),
-		broadcast:     make(chan model.WSMessage, 100),
-		heartbeat:     make(chan struct{}),
-		compressor:    compressor,
-		stopHeartbeat: make(chan struct{}),
-		stopBroadcast: make(chan struct{}),
-	}
-}
-
-// AddClient adds a WebSocket client
-func (m *WebSocketManager) AddClient(conn *websocket.Conn) {
-	m.clientsMu.Lock()
-	m.clients[conn] = true
-	m.clientsMu.Unlock()
-}
-
-// RemoveClient removes a WebSocket client
-func (m *WebSocketManager) RemoveClient(conn *websocket.Conn) {
-	m.clientsMu.Lock()
-	delete(m.clients, conn)
-	m.clientsMu.Unlock()
-	conn.Close()
-}
-
-// Broadcast sends a message to all WebSocket clients
-func (m *WebSocketManager) Broadcast(msg model.WSMessage) {
-	m.broadcast <- msg
-}
-
-// Start starts the WebSocket broadcast loop
-func (m *WebSocketManager) Start() {
-	go func() {
-		for {
-			select {
-			case msg := <-m.broadcast:
-				m.clientsMu.RLock()
-				for conn := range m.clients {
-					err := writeWithDeadline(conn, func() error {
-						return m.compressor.WriteCompressed(conn, msg)
-					})
-					if err != nil {
-						logger.L().Error("WebSocket write error", zap.Error(err))
-						removeConnFromMap(conn, m.clients, &m.clientsMu)
-					}
-				}
-				m.clientsMu.RUnlock()
-			case <-m.heartbeat:
-				m.clientsMu.RLock()
-				for conn := range m.clients {
-					err := writeWithDeadline(conn, func() error {
-						return conn.WriteJSON(model.WSMessage{
-							Type:      "ping",
-							Timestamp: time.Now(),
-						})
-					})
-					if err != nil {
-						logger.L().Error("WebSocket ping error", zap.Error(err))
-						removeConnFromMap(conn, m.clients, &m.clientsMu)
-					}
-				}
-				m.clientsMu.RUnlock()
-			case <-m.stopBroadcast:
-				return
-			}
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				m.heartbeat <- struct{}{}
-			case <-m.stopHeartbeat:
-				return
-			}
-		}
-	}()
-}
-
-// ClientCount returns the number of connected WebSocket clients
-func (m *WebSocketManager) ClientCount() int {
-	m.clientsMu.RLock()
-	defer m.clientsMu.RUnlock()
-	return len(m.clients)
-}
-
-// Stop gracefully stops the WebSocket manager and releases resources
-// P0: Added to prevent goroutine leak
-func (m *WebSocketManager) Stop() {
-	close(m.stopBroadcast)
-	close(m.stopHeartbeat)
 }
 
 // handleWebSocket handles WebSocket connections
@@ -235,12 +124,6 @@ func (s *Server) startBroadcaster() {
 	}()
 }
 
-// broadcast sends a message to all WebSocket clients
-// nolint:unused -- API compatibility
-func (s *Server) broadcast(msg model.WSMessage) {
-	s.broadcastChan <- msg
-}
-
 // addWSClient adds a WebSocket client
 func (s *Server) addWSClient(conn *websocket.Conn) {
 	s.wsClientsMu.Lock()
@@ -254,27 +137,4 @@ func (s *Server) removeWSClient(conn *websocket.Conn) {
 	delete(s.wsClients, conn)
 	s.wsClientsMu.Unlock()
 	conn.Close()
-}
-
-// getWSCompressionStats handles getting WebSocket compression statistics
-func (s *Server) getWSCompressionStats(c *gin.Context) { // nolint:unused
-	if s.wsCompressor == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"enabled": false,
-			"message": "WebSocket compression not initialized",
-		})
-		return
-	}
-
-	stats := s.wsCompressor.GetStats()
-	c.JSON(http.StatusOK, gin.H{
-		"enabled":             true,
-		"total_messages":      stats.TotalMessages,
-		"compressed_messages": stats.CompressedMessages,
-		"skipped_messages":    stats.SkippedMessages,
-		"original_bytes":      stats.OriginalBytes,
-		"compressed_bytes":    stats.CompressedBytes,
-		"compression_ratio":   stats.CompressionRatio,
-		"savings_percent":     (1 - stats.CompressionRatio) * 100,
-	})
 }

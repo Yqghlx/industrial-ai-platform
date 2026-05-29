@@ -390,15 +390,6 @@ func isBlockedUserAgentWithConfig(userAgent string, blockedAgents []string, bloc
 	return false
 }
 
-// isBlockedUserAgent is kept for backward compatibility
-// Deprecated: Use isBlockedUserAgentWithConfig instead
-// nolint:unused
-func isBlockedUserAgent(userAgent string) bool {
-	// 使用默认配置
-	defaultConfig := DefaultWAFConfig()
-	return isBlockedUserAgentWithConfig(userAgent, defaultConfig.BlockedUserAgents, defaultConfig.BlockEmptyUserAgent)
-}
-
 // initWAFPatterns 初始化预编译的正则表达式
 // P1-11: 在初始化时预编译所有正则表达式以提升性能
 func initWAFPatterns(config WAFConfig) {

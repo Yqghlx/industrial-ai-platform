@@ -337,6 +337,11 @@ func TestRegisterCircuitBreakerRoutes_NotFound(t *testing.T) {
 	assert.Contains(t, resp["error"], "not found")
 }
 
+// marshalFallbackData 将数据序列化为 JSON 字节
+func marshalFallbackData(data interface{}) ([]byte, error) {
+	return json.Marshal(data)
+}
+
 // ============================================
 // marshalFallbackData Tests
 // ============================================

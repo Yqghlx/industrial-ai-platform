@@ -1,7 +1,11 @@
 name: Code Quality
 
 on:
-  workflow_dispatch:  # Manual trigger only (paused)
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

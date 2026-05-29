@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-29
+
 ### Added
 - Test coverage enhancement: Handler层覆盖率74.9% (2026-05-28)
 - Comprehensive test coverage for backend services (平均80%+)
@@ -15,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GetCSRFToken test coverage
 - Code audit report (CODE_AUDIT_REPORT.md)
 - Monitoring system verification report (MONITORING_SYSTEM_CHECK_REPORT.md)
+- 告警趋势/排名/效率报告 API（AlertTrend、AlertRanking、AlertEfficiency）
+- 设备统计 API（GetDeviceStats）
+- 黑匣子数据查询 API（BlackboxData）
+- GetRule/ToggleRule/GetWorkOrder Handler 实现
+- 统一 RBACService 接口签名
+- 前端测试覆盖率阈值提升至 70%
 
 ### Security
 - SEC-CRITICAL-01: 删除.secrets.tmp明文密钥文件，验证git历史无提交 (✅ 已修复)
@@ -25,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SEC-HIGH-04: CORS通配符改为环境变量配置，自动过滤* (✅ 已修复)
 - MAJOR-02: GetUsername/GetUserRole安全类型断言模式（带ok检查） (✅ 已修复)
 - MAJOR-03: Token黑名单淘汰策略优化（检查条目过期时间） (✅ 已修复)
+- 修复 GetTenantID/GetTokenID 不安全类型断言，改为 comma-ok 安全模式
+- WebSocket 广播添加写入超时（SetWriteDeadline），修复慢客户端阻塞问题
+- 统一三套 WebSocket 实现，修复消息广播断裂（handler层/service层/ws包合并为单例）
+- 数据库连接池参数和限流参数改为通过环境变量配置，支持运维动态调参
+- 限流器添加 bucket 最大容量限制，防止恶意 IP 枚举导致 OOM
+- Docker Compose 数据层端口（PostgreSQL/Redis）绑定到 127.0.0.1，减少攻击面
+- docker-compose.ghcr.yml 改为强制环境变量模式（${VAR:?必须设置}），消除弱默认密码
+- exportReport 添加 120s 超时保护（AbortController），防止大文件导出无限挂起
+- generateFallbackPassword 改为 log.Fatal 不再降级为弱密码
+- 移除未使用的 pgx/v5 直接依赖，减少安全扫描噪音
 - WebSocket real-time telemetry streaming
 - AI Agent integration with GLM-5
 - Device fleet dashboard with live metrics
@@ -74,6 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - TestAdminHandlerNew_CreateUser_Success (✅ PASS)
   - TestAdminHandlerNew_DeleteUser (✅ PASS)
   - TestBusinessHandlerNew_GetROIStats_CacheUnavailable (✅ PASS)
+- **前端测试修复**
+  - 修复 27 个测试文件的空断言问题（expect(true).toBeTruthy()），250 个测试用例全部通过
 - AdminHandlerNew test compilation errors (missing TelemetryServiceInterface parameter)
 - SystemStatus.tsx useEffect dependency warnings (added useCallback wrapper)
 - Database schema missing columns (tenant_id, token_version)
@@ -116,7 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | Version | Date | Key Changes |
 |---------|------|-------------|
 | 1.0.0 | 2026-05-26 | Initial release |
-| Unreleased | - | Bug fixes, test coverage, optimization |
+| 1.1.0 | 2026-05-29 | Security fixes, new APIs, frontend test overhaul |
 
 ---
 

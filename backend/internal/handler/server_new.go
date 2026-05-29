@@ -265,15 +265,26 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 
 	// Development environment: add default localhost origins
 	if !isProduction {
-		// Allow common development origins
-		wsAllowedOrigins["http://localhost"] = true
-		wsAllowedOrigins["http://localhost:3000"] = true
-		wsAllowedOrigins["http://localhost:8080"] = true
-		wsAllowedOrigins["http://localhost:5173"] = true
-		wsAllowedOrigins["http://127.0.0.1"] = true
-		wsAllowedOrigins["http://127.0.0.1:3000"] = true
-		wsAllowedOrigins["http://127.0.0.1:8080"] = true
-		wsAllowedOrigins["http://127.0.0.1:5173"] = true
+		// 支持通过 WS_DEV_ORIGINS 环境变量自定义开发环境的 WebSocket 源
+		// 格式: WS_DEV_ORIGINS=http://localhost:3000,http://localhost:8080
+		if devOrigins := os.Getenv("WS_DEV_ORIGINS"); devOrigins != "" {
+			for _, o := range strings.Split(devOrigins, ",") {
+				o = strings.TrimSpace(o)
+				if o != "" {
+					wsAllowedOrigins[o] = true
+				}
+			}
+		} else {
+			// 默认开发环境源
+			wsAllowedOrigins["http://localhost"] = true
+			wsAllowedOrigins["http://localhost:3000"] = true
+			wsAllowedOrigins["http://localhost:8080"] = true
+			wsAllowedOrigins["http://localhost:5173"] = true
+			wsAllowedOrigins["http://127.0.0.1"] = true
+			wsAllowedOrigins["http://127.0.0.1:3000"] = true
+			wsAllowedOrigins["http://127.0.0.1:8080"] = true
+			wsAllowedOrigins["http://127.0.0.1:5173"] = true
+		}
 	}
 
 	wsUpgrader := websocket.Upgrader{

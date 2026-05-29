@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -226,11 +225,4 @@ func (h *CircuitBreakerHandler) RegisterCircuitBreakerRoutes(r *gin.Engine) {
 		cb.POST("/:name/open", h.ForceOpenCircuitBreaker)
 		cb.POST("/:name/close", h.ForceCloseCircuitBreaker)
 	}
-}
-
-// marshalFallbackData 序列化降级数据
-// marshalFallbackData is kept for future use
-// nolint:unused
-func marshalFallbackData(data interface{}) ([]byte, error) {
-	return json.Marshal(data)
 }

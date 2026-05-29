@@ -1,7 +1,11 @@
 name: Frontend CI
 
 on:
-  workflow_dispatch:  # Manual trigger only (paused)
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '20'
@@ -87,7 +91,7 @@ jobs:
         with:
           files: frontend/coverage/coverage-final.json
           flags: frontend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
       - name: Archive coverage report
         uses: actions/upload-artifact@v4

@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,13 +11,6 @@ import (
 // Mock server for k6 performance testing - minimal implementation
 
 var startTime = time.Now()
-
-// requestCount and countMutex are kept for future rate limiting
-// nolint:unused
-var (
-	requestCount int64
-	countMutex   sync.Mutex
-)
 
 // JWT Claims
 type Claims struct {

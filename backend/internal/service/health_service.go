@@ -162,14 +162,16 @@ func (s *HealthService) checkLLMAPI(ctx context.Context) HealthStatus {
 
 	start := time.Now()
 
-	// Determine the base URL
+	// P2-04: 从配置中获取 LLM URL，不再硬编码后备地址
+	// 优先级：LLMBseURL > LLMFallbackURL > 不检查（返回 unavailable）
 	baseURL := s.config.LLMBseURL
 	if baseURL == "" {
-		// P2-04: Use configurable fallback URL instead of hardcoded one
 		baseURL = s.config.LLMFallbackURL
-		if baseURL == "" {
-			// Final fallback if not configured
-			baseURL = "https://open.bigmodel.cn/api/paas/v4"
+	}
+	if baseURL == "" {
+		return HealthStatus{
+			Status:  "unavailable",
+			Message: "LLM API URL not configured (LLM_BASE_URL or LLM_FALLBACK_URL)",
 		}
 	}
 
