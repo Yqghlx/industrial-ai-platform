@@ -35,6 +35,8 @@ import {
   User,
   UserCreateInput,
   SystemStatus,
+  LLMConfig,
+  LLMConfigUpdate,
   HealthCheck,
   DeviceGraph,
   PaginatedResponse,
@@ -494,6 +496,15 @@ class ApiClient {
 
   async getSystemStatus(): Promise<SystemStatus> {
     return this.request<SystemStatus>('GET', '/system/status');
+  }
+
+  // LLM Config
+  async getLLMConfig(): Promise<LLMConfig> {
+    return this.request<LLMConfig>('GET', '/admin/config/llm');
+  }
+
+  async updateLLMConfig(config: LLMConfigUpdate): Promise<{ message: string }> {
+    return this.request<{ message: string }>('PUT', '/admin/config/llm', config);
   }
 
   // Health

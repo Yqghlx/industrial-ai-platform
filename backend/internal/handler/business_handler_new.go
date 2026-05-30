@@ -24,6 +24,7 @@ type BusinessHandlerNew struct {
 	blackBoxSvc     service.BlackBoxServiceInterface
 	reportSvc       service.ReportServiceInterface
 	alertSvc        service.AlertServiceInterface
+	deviceSvc       service.DeviceServiceInterface
 	broadcast       func(msg model.WSMessage)
 	cache           cache.CacheService // 添加缓存服务
 }
@@ -35,6 +36,7 @@ func NewBusinessHandlerNew(
 	blackBoxSvc service.BlackBoxServiceInterface,
 	reportSvc service.ReportServiceInterface,
 	alertSvc service.AlertServiceInterface,
+	deviceSvc service.DeviceServiceInterface,
 	broadcast func(msg model.WSMessage),
 	cacheSvc cache.CacheService, // 添加缓存参数
 ) *BusinessHandlerNew {
@@ -44,9 +46,18 @@ func NewBusinessHandlerNew(
 		blackBoxSvc:     blackBoxSvc,
 		reportSvc:       reportSvc,
 		alertSvc:        alertSvc,
+		deviceSvc:       deviceSvc,
 		broadcast:       broadcast,
 		cache:           cacheSvc,
 	}
+}
+
+// ensureSlice 确保 nil slice 序列化为 JSON 空数组而非 null
+func ensureSlice[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
 }
 
 // ListWorkOrders 列出工单
@@ -64,7 +75,7 @@ func (h *BusinessHandlerNew) ListWorkOrders(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":      orders,
+		"data":      ensureSlice(orders),
 		"total":     total,
 		"page":      pagination.Page,
 		"page_size": pagination.PageSize,
@@ -79,6 +90,14 @@ func (h *BusinessHandlerNew) CreateWorkOrder(c *gin.Context) {
 	if err := c.ShouldBindJSON(&order); err != nil {
 		response.BadRequest(c, err.Error())
 		return
+	}
+
+	// 验证设备是否存在
+	if order.DeviceID != "" {
+		if _, err := h.deviceSvc.GetByID(ctx, order.DeviceID); err != nil {
+			response.BadRequest(c, fmt.Sprintf("设备 %s 不存在", order.DeviceID))
+			return
+		}
 	}
 
 	order.CreatedAt = time.Now()
@@ -135,7 +154,7 @@ func (h *BusinessHandlerNew) ListNotifications(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":      notifications,
+		"data":      ensureSlice(notifications),
 		"total":     total,
 		"page":      pagination.Page,
 		"page_size": pagination.PageSize,
@@ -172,7 +191,7 @@ func (h *BusinessHandlerNew) ListBlackBox(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":      records,
+		"data":      ensureSlice(records),
 		"total":     total,
 		"page":      pagination.Page,
 		"page_size": pagination.PageSize,
@@ -192,7 +211,7 @@ func (h *BusinessHandlerNew) ListReports(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":      reports,
+		"data":      ensureSlice(reports),
 		"total":     total,
 		"page":      pagination.Page,
 		"page_size": pagination.PageSize,
@@ -204,15 +223,15 @@ func (h *BusinessHandlerNew) GenerateReport(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req struct {
-		ReportType string `json:"report_type" binding:"required"`
-		DeviceID   string `json:"device_id"`
+		Type     string `json:"type" binding:"required"`
+		DeviceID string `json:"device_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 
-	report, err := h.reportSvc.GenerateReport(ctx, req.ReportType, req.DeviceID)
+	report, err := h.reportSvc.GenerateReport(ctx, req.Type, req.DeviceID)
 	if err != nil {
 		response.HandleError(c, err)
 		return

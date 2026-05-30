@@ -1,0 +1,178 @@
+- generic [ref=e5]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - img [ref=e11]
+          - generic [ref=e13]: Industrial AI
+        - button "关闭" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+      - navigation [ref=e17]:
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - link "仪表盘" [ref=e20] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e21]
+              - generic [ref=e26]: 仪表盘
+          - listitem [ref=e27]:
+            - link "数字孪生" [ref=e28] [cursor=pointer]:
+              - /url: /digital-twin
+              - img [ref=e29]
+              - generic [ref=e31]: 数字孪生
+          - listitem [ref=e32]:
+            - link "设备管理" [ref=e33] [cursor=pointer]:
+              - /url: /devices
+              - img [ref=e34]
+              - generic [ref=e37]: 设备管理
+              - img [ref=e38]
+          - listitem [ref=e40]:
+            - link "知识图谱" [ref=e41] [cursor=pointer]:
+              - /url: /knowledge-graph
+              - img [ref=e42]
+              - generic [ref=e47]: 知识图谱
+          - listitem [ref=e48]:
+            - link "规则配置" [ref=e49] [cursor=pointer]:
+              - /url: /rules
+              - img [ref=e50]
+              - generic [ref=e53]: 规则配置
+          - listitem [ref=e54]:
+            - link "工单管理" [ref=e55] [cursor=pointer]:
+              - /url: /work-orders
+              - img [ref=e56]
+              - generic [ref=e58]: 工单管理
+          - listitem [ref=e59]:
+            - link "通知中心" [ref=e60] [cursor=pointer]:
+              - /url: /notifications
+              - img [ref=e61]
+              - generic [ref=e64]: 通知中心
+          - listitem [ref=e65]:
+            - link "AI智能体" [ref=e66] [cursor=pointer]:
+              - /url: /ai-agent
+              - img [ref=e67]
+              - generic [ref=e70]: AI智能体
+          - listitem [ref=e71]:
+            - link "报告中心" [ref=e72] [cursor=pointer]:
+              - /url: /reports
+              - img [ref=e73]
+              - generic [ref=e76]: 报告中心
+          - listitem [ref=e77]:
+            - link "遥测数据" [ref=e78] [cursor=pointer]:
+              - /url: /telemetry
+              - img [ref=e79]
+              - generic [ref=e82]: 遥测数据
+          - listitem [ref=e83]:
+            - link "告警管理" [ref=e84] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e85]
+              - generic [ref=e87]: 告警管理
+          - listitem [ref=e88]:
+            - link "黑匣子" [ref=e89] [cursor=pointer]:
+              - /url: /blackbox
+              - img [ref=e90]
+              - generic [ref=e93]: 黑匣子
+          - listitem [ref=e94]:
+            - link "ROI统计" [ref=e95] [cursor=pointer]:
+              - /url: /roi
+              - img [ref=e96]
+              - generic [ref=e98]: ROI统计
+          - listitem [ref=e99]: 系统管理
+          - listitem [ref=e100]:
+            - link "用户管理" [ref=e101] [cursor=pointer]:
+              - /url: /users
+              - img [ref=e102]
+              - generic [ref=e107]: 用户管理
+          - listitem [ref=e108]:
+            - link "系统状态" [ref=e109] [cursor=pointer]:
+              - /url: /system
+              - img [ref=e110]
+              - generic [ref=e114]: 系统状态
+      - generic [ref=e115]:
+        - generic [ref=e116]:
+          - img [ref=e117]
+          - button "中文" [ref=e120] [cursor=pointer]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - img [ref=e124]
+            - generic [ref=e129]:
+              - generic [ref=e130]: admin
+              - generic [ref=e131]: admin
+          - button "退出登录" [ref=e132] [cursor=pointer]:
+            - img [ref=e133]
+  - generic [ref=e136]:
+    - banner [ref=e137]:
+      - button "关闭" [ref=e139] [cursor=pointer]:
+        - img [ref=e140]
+      - generic [ref=e141]:
+        - generic [ref=e142]:
+          - img [ref=e143]
+          - generic [ref=e145]: 连接断开
+        - button "通知中心" [ref=e146] [cursor=pointer]:
+          - img [ref=e147]
+          - generic "未读" [ref=e150]
+    - main [ref=e151]:
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - heading "设备管理" [level=1] [ref=e163]
+            - paragraph [ref=e164]: 设备管理
+          - generic [ref=e165]:
+            - button "导出" [ref=e166] [cursor=pointer]:
+              - img [ref=e167]
+              - generic [ref=e170]: 导出
+            - button "创建" [ref=e171] [cursor=pointer]:
+              - img [ref=e172]
+              - generic [ref=e173]: 创建
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - img [ref=e178]
+            - textbox "搜索" [ref=e181]
+          - combobox "设备类型" [ref=e182]:
+            - 'option "设备类型: 全部类型" [selected]'
+            - option "数控机床"
+            - option "注塑机"
+            - option "工业机器人"
+            - option "装配线"
+            - option "传感器"
+            - option "PLC控制器"
+            - option "电机"
+            - option "泵"
+            - option "阀门"
+            - option "加热器"
+            - option "冷却器"
+            - option "仪表"
+        - generic [ref=e184]:
+          - table [ref=e186]:
+            - rowgroup [ref=e187]:
+              - row "设备ID 设备名称 设备类型 位置 状态 编辑" [ref=e188]:
+                - columnheader "设备ID" [ref=e189]
+                - columnheader "设备名称" [ref=e190]
+                - columnheader "设备类型" [ref=e191]
+                - columnheader "位置" [ref=e192]
+                - columnheader "状态" [ref=e193]
+                - columnheader "编辑" [ref=e194]
+            - rowgroup [ref=e195]:
+              - row "test-cnc-001 Test CNC Machine CNC Factory A - Line 1 在线 编辑 删除" [ref=e196]:
+                - cell "test-cnc-001" [ref=e197]
+                - cell "Test CNC Machine" [ref=e198]
+                - cell "CNC" [ref=e199]
+                - cell "Factory A - Line 1" [ref=e200]
+                - cell "在线" [ref=e201]:
+                  - generic [ref=e202]: 在线
+                - cell "编辑 删除" [ref=e203]:
+                  - generic [ref=e204]:
+                    - button "编辑" [ref=e205] [cursor=pointer]:
+                      - img [ref=e206]
+                    - button "删除" [ref=e209] [cursor=pointer]:
+                      - img [ref=e210]
+          - generic [ref=e213]:
+            - generic [ref=e214]: "全部 1 设备数量 · 筛选: 1"
+            - generic [ref=e215]:
+              - button "上一步" [disabled] [ref=e216]:
+                - img [ref=e217]
+                - text: 上一步
+              - generic [ref=e219]: 1 / 1
+              - button "下一步" [disabled] [ref=e220]:
+                - text: 下一步
+                - img [ref=e221]
+  - button "性能监控" [ref=e157] [cursor=pointer]:
+    - img [ref=e158]

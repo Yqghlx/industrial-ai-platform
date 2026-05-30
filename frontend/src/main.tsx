@@ -1,7 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import I18nProvider from './i18n';
-import LoadingSpinner from './components/LoadingSpinner';
 import { ToastProvider } from './components/Toast';
 import { MobileProvider } from './components/MobileProvider';
 import AuthProvider from './components/AuthContext';
@@ -114,9 +113,7 @@ function Main() {
           <BrowserRouter>
             <AuthProvider>
               <ToastProvider>
-                <Suspense fallback={<LoadingSpinner fullScreen />}>
-                  <AppRoutes />
-                </Suspense>
+                <AppRoutes />
               </ToastProvider>
             </AuthProvider>
           </BrowserRouter>

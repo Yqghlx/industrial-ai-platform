@@ -1,0 +1,184 @@
+- generic [ref=e4]:
+  - generic [ref=e35]:
+    - complementary [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - img [ref=e41]
+            - generic [ref=e43]: Industrial AI
+          - button "关闭" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+        - navigation [ref=e47]:
+          - list [ref=e48]:
+            - listitem [ref=e49]:
+              - link "仪表盘" [ref=e50] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e51]
+                - generic [ref=e56]: 仪表盘
+                - img [ref=e57]
+            - listitem [ref=e59]:
+              - link "数字孪生" [ref=e60] [cursor=pointer]:
+                - /url: /digital-twin
+                - img [ref=e61]
+                - generic [ref=e63]: 数字孪生
+            - listitem [ref=e64]:
+              - link "设备管理" [ref=e65] [cursor=pointer]:
+                - /url: /devices
+                - img [ref=e66]
+                - generic [ref=e69]: 设备管理
+            - listitem [ref=e70]:
+              - link "知识图谱" [ref=e71] [cursor=pointer]:
+                - /url: /knowledge-graph
+                - img [ref=e72]
+                - generic [ref=e77]: 知识图谱
+            - listitem [ref=e78]:
+              - link "规则配置" [ref=e79] [cursor=pointer]:
+                - /url: /rules
+                - img [ref=e80]
+                - generic [ref=e83]: 规则配置
+            - listitem [ref=e84]:
+              - link "工单管理" [ref=e85] [cursor=pointer]:
+                - /url: /work-orders
+                - img [ref=e86]
+                - generic [ref=e88]: 工单管理
+            - listitem [ref=e89]:
+              - link "通知中心" [ref=e90] [cursor=pointer]:
+                - /url: /notifications
+                - img [ref=e91]
+                - generic [ref=e94]: 通知中心
+            - listitem [ref=e95]:
+              - link "AI智能体" [ref=e96] [cursor=pointer]:
+                - /url: /ai-agent
+                - img [ref=e97]
+                - generic [ref=e100]: AI智能体
+            - listitem [ref=e101]:
+              - link "报告中心" [ref=e102] [cursor=pointer]:
+                - /url: /reports
+                - img [ref=e103]
+                - generic [ref=e106]: 报告中心
+            - listitem [ref=e107]:
+              - link "遥测数据" [ref=e108] [cursor=pointer]:
+                - /url: /telemetry
+                - img [ref=e109]
+                - generic [ref=e112]: 遥测数据
+            - listitem [ref=e113]:
+              - link "告警管理" [ref=e114] [cursor=pointer]:
+                - /url: /alerts
+                - img [ref=e115]
+                - generic [ref=e117]: 告警管理
+            - listitem [ref=e118]:
+              - link "黑匣子" [ref=e119] [cursor=pointer]:
+                - /url: /blackbox
+                - img [ref=e120]
+                - generic [ref=e123]: 黑匣子
+            - listitem [ref=e124]:
+              - link "ROI统计" [ref=e125] [cursor=pointer]:
+                - /url: /roi
+                - img [ref=e126]
+                - generic [ref=e128]: ROI统计
+            - listitem [ref=e129]: 系统管理
+            - listitem [ref=e130]:
+              - link "用户管理" [ref=e131] [cursor=pointer]:
+                - /url: /users
+                - img [ref=e132]
+                - generic [ref=e137]: 用户管理
+            - listitem [ref=e138]:
+              - link "系统状态" [ref=e139] [cursor=pointer]:
+                - /url: /system
+                - img [ref=e140]
+                - generic [ref=e144]: 系统状态
+        - generic [ref=e145]:
+          - generic [ref=e146]:
+            - img [ref=e147]
+            - button "中文" [ref=e150] [cursor=pointer]
+          - generic [ref=e151]:
+            - generic [ref=e152]:
+              - img [ref=e154]
+              - generic [ref=e159]:
+                - generic [ref=e160]: admin
+                - generic [ref=e161]: admin
+            - button "退出登录" [ref=e162] [cursor=pointer]:
+              - img [ref=e163]
+    - generic [ref=e166]:
+      - banner [ref=e167]:
+        - button "关闭" [ref=e169] [cursor=pointer]:
+          - img [ref=e170]
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - img [ref=e173]
+            - generic [ref=e175]: 实时连接
+          - button "通知中心" [ref=e176] [cursor=pointer]:
+            - img [ref=e177]
+            - generic "未读" [ref=e180]
+      - main [ref=e181]:
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - heading "概览" [level=1] [ref=e186]
+              - paragraph [ref=e187]: 设备状态
+            - link "数字孪生" [ref=e188] [cursor=pointer]:
+              - /url: /digital-twin
+              - img [ref=e189]
+              - generic [ref=e191]: 数字孪生
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - img [ref=e195]
+                - generic [ref=e198]: 设备数量
+              - generic [ref=e199]: "1"
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - img [ref=e202]
+                - generic [ref=e204]: 在线
+              - generic [ref=e205]: "1"
+            - generic [ref=e206]:
+              - generic [ref=e207]:
+                - img [ref=e208]
+                - generic [ref=e210]: 警告
+              - generic [ref=e211]: "0"
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - img [ref=e214]
+                - generic [ref=e216]: 故障
+              - generic [ref=e217]: "0"
+          - generic [ref=e218]:
+            - generic [ref=e219]:
+              - heading "设备管理" [level=2] [ref=e220]
+              - link "设备管理 →" [ref=e221] [cursor=pointer]:
+                - /url: /devices
+            - link "在线 Test CNC Machine test-cnc-001 在线 Factory A - Line 1 · CNC" [ref=e224] [cursor=pointer]:
+              - /url: /devices/test-cnc-001
+              - generic [ref=e225]:
+                - generic [ref=e226]:
+                  - generic [ref=e227]:
+                    - generic "在线" [ref=e228]
+                    - generic [ref=e229]: Test CNC Machine
+                  - text: test-cnc-001
+                - generic [ref=e230]: 在线
+              - generic [ref=e231]: Factory A - Line 1 · CNC
+          - generic [ref=e232]:
+            - heading "快捷操作" [level=2] [ref=e234]
+            - generic [ref=e236]:
+              - link "AI智能体" [ref=e237] [cursor=pointer]:
+                - /url: /ai-agent
+                - img [ref=e238]
+                - generic [ref=e241]: AI智能体
+              - link "工单管理" [ref=e242] [cursor=pointer]:
+                - /url: /work-orders
+                - img [ref=e243]
+                - generic [ref=e245]: 工单管理
+              - link "通知中心" [ref=e246] [cursor=pointer]:
+                - /url: /notifications
+                - img [ref=e247]
+                - generic [ref=e250]: 通知中心
+              - link "报告中心" [ref=e251] [cursor=pointer]:
+                - /url: /reports
+                - img [ref=e252]
+                - generic [ref=e254]: 报告中心
+  - status [ref=e255]:
+    - generic [ref=e256]:
+      - generic [ref=e257]:
+        - generic [ref=e259]: ✓
+        - generic [ref=e260]: 登录成功
+      - button "关闭" [ref=e261] [cursor=pointer]:
+        - img [ref=e262]

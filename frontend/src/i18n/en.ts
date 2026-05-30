@@ -25,6 +25,7 @@ export default {
     yes: 'Yes',
     no: 'No',
     export: 'Export',
+    download: 'Download',
     openMenu: 'Open Menu',
     connected: 'Connected',
     disconnected: 'Disconnected',
@@ -71,6 +72,14 @@ export default {
     loadFailedAlerts: 'Alert data loading failed',
     loadFailedAlertStats: 'Alert stats data loading failed',
     loadFailedRecordData: 'Record data loading failed',
+    deviceNotFound: 'Device not found, please select a valid device',
+  },
+  validation: {
+    required: 'This field is required',
+    selectDevice: 'Please select a device',
+    invalidId: 'ID allows only letters, numbers, hyphens and underscores',
+    minValue: 'Value must be at least {min}',
+    deviceNotFound: 'Device not found',
   },
   nav: {
     dashboard: 'Dashboard',
@@ -444,6 +453,13 @@ export default {
     running: 'Running',
     connected: 'Connected',
     postgresql: 'PostgreSQL',
+    llmConfig: 'LLM Configuration',
+    baseURL: 'Base URL',
+    modelName: 'Model Name',
+    apiKeyPlaceholder: 'No API Key configured',
+    apiKeyHint: 'Leave empty to keep current key, or enter a new value to update',
+    configSaved: 'Configuration saved and applied immediately',
+    configSaveFailed: 'Failed to save configuration',
   },
 user: {
     title: 'User Management',
@@ -488,6 +504,8 @@ user: {
   digitalTwin: {
     realTimeMonitoring: 'Real-Time Device Monitoring',
     realTimeUpdate: 'Real-Time Update',
+    noTelemetryData: 'No Telemetry Data',
+    waitingForData: 'Start the edge simulator to report data, or wait for device connection',
   },
   knowledgeGraph: {
     topologyTitle: 'Device Topology Graph',

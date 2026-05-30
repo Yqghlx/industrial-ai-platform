@@ -367,6 +367,18 @@ export interface SystemStatus {
   user_count: number;
 }
 
+export interface LLMConfig {
+  llm_api_key: string;
+  llm_base_url: string;
+  llm_model: string;
+}
+
+export interface LLMConfigUpdate {
+  llm_api_key?: string;
+  llm_base_url: string;
+  llm_model: string;
+}
+
 export interface HealthCheck {
   status: 'ok' | 'error';
   database: 'healthy' | 'unhealthy';

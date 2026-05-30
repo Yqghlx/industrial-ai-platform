@@ -166,31 +166,36 @@ export default function DeviceDetail() {
         <div className="card-body">
           {loading ? (
             <Skeleton variant="chart" />
+          ) : chartData.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+              <BarChart3 className="w-12 h-12 text-slate-500 mb-3" />
+              <p className="text-lg text-slate-300">{t('telemetry.noHistoryData')}</p>
+            </div>
           ) : (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <XAxis dataKey="time" stroke="#64748b" />
                   <YAxis stroke="#64748b" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1e293b', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
                       border: '1px solid #334155',
                       borderRadius: '8px'
                     }}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="temperature" 
-                    stroke="#ef4444" 
+                  <Line
+                    type="monotone"
+                    dataKey="temperature"
+                    stroke="#ef4444"
                     name={t('telemetry.temperature')}
                     dot={false}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="vibration" 
-                    stroke="#3b82f6" 
+                  <Line
+                    type="monotone"
+                    dataKey="vibration"
+                    stroke="#3b82f6"
                     name={t('telemetry.vibration')}
                     dot={false}
                   />
@@ -209,6 +214,11 @@ export default function DeviceDetail() {
         <div className="card-body">
           {loading ? (
             <Skeleton variant="card" />
+          ) : telemetry.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <BarChart3 className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+              <p className="text-lg text-slate-300">{t('telemetry.noHistoryData')}</p>
+            </div>
           ) : (
             <div className="table-container">
               <table className="table">

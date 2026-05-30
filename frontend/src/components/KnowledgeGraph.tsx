@@ -135,8 +135,14 @@ export default function KnowledgeGraph() {
         <div className="card-body">
           {loading ? (
             <Skeleton variant="chart" height={500} />
+          ) : !graphData || graphData.nodes.length === 0 ? (
+            <div className="w-full h-[500px] flex flex-col items-center justify-center bg-slate-800/50 rounded-lg">
+              <Network className="w-12 h-12 text-slate-500 mb-3" />
+              <p className="text-lg text-slate-300">{t('blackbox.noRecords')}</p>
+              <p className="text-sm text-slate-400 mt-1">{t('telemetry.selectDevice')}</p>
+            </div>
           ) : (
-            <div 
+            <div
               ref={containerRef}
               className="w-full h-[500px] bg-slate-800/50 rounded-lg"
             />

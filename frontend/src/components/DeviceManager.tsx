@@ -323,12 +323,12 @@ export default function DeviceManager() {
                   {!editingDevice && (
                     <div>
                       <label className="label" htmlFor="device-edit-id">{t('device.id')}</label>
-                      <input id="device-edit-id" name="device-id" className="input" required defaultValue="" />
+                      <input id="device-edit-id" name="device-id" className="input" required pattern="[a-zA-Z0-9_-]+" title="ID 仅允许字母、数字、横杠和下划线" defaultValue="" />
                     </div>
                   )}
                   <div>
                     <label className="label" htmlFor="device-edit-name">{t('device.name')}</label>
-                    <input id="device-edit-name" name="device-name" className="input" required defaultValue={editingDevice?.name} />
+                    <input id="device-edit-name" name="device-name" className="input" required minLength={2} defaultValue={editingDevice?.name} />
                   </div>
                   <div>
                     <label className="label" htmlFor="device-edit-type">{t('device.type')}</label>

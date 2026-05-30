@@ -30,7 +30,7 @@ func TestNewBusinessHandlerNew(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, mockCacheSvc)
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, mockCacheSvc)
 
 	assert.NotNil(t, handler)
 	assert.Equal(t, mockWorkOrderSvc, handler.workOrderSvc)
@@ -52,7 +52,7 @@ func TestBusinessHandlerNew_ListWorkOrders_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	orders := []model.WorkOrder{
 		{ID: 1, Title: "Order 1", Status: "pending", DeviceID: "device-1", CreatedAt: time.Now()},
@@ -92,7 +92,7 @@ func TestBusinessHandlerNew_ListWorkOrders_WithFilters(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	orders := []model.WorkOrder{
 		{ID: 1, Title: "Order 1", Status: "pending", DeviceID: "device-1", CreatedAt: time.Now()},
@@ -124,7 +124,11 @@ func TestBusinessHandlerNew_CreateWorkOrder_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
+
+	mockDeviceSvc := new(MockDeviceService)
+	mockDeviceSvc.On("GetByID", mock.Anything, "device-1").Return(&model.Device{ID: "device-1"}, nil)
+	handler.deviceSvc = mockDeviceSvc
 
 	mockWorkOrderSvc.On("Create", mock.Anything, mock.AnythingOfType("*model.WorkOrder")).Return(nil)
 
@@ -162,7 +166,7 @@ func TestBusinessHandlerNew_UpdateWorkOrderStatus_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockWorkOrderSvc.On("UpdateStatus", mock.Anything, 1, "completed").Return(nil)
 
@@ -196,7 +200,7 @@ func TestBusinessHandlerNew_ListNotifications_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	notifications := []model.Notification{
 		{ID: 1, Type: "alert", Title: "Notification 1", CreatedAt: time.Now()},
@@ -228,7 +232,7 @@ func TestBusinessHandlerNew_MarkNotificationRead_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockNotificationSvc.On("MarkRead", mock.Anything, 1).Return(nil)
 
@@ -256,7 +260,7 @@ func TestBusinessHandlerNew_MarkNotificationRead_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockNotificationSvc.On("MarkRead", mock.Anything, 1).Return(assert.AnError)
 
@@ -283,7 +287,7 @@ func TestBusinessHandlerNew_ListBlackBox_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	records := []model.BlackBoxRecord{
 		{ID: 1, DeviceID: "device-1", CreatedAt: time.Now()},
@@ -315,7 +319,7 @@ func TestBusinessHandlerNew_ListBlackBox_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockBlackBoxSvc.On("List", mock.Anything, "", 1, 20).Return(nil, 0, assert.AnError)
 
@@ -342,7 +346,7 @@ func TestBusinessHandlerNew_ListReports_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	reports := []model.Report{
 		{ID: 1, Type: "weekly"},
@@ -374,7 +378,7 @@ func TestBusinessHandlerNew_ListReports_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockReportSvc.On("ListReports", mock.Anything, "", 1, 20).Return(nil, 0, assert.AnError)
 
@@ -401,7 +405,7 @@ func TestBusinessHandlerNew_GenerateReport_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	report := &model.Report{ID: 1, Type: "daily"}
 
@@ -439,7 +443,7 @@ func TestBusinessHandlerNew_GetROIStats_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, mockCacheSvc)
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, mockCacheSvc)
 
 	stats := &model.ROIStats{
 		TotalDevices:     100,
@@ -482,7 +486,7 @@ func TestBusinessHandlerNew_GetROIStats_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, mockCacheSvc)
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, mockCacheSvc)
 
 	mockReportSvc.On("GetROIStats", mock.Anything).Return(nil, assert.AnError)
 	mockCacheSvc.On("IsAvailable").Return(true)
@@ -512,7 +516,7 @@ func TestBusinessHandlerNew_GetAlertStats_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockAlertSvc.On("GetAlerts", mock.Anything, "all", 1, 1000).Return(nil, 0, assert.AnError)
 
@@ -539,7 +543,7 @@ func TestBusinessHandlerNew_GetAlertStats_Success(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	alerts := []model.Alert{
 		{ID: 1, Severity: "critical", Status: "active", TriggeredAt: time.Now()},
@@ -580,7 +584,7 @@ func TestBusinessHandlerNew_GetWorkOrder_Placeholder(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.GET("/work-orders/:id", handler.GetWorkOrder)
 
@@ -605,7 +609,7 @@ func TestBusinessHandlerNew_ExportDevices_Placeholder(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.GET("/export/devices", handler.ExportDevices)
 
@@ -629,7 +633,7 @@ func TestBusinessHandlerNew_ExportAlerts_Placeholder(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.GET("/export/alerts", handler.ExportAlerts)
 
@@ -653,7 +657,7 @@ func TestBusinessHandlerNew_ExportROI_Placeholder(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.GET("/export/roi", handler.ExportROI)
 
@@ -684,7 +688,7 @@ func TestBusinessHandlerNew_GetBlackBoxData_Placeholder(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.GET("/black-box/:id", handler.GetBlackBoxData)
 
@@ -709,7 +713,7 @@ func TestBusinessHandlerNew_ListWorkOrders_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockWorkOrderSvc.On("List", mock.Anything, "", "", 1, 20).Return(nil, 0, assert.AnError)
 
@@ -737,7 +741,7 @@ func TestBusinessHandlerNew_CreateWorkOrder_BadRequest(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.POST("/work-orders", handler.CreateWorkOrder)
 
@@ -762,7 +766,7 @@ func TestBusinessHandlerNew_UpdateWorkOrderStatus_BadRequest(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.PUT("/work-orders/:id/status", handler.UpdateWorkOrderStatus)
 
@@ -787,7 +791,7 @@ func TestBusinessHandlerNew_GenerateReport_BadRequest(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	router.POST("/reports/generate", handler.GenerateReport)
 
@@ -812,7 +816,7 @@ func TestBusinessHandlerNew_ListNotifications_ServiceError(t *testing.T) {
 
 	broadcastFunc := func(msg model.WSMessage) {}
 
-	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, broadcastFunc, new(MockCache))
+	handler := NewBusinessHandlerNew(mockWorkOrderSvc, mockNotificationSvc, mockBlackBoxSvc, mockReportSvc, mockAlertSvc, new(MockDeviceService), broadcastFunc, new(MockCache))
 
 	mockNotificationSvc.On("List", mock.Anything, "", 1, 20).Return(nil, 0, assert.AnError)
 

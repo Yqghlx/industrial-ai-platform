@@ -21,8 +21,9 @@ export default function NotificationCenter() {
     setLoading(true);
     try {
       const res = await api.getNotifications(filter);
-      // FE-P1: 限制数组大小，防止内存泄漏
-      const data = (res.data as Notification[]).slice(0, MAX_NOTIFICATIONS_ENTRIES);
+      // FE-P1: 限制数组大小，防止内存泄漏，防御 null 响应
+      const raw = Array.isArray(res.data) ? res.data : [];
+      const data = raw.slice(0, MAX_NOTIFICATIONS_ENTRIES);
       setNotifications(data);
     } catch (error) {
       console.error('Failed to load notifications:', error);

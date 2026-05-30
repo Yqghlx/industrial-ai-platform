@@ -5,7 +5,7 @@ import { useEscapeKey } from '../lib/hooks';
 import { SkeletonTable } from './Skeleton';
 import { useToast } from './Toast';
 import { Plus, Search } from 'lucide-react';
-import { WorkOrder } from '../types/api';
+import { WorkOrder, Device } from '../types/api';
 import { asWorkOrderArraySafe } from '../types/typeGuards';
 import { getWorkOrderStatusColor, getWorkOrderPriorityColor } from '../lib/colorUtils';
 
@@ -54,6 +54,7 @@ export default function WorkOrderBoard() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -70,15 +71,23 @@ export default function WorkOrderBoard() {
     setLoading(true);
     try {
       const res = await api.getWorkOrders({ status: statusFilter });
-      // FE-P1-01: 使用类型守卫安全转换数组
       setOrders(asWorkOrderArraySafe(res.data));
     } catch (error) {
-      console.error('Failed to load work orders:', error);
       showToast({ type: 'error', message: t('errors.loadFailedWorkOrders') });
     } finally {
       setLoading(false);
     }
   }, [statusFilter, showToast, t]);
+
+  // 打开创建模态框时加载设备列表
+  useEffect(() => {
+    if (!showCreateModal) return;
+    api.getDevices(1, 200).then(res => {
+      setDevices(res.data || []);
+    }).catch(() => {
+      setDevices([]);
+    });
+  }, [showCreateModal]);
 
   useEffect(() => {
     loadOrders();
@@ -94,7 +103,38 @@ export default function WorkOrderBoard() {
     }
   }, [loadOrders, showToast, t]);
 
-  // Note: Color functions are imported from colorUtils.ts
+  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = {
+      title: (formData.get('title') as string).trim(),
+      description: (formData.get('description') as string).trim(),
+      device_id: formData.get('device_id') as string,
+      priority: formData.get('priority') as 'urgent' | 'high' | 'medium' | 'low',
+    };
+
+    if (!data.title) {
+      showToast({ type: 'error', message: t('validation.required') });
+      return;
+    }
+    if (!data.device_id) {
+      showToast({ type: 'error', message: t('validation.selectDevice') });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await api.createWorkOrder(data);
+      showToast({ type: 'success', message: t('workOrder.created') });
+      setShowCreateModal(false);
+      loadOrders();
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t('workOrder.createFailed');
+      showToast({ type: 'error', message: msg });
+    } finally {
+      setCreating(false);
+    }
+  }, [loadOrders, showToast, t]);
 
   return (
     <div className="space-y-6">
@@ -104,7 +144,7 @@ export default function WorkOrderBoard() {
           <h1 className="text-2xl font-bold text-slate-100">{t('nav.workOrders')}</h1>
           <p className="text-slate-400">{t('workOrder.title')}</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary flex items-center gap-2"
           aria-label={t('workOrder.create')}
@@ -178,40 +218,24 @@ export default function WorkOrderBoard() {
               <h2 className="text-lg font-semibold">{t('workOrder.createOrder')}</h2>
             </div>
             <div className="card-body">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                setCreating(true);
-                const formData = new FormData(e.target as HTMLFormElement);
-                const data = {
-                  title: formData.get('title') as string,
-                  description: formData.get('description') as string,
-                  device_id: formData.get('device_id') as string,
-                  priority: formData.get('priority') as 'urgent' | 'high' | 'medium' | 'low',
-                };
-
-                try {
-                  await api.createWorkOrder(data);
-                  showToast({ type: 'success', message: t('workOrder.created') });
-                  setShowCreateModal(false);
-                  loadOrders();
-                } catch (error) {
-                  showToast({ type: 'error', message: t('workOrder.createFailed') });
-                } finally {
-                  setCreating(false);
-                }
-              }}>
+              <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
                     <label className="label" htmlFor="wo-create-title">{t('workOrder.title')}</label>
-                    <input id="wo-create-title" name="title" className="input" required />
+                    <input id="wo-create-title" name="title" className="input" required minLength={2} maxLength={200} />
                   </div>
                   <div>
                     <label className="label" htmlFor="wo-create-description">{t('device.description')}</label>
-                    <textarea id="wo-create-description" name="description" className="input h-20" />
+                    <textarea id="wo-create-description" name="description" className="input h-20" maxLength={1000} />
                   </div>
                   <div>
                     <label className="label" htmlFor="wo-create-device-id">{t('device.id')}</label>
-                    <input id="wo-create-device-id" name="device_id" className="input" />
+                    <select id="wo-create-device-id" name="device_id" className="input" required>
+                      <option value="">{t('validation.selectDevice')}</option>
+                      {devices.map(d => (
+                        <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="label" htmlFor="wo-create-priority">{t('workOrder.priority')}</label>

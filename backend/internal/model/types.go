@@ -137,7 +137,7 @@ type WorkOrder struct {
 	DeviceID    string    `json:"device_id" db:"device_id" binding:"required,max=100"`
 	TenantID    string    `json:"tenant_id" db:"tenant_id" binding:"max=100"`
 	Priority    string    `json:"priority" db:"priority" binding:"oneof=low medium high urgent"`
-	Status      string    `json:"status" db:"status" binding:"oneof=pending in_progress completed cancelled"`
+	Status      string    `json:"status" db:"status"` // 由 handler 层设置默认值，不在 binding 层验证
 	AssignedTo  *int      `json:"assigned_to,omitempty" db:"assigned_to"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
@@ -273,7 +273,7 @@ func (p *PaginationParams) Defaults() {
 // DeviceGraph 设备关系图
 type DeviceGraph struct {
 	Nodes []GraphNode `json:"nodes"`
-	Edges []GraphEdge `json:"edges"`
+	Links []GraphLink `json:"links"`
 }
 
 type GraphNode struct {
@@ -283,10 +283,11 @@ type GraphNode struct {
 	Status string `json:"status"`
 }
 
-type GraphEdge struct {
+// GraphLink 设备关系边
+type GraphLink struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
-	Label  string `json:"label"`
+	Type   string `json:"type"`
 }
 
 // DeviceStatsDetail 设备详细统计
@@ -325,6 +326,14 @@ type EfficiencyReport struct {
 
 // DeviceContext AI 查询的设备上下文数据
 type DeviceContext struct {
-	Device    *Device        `json:"device,omitempty"`
+	Device    *Device         `json:"device,omitempty"`
 	Telemetry []TelemetryData `json:"telemetry,omitempty"`
+}
+
+// SystemConfig 系统配置项
+type SystemConfig struct {
+	Key       string    `json:"key" db:"key"`
+	Value     string    `json:"value" db:"value"`
+	Category  string    `json:"category" db:"category"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }

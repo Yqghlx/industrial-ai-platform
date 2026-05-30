@@ -1,0 +1,209 @@
+- generic [ref=e5]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - img [ref=e11]
+          - generic [ref=e13]: Industrial AI
+        - button "关闭" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+      - navigation [ref=e17]:
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - link "仪表盘" [ref=e20] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e21]
+              - generic [ref=e26]: 仪表盘
+          - listitem [ref=e27]:
+            - link "数字孪生" [ref=e28] [cursor=pointer]:
+              - /url: /digital-twin
+              - img [ref=e29]
+              - generic [ref=e31]: 数字孪生
+          - listitem [ref=e32]:
+            - link "设备管理" [ref=e33] [cursor=pointer]:
+              - /url: /devices
+              - img [ref=e34]
+              - generic [ref=e37]: 设备管理
+          - listitem [ref=e38]:
+            - link "知识图谱" [ref=e39] [cursor=pointer]:
+              - /url: /knowledge-graph
+              - img [ref=e40]
+              - generic [ref=e45]: 知识图谱
+          - listitem [ref=e46]:
+            - link "规则配置" [ref=e47] [cursor=pointer]:
+              - /url: /rules
+              - img [ref=e48]
+              - generic [ref=e51]: 规则配置
+          - listitem [ref=e52]:
+            - link "工单管理" [ref=e53] [cursor=pointer]:
+              - /url: /work-orders
+              - img [ref=e54]
+              - generic [ref=e56]: 工单管理
+          - listitem [ref=e57]:
+            - link "通知中心" [ref=e58] [cursor=pointer]:
+              - /url: /notifications
+              - img [ref=e59]
+              - generic [ref=e62]: 通知中心
+          - listitem [ref=e63]:
+            - link "AI智能体" [ref=e64] [cursor=pointer]:
+              - /url: /ai-agent
+              - img [ref=e65]
+              - generic [ref=e68]: AI智能体
+              - img [ref=e69]
+          - listitem [ref=e71]:
+            - link "报告中心" [ref=e72] [cursor=pointer]:
+              - /url: /reports
+              - img [ref=e73]
+              - generic [ref=e76]: 报告中心
+          - listitem [ref=e77]:
+            - link "遥测数据" [ref=e78] [cursor=pointer]:
+              - /url: /telemetry
+              - img [ref=e79]
+              - generic [ref=e82]: 遥测数据
+          - listitem [ref=e83]:
+            - link "告警管理" [ref=e84] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e85]
+              - generic [ref=e87]: 告警管理
+          - listitem [ref=e88]:
+            - link "黑匣子" [ref=e89] [cursor=pointer]:
+              - /url: /blackbox
+              - img [ref=e90]
+              - generic [ref=e93]: 黑匣子
+          - listitem [ref=e94]:
+            - link "ROI统计" [ref=e95] [cursor=pointer]:
+              - /url: /roi
+              - img [ref=e96]
+              - generic [ref=e98]: ROI统计
+          - listitem [ref=e99]: 系统管理
+          - listitem [ref=e100]:
+            - link "用户管理" [ref=e101] [cursor=pointer]:
+              - /url: /users
+              - img [ref=e102]
+              - generic [ref=e107]: 用户管理
+          - listitem [ref=e108]:
+            - link "系统状态" [ref=e109] [cursor=pointer]:
+              - /url: /system
+              - img [ref=e110]
+              - generic [ref=e114]: 系统状态
+      - generic [ref=e115]:
+        - generic [ref=e116]:
+          - img [ref=e117]
+          - button "中文" [ref=e120] [cursor=pointer]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - img [ref=e124]
+            - generic [ref=e129]:
+              - generic [ref=e130]: admin
+              - generic [ref=e131]: admin
+          - button "退出登录" [ref=e132] [cursor=pointer]:
+            - img [ref=e133]
+  - generic [ref=e136]:
+    - banner [ref=e137]:
+      - button "关闭" [ref=e139] [cursor=pointer]:
+        - img [ref=e140]
+      - generic [ref=e141]:
+        - generic [ref=e142]:
+          - img [ref=e143]
+          - generic [ref=e145]: 实时连接
+        - button "通知中心" [ref=e146] [cursor=pointer]:
+          - img [ref=e147]
+          - generic "未读" [ref=e150]
+    - main [ref=e151]:
+      - generic [ref=e157]:
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - heading "AI智能体" [level=1] [ref=e160]
+            - paragraph [ref=e161]: AI智能体
+          - generic [ref=e162]:
+            - button "清除历史" [ref=e163] [cursor=pointer]:
+              - img [ref=e164]
+              - generic [ref=e167]: 清除历史
+            - generic [ref=e168]:
+              - img [ref=e169]
+              - generic [ref=e171]: GLM-4-flash
+        - generic [ref=e172]:
+          - generic [ref=e174]:
+            - img [ref=e175]
+            - generic [ref=e178]: AI智能体对话
+          - generic [ref=e179]:
+            - generic [ref=e180]:
+              - paragraph [ref=e182]: 当前设备运行状态如何？
+              - img [ref=e184]
+            - generic [ref=e187]:
+              - img [ref=e189]
+              - generic [ref=e192]:
+                - generic [ref=e193]: 设备专家
+                - generic [ref=e194]:
+                  - heading "当前设备运行状态分析" [level=3] [ref=e195]
+                  - heading "1. 设备基本参数" [level=4] [ref=e196]
+                  - list [ref=e197]:
+                    - listitem [ref=e198]:
+                      - strong [ref=e199]: 设备型号
+                      - text: ：XX-1234
+                    - listitem [ref=e200]:
+                      - strong [ref=e201]: 运行时间
+                      - text: ：自2023年1月1日投入运行，累计运行时长为1000小时
+                    - listitem [ref=e202]:
+                      - strong [ref=e203]: 设备温度
+                      - text: ：当前温度为45°C，正常工作温度范围40-60°C
+                    - listitem [ref=e204]:
+                      - strong [ref=e205]: 振动水平
+                      - text: ：当前振动值为0.5mm/s，正常工作振动范围0.3-0.7mm/s
+                  - heading "2. 遥测数据分析" [level=4] [ref=e206]
+                  - list [ref=e207]:
+                    - listitem [ref=e208]:
+                      - strong [ref=e209]: 电流
+                      - text: ：当前电流为120A，正常工作电流范围为100-130A
+                    - listitem [ref=e210]:
+                      - strong [ref=e211]: 压力
+                      - text: ：当前压力为10MPa，正常工作压力范围为8-12MPa
+                    - listitem [ref=e212]:
+                      - strong [ref=e213]: 油位
+                      - text: ：当前油位为70%，正常工作油位范围为60%-80%
+                  - heading "3. 故障和异常诊断" [level=4] [ref=e214]
+                  - list [ref=e215]:
+                    - listitem [ref=e216]:
+                      - strong [ref=e217]: 异常
+                      - text: ：无异常报警记录
+                    - listitem [ref=e218]:
+                      - strong [ref=e219]: 故障
+                      - text: ：无故障记录
+                  - heading "4. 设备维护建议" [level=4] [ref=e220]
+                  - list [ref=e221]:
+                    - listitem [ref=e222]:
+                      - strong [ref=e223]: 定期检查
+                      - text: ：建议每200小时进行一次全面检查
+                    - listitem [ref=e224]:
+                      - strong [ref=e225]: 润滑保养
+                      - text: ：根据使用情况，每300小时更换一次润滑油
+                    - listitem [ref=e226]:
+                      - strong [ref=e227]: 温度监控
+                      - text: ：持续监控设备温度，确保不超过60°C
+                  - heading "5. 设备相关问题解答" [level=4] [ref=e228]
+                  - list [ref=e229]:
+                    - listitem [ref=e230]:
+                      - strong [ref=e231]: 问
+                      - text: ：设备振动水平是否正常？
+                      - strong [ref=e232]: 答
+                      - text: ：是的，当前振动水平0.5mm/s在正常工作范围内。
+                  - heading "可操作建议" [level=4] [ref=e233]
+                  - list [ref=e234]:
+                    - listitem [ref=e235]:
+                      - strong [ref=e236]: 执行计划
+                      - text: ：根据维护建议，安排下一次全面检查和润滑保养。
+                    - listitem [ref=e237]:
+                      - strong [ref=e238]: 持续监控
+                      - text: ：继续监控设备各项参数，确保设备稳定运行。
+          - generic [ref=e239]:
+            - generic [ref=e240]:
+              - button "分析设备运行状态" [ref=e241] [cursor=pointer]
+              - button "给我维护建议" [ref=e242] [cursor=pointer]
+              - button "预测故障风险" [ref=e243] [cursor=pointer]
+              - button "如何优化生产效率" [ref=e244] [cursor=pointer]
+              - button "生成每日报告" [ref=e245] [cursor=pointer]
+            - generic [ref=e246]:
+              - textbox "输入您的问题..." [ref=e247]
+              - button "提问" [disabled] [ref=e248]:
+                - img [ref=e249]
+                - generic [ref=e252]: 提问

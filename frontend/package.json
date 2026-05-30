@@ -26,6 +26,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-force-graph-2d": "^1.25.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.20.0",
     "recharts": "^2.12.0"
   },

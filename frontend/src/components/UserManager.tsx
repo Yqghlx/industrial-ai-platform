@@ -37,7 +37,7 @@ const UserRow = React.memo(function UserRow({ user, t, onDelete }: UserRowProps)
           {user.role === 'admin' ? t('user.admin') : t('user.user')}
         </span>
       </td>
-      <td>{new Date(user.created_at).toLocaleDateString()}</td>
+      <td>{user.created_at && !user.created_at.startsWith('0001') ? new Date(user.created_at).toLocaleDateString() : '--'}</td>
       <td>
         <button
           onClick={() => onDelete(user.id)}
@@ -83,7 +83,7 @@ export default function UserManager() {
     onSuccess: (_action) => {},
   });
 
-  const { items: users, loading } = state;
+  const { items: users, loading, error: crudError } = state;
   const { create, delete: deleteItem } = actions;
 
   const handleDelete = useCallback(async (id: number) => {
@@ -187,11 +187,13 @@ export default function UserManager() {
                 };
 
                 // FE-P2-09: 使用 useCRUD hook 的 create 方法
-                const success = await create(data) !== null;
-                if (success) {
+                const result = await create(data);
+                if (result) {
                   showToast({ type: 'success', message: t('user.createSuccess') });
                 } else {
-                  showToast({ type: 'error', message: t('user.createFailed') });
+                  // 显示后端返回的具体错误（用户名已存在/邮箱已存在等）
+                  const lastError = crudError;
+                  showToast({ type: 'error', message: lastError || t('user.createFailed') });
                 }
                 setCreating(false);
                 setShowCreateModal(false);

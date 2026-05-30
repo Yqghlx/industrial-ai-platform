@@ -3,14 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { useAuth } from './AuthContext';
 import { useIsMobile } from '../lib/useSwipe';
-import { 
-  LayoutDashboard, 
-  Settings, 
-  Users, 
-  Bell, 
-  FileText, 
-  Bot, 
-  Wrench, 
+import {
+  LayoutDashboard,
+  Settings,
+  Users,
+  Bell,
+  FileText,
+  Bot,
+  Wrench,
   Activity,
   Network,
   Box,
@@ -20,6 +20,7 @@ import {
   LogOut,
   X,
   ChevronRight,
+  ChevronLeft,
   Gauge,
   AlertTriangle
 } from 'lucide-react';
@@ -27,9 +28,11 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { t, language, setLanguage } = useI18n();
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -100,8 +103,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 flex-col">
-        <SidebarContent 
+      <aside className={`hidden lg:flex fixed inset-y-0 left-0 z-50 bg-slate-800 border-r border-slate-700 flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+        <SidebarContent
           menuItems={menuItems}
           adminItems={adminItems}
           isAdmin={isAdmin}
@@ -113,6 +116,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           isActive={isActive}
           onNavClick={handleNavClick}
           showCloseButton={false}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
         />
       </aside>
 
@@ -156,6 +161,8 @@ interface SidebarContentProps {
   onNavClick: () => void;
   showCloseButton: boolean;
   onClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function SidebarContent({
@@ -171,19 +178,39 @@ function SidebarContent({
   onNavClick,
   showCloseButton,
   onClose,
+  collapsed = false,
+  onToggleCollapse,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between h-14 lg:h-16 px-4 border-b border-slate-700 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shrink-0">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <span className="text-base lg:text-lg font-bold text-slate-100">Industrial AI</span>
-          </div>
+          {!collapsed && (
+            <span className="text-base lg:text-lg font-bold text-slate-100 truncate">Industrial AI</span>
+          )}
         </div>
+        {!collapsed && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors"
+            aria-label={t('common.close')}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+        {collapsed && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="absolute -right-3 top-4 w-6 h-6 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-600 transition-colors z-10"
+            aria-label={t('common.openMenu')}
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
         {showCloseButton && onClose && (
           <button 
             onClick={onClose} 
@@ -202,19 +229,23 @@ function SidebarContent({
             <li key={item.path}>
               <Link
                 to={item.path}
+                title={collapsed ? item.label : undefined}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 lg:py-2 rounded-lg text-slate-300 
+                  flex items-center gap-3 px-3 py-2.5 lg:py-2 rounded-lg text-slate-300
                   transition-colors touch-manipulation
-                  ${isActive(item.path) 
-                    ? 'bg-primary-600/20 text-primary-400' 
+                  ${collapsed ? 'justify-center' : ''}
+                  ${isActive(item.path)
+                    ? 'bg-primary-600/20 text-primary-400'
                     : 'hover:bg-slate-700/50 hover:text-slate-100 active:bg-slate-700'
                   }
                 `}
                 onClick={onNavClick}
               >
                 <item.icon className="w-5 h-5 shrink-0" />
-                <span className="flex-1 truncate">{item.label}</span>
-                {isActive(item.path) && (
+                {!collapsed && (
+                  <span className="flex-1 truncate">{item.label}</span>
+                )}
+                {!collapsed && isActive(item.path) && (
                   <ChevronRight className="w-4 h-4 text-primary-400" />
                 )}
               </Link>
@@ -224,27 +255,36 @@ function SidebarContent({
           {isAdmin && (
             <>
               <li className="pt-4">
-                <span className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  {t('nav.admin')}
-                </span>
+                {!collapsed && (
+                  <span className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    {t('nav.admin')}
+                  </span>
+                )}
+                {collapsed && (
+                  <div className="border-t border-slate-700 mx-2" />
+                )}
               </li>
               {adminItems.map((item) => (
                 <li key={item.path}>
                   <Link
                     to={item.path}
+                    title={collapsed ? item.label : undefined}
                     className={`
-                      flex items-center gap-3 px-3 py-2.5 lg:py-2 rounded-lg text-slate-300 
+                      flex items-center gap-3 px-3 py-2.5 lg:py-2 rounded-lg text-slate-300
                       transition-colors touch-manipulation
-                      ${isActive(item.path) 
-                        ? 'bg-primary-600/20 text-primary-400' 
+                      ${collapsed ? 'justify-center' : ''}
+                      ${isActive(item.path)
+                        ? 'bg-primary-600/20 text-primary-400'
                         : 'hover:bg-slate-700/50 hover:text-slate-100 active:bg-slate-700'
                       }
                     `}
                     onClick={onNavClick}
                   >
                     <item.icon className="w-5 h-5 shrink-0" />
-                    <span className="flex-1 truncate">{item.label}</span>
-                    {isActive(item.path) && (
+                    {!collapsed && (
+                      <span className="flex-1 truncate">{item.label}</span>
+                    )}
+                    {!collapsed && isActive(item.path) && (
                       <ChevronRight className="w-4 h-4 text-primary-400" />
                     )}
                   </Link>
@@ -257,37 +297,43 @@ function SidebarContent({
 
       {/* Footer */}
       <div className="border-t border-slate-700 p-3 lg:p-4 shrink-0">
-        {/* Language switcher */}
-        <div className="flex items-center gap-2 mb-3">
-          <Globe className="w-4 h-4 text-slate-400" />
-          <button
-            onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
-            className="text-sm text-slate-400 hover:text-slate-200 active:text-slate-100 touch-manipulation py-1 px-2 rounded"
-          >
-            {language === 'zh' ? '中文' : 'English'}
-          </button>
-        </div>
-        
+        {/* Language switcher - 隐藏折叠状态 */}
+        {!collapsed && (
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="w-4 h-4 text-slate-400" />
+            <button
+              onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
+              className="text-sm text-slate-400 hover:text-slate-200 active:text-slate-100 touch-manipulation py-1 px-2 rounded"
+            >
+              {language === 'zh' ? '中文' : 'English'}
+            </button>
+          </div>
+        )}
+
         {/* User info */}
         {user && (
-          <div data-testid="user-menu" className="flex items-center justify-between py-2 px-2 bg-slate-700/50 rounded-lg">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center shrink-0">
+          <div data-testid="user-menu" className={`flex items-center justify-between py-2 px-2 bg-slate-700/50 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
+            <div className={`flex items-center gap-2 min-w-0 ${collapsed ? 'justify-center' : ''}`}>
+              <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center shrink-0" title={collapsed ? user.username : undefined}>
                 <Users className="w-4 h-4 text-slate-300" />
               </div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
-                <div className="text-xs text-slate-400 truncate">{user.role}</div>
-              </div>
+              {!collapsed && (
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
+                  <div className="text-xs text-slate-400 truncate">{user.role}</div>
+                </div>
+              )}
             </div>
-            <button
-              data-testid="logout-btn"
-              onClick={onLogout}
-              className="p-2 text-slate-400 hover:text-red-400 active:text-red-300 active:bg-slate-600 rounded-lg transition-colors touch-manipulation shrink-0"
-              aria-label={t('auth.logout')}
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            {!collapsed && (
+              <button
+                data-testid="logout-btn"
+                onClick={onLogout}
+                className="p-2 text-slate-400 hover:text-red-400 active:text-red-300 active:bg-slate-600 rounded-lg transition-colors touch-manipulation shrink-0"
+                aria-label={t('auth.logout')}
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
           </div>
         )}
       </div>

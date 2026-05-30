@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/industrial-ai/platform/internal/model"
@@ -138,6 +139,7 @@ type AgentService struct {
 	httpClient    HTTPClientInterface // FIX-019: HTTP Client 接口化
 	config        *AgentServiceConfig
 	optimizer     *AgentOptimizer // P2-3: Queue + Cache optimization
+	configMu      sync.RWMutex    // 保护动态配置字段的读写锁
 }
 
 // NewAgentService creates a new agent service
@@ -234,6 +236,25 @@ func NewAgentServiceWithConfig(
 		httpClient:    httpClient,
 		config:        config,
 	}
+}
+
+// UpdateConfig 动态更新 LLM 配置（无需重启服务）
+func (s *AgentService) UpdateConfig(apiKey, baseURL, model string) {
+	s.configMu.Lock()
+	defer s.configMu.Unlock()
+	if apiKey != "" {
+		s.apiKey = apiKey
+	}
+	if baseURL != "" {
+		s.baseURL = baseURL
+	}
+	if model != "" {
+		s.model = model
+	}
+	logger.L().Info("AgentService 配置已动态更新",
+		zap.String("base_url", s.baseURL),
+		zap.String("model", s.model),
+	)
 }
 
 // Query processes an AI agent query

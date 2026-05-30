@@ -25,6 +25,7 @@ export default {
     yes: '是',
     no: '否',
     export: '导出',
+    download: '下载',
     openMenu: '打开菜单',
     connected: '实时连接',
     disconnected: '连接断开',
@@ -71,6 +72,14 @@ export default {
     loadFailedAlerts: '告警数据加载失败',
     loadFailedAlertStats: '告警统计数据加载失败',
     loadFailedRecordData: '记录数据加载失败',
+    deviceNotFound: '设备不存在，请选择有效设备',
+  },
+  validation: {
+    required: '此字段为必填项',
+    selectDevice: '请选择设备',
+    invalidId: 'ID 仅允许字母、数字、横杠和下划线',
+    minValue: '值不能小于 {min}',
+    deviceNotFound: '设备不存在',
   },
   nav: {
     dashboard: '仪表盘',
@@ -444,6 +453,13 @@ export default {
     running: '运行中',
     connected: '已连接',
     postgresql: 'PostgreSQL',
+    llmConfig: '大模型配置',
+    baseURL: '接口地址',
+    modelName: '模型名称',
+    apiKeyPlaceholder: '未配置 API Key',
+    apiKeyHint: '留空则保持原有 Key 不变，输入新值则覆盖',
+    configSaved: '配置已保存，即时生效',
+    configSaveFailed: '配置保存失败',
   },
 user: {
     title: '用户管理',
@@ -488,6 +504,8 @@ user: {
   digitalTwin: {
     realTimeMonitoring: '实时设备监控面板',
     realTimeUpdate: '实时更新',
+    noTelemetryData: '暂无遥测数据',
+    waitingForData: '请启动边缘设备模拟器上报数据，或等待设备连接',
   },
   knowledgeGraph: {
     topologyTitle: '设备拓扑关系图',

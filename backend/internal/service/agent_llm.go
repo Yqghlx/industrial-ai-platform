@@ -70,10 +70,17 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 		userMessage = fmt.Sprintf("当前设备上下文数据:\n%s\n\n用户问题: %s", string(contextJSON), query)
 	}
 
+	// 使用读锁读取动态配置
+	s.configMu.RLock()
+	currentModel := s.model
+	currentBaseURL := s.baseURL
+	currentAPIKey := s.apiKey
+	s.configMu.RUnlock()
+
 	// Build request body (OpenAI-compatible format)
 	// OPT-001: Reduce max_tokens for faster response (see DefaultMaxTokens constant)
 	reqBody := map[string]interface{}{
-		"model": s.model,
+		"model": currentModel,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userMessage},
@@ -88,15 +95,15 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 	}
 
 	// Create HTTP request
-	url := s.baseURL + "/chat/completions"
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonBody))
+	apiURL := currentBaseURL + "/chat/completions"
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewReader(jsonBody))
 	if err != nil {
 		return "", errors.NewInternalError(fmt.Sprintf("Failed to create request: %v", err))
 	}
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+currentAPIKey)
 
 	// FIX-019: 使用共享 HTTP Client 发送请求
 	resp, err := s.httpClient.Do(req)

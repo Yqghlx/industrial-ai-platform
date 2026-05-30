@@ -96,6 +96,7 @@ type HTTPServerNew struct {
 	blackBoxSvc      service.BlackBoxServiceInterface
 	cacheSvc         *cache_service.CacheServiceIntegration
 	agentSvc         service.AgentServiceInterface
+	configSvc        service.ConfigServiceInterface
 
 	// Handlers (new architecture)
 	alertHandler     *AlertHandler
@@ -197,6 +198,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	// Phase 3: Handler 层完全通过 ServiceFactory 获取服务，不直接依赖 Repository
 	serviceFactory := service.NewServiceFactoryFromDB(db)
 	serviceFactory.InitializeAgentService(cacheSvc.GetCache())
+	serviceFactory.InitializeConfigService()
 
 	// 从 ServiceFactory 获取服务实例（不再直接引用 Repository）
 	authSvc := serviceFactory.GetAuthService()
@@ -332,6 +334,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		blackBoxSvc:     blackBoxSvc,
 		cacheSvc:        cacheSvc,
 		agentSvc:      agentSvc,
+		configSvc:     serviceFactory.GetConfigService(),
 		cache:         cacheSvc.GetCache(),
 		wsClients:     make(map[*websocket.Conn]bool),
 		broadcastChan: make(chan model.WSMessage, 100),
@@ -402,12 +405,12 @@ func (s *HTTPServerNew) setupHandlers() {
 	// Initialize handlers
 	s.alertHandler = NewAlertHandler(s.alertSvc, s.broadcastFn)
 	s.deviceHandler = NewDeviceHandlerNew(s.deviceSvc, s.alertSvc, s.authSvc, s.telemetrySvc, s.broadcastFn)
-	s.businessHandler = NewBusinessHandlerNew(s.workOrderSvc, s.notificationSvc, s.blackBoxSvc, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
+	s.businessHandler = NewBusinessHandlerNew(s.workOrderSvc, s.notificationSvc, s.blackBoxSvc, s.reportSvc, s.alertSvc, s.deviceSvc, s.broadcastFn, s.cache)
 	s.telemetryHandler = NewTelemetryHandlerNew(s.telemetrySvc, s.agentSvc)
 	s.authHandler = NewAuthHandlerNew(s.authSvc, s.userSvc)
 	s.tenantHandler = NewTenantHandler(s.tenantSvc)
 	s.rbacHandler = NewRBACHandler(NewRBACServiceAdapter(s.rbacSvc))
-	s.adminHandler = NewAdminHandlerNew(s.authSvc, s.telemetrySvc)
+	s.adminHandler = NewAdminHandlerNew(s.authSvc, s.telemetrySvc, s.configSvc)
 	s.healthHandler = NewHealthHandlerNew(s.startTime)
 	s.exportHandler = NewExportHandler(s.exportSvc)
 
@@ -483,14 +486,14 @@ func (s *HTTPServerNew) setupHandlers() {
 		auth.GET("/auth/validate", s.authHandler.ValidateToken)
 
 		// Work Orders
-		auth.GET("/workorders", s.businessHandler.ListWorkOrders)
-		auth.POST("/workorders", s.businessHandler.CreateWorkOrder)
-		auth.GET("/workorders/:id", s.businessHandler.GetWorkOrder)
-		auth.PUT("/workorders/:id/status", s.businessHandler.UpdateWorkOrderStatus)
+		auth.GET("/work-orders", s.businessHandler.ListWorkOrders)
+		auth.POST("/work-orders", s.businessHandler.CreateWorkOrder)
+		auth.GET("/work-orders/:id", s.businessHandler.GetWorkOrder)
+		auth.PUT("/work-orders/:id/status", s.businessHandler.UpdateWorkOrderStatus)
 
 		// Notifications
 		auth.GET("/notifications", s.businessHandler.ListNotifications)
-		auth.POST("/notifications/:id/read", s.businessHandler.MarkNotificationRead)
+		auth.PUT("/notifications/:id/read", s.businessHandler.MarkNotificationRead)
 
 		// Reports
 		auth.GET("/reports", s.businessHandler.ListReports)
@@ -533,6 +536,8 @@ func (s *HTTPServerNew) setupHandlers() {
 		admin.POST("/admin/users", s.adminHandler.CreateUser)
 		admin.DELETE("/admin/users/:id", s.adminHandler.DeleteUser)
 		admin.GET("/system/status", s.adminHandler.GetSystemStatus)
+		admin.GET("/admin/config/llm", s.adminHandler.GetLLMConfig)
+		admin.PUT("/admin/config/llm", s.adminHandler.UpdateLLMConfig)
 
 		admin.POST("/tenants", s.tenantHandler.CreateTenant)
 		admin.GET("/tenants", s.tenantHandler.ListTenants)

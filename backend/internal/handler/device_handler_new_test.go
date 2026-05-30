@@ -271,7 +271,7 @@ func TestDeviceHandlerNew_GetDeviceGraph_Success(t *testing.T) {
 
 	graphData := &model.DeviceGraph{
 		Nodes: []model.GraphNode{{ID: "node-1", Name: "Node 1", Type: "CNC", Status: "online"}},
-		Edges: []model.GraphEdge{},
+		Links: []model.GraphLink{},
 	}
 
 	mockDeviceSvc.On("GetGraph", mock.Anything).Return(graphData, nil)

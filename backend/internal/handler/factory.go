@@ -71,6 +71,7 @@ func (f *HandlerFactory) CreateAdminHandler() *AdminHandlerNew {
 	return NewAdminHandlerNew(
 		f.serviceFactory.GetAuthService(),
 		f.serviceFactory.GetTelemetryService(),
+		f.serviceFactory.GetConfigService(),
 	)
 }
 
@@ -94,6 +95,7 @@ func (f *HandlerFactory) CreateBusinessHandler() *BusinessHandlerNew {
 		f.serviceFactory.GetBlackBoxService(),
 		f.serviceFactory.GetReportService(),
 		f.serviceFactory.GetAlertService(),
+		f.serviceFactory.GetDeviceService(),
 		f.broadcastFunc,
 		f.cache,
 	)

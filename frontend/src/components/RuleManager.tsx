@@ -135,7 +135,9 @@ export default function RuleManager() {
                       <td>
                         <span className="text-slate-300">{rule.metric}</span>
                         <span className="text-slate-400 ml-1">{rule.operator}</span>
-                        <span className="text-primary-400 ml-1">{rule.threshold}</span>
+                      </td>
+                      <td>
+                        <span className="text-primary-400 font-medium">{rule.threshold}</span>
                       </td>
                       <td>
                         <span className={`status-badge ${getSeverityColor(rule.severity)}`}>
@@ -264,7 +266,7 @@ export default function RuleManager() {
                     </div>
                     <div>
                       <label className="label" htmlFor="rule-threshold">{t('alert.threshold')}</label>
-                      <input id="rule-threshold" name="threshold" type="number" className="input" defaultValue={editingRule?.threshold} />
+                      <input id="rule-threshold" name="threshold" type="number" className="input" required min="0" step="0.1" defaultValue={editingRule?.threshold} />
                     </div>
                   </div>
                   <div>
@@ -278,7 +280,7 @@ export default function RuleManager() {
                   </div>
                   <div>
                     <label className="label" htmlFor="rule-cooldown">{t('alert.cooldown')} ({t('alert.cooldownUnit')})</label>
-                    <input id="rule-cooldown" name="cooldown_sec" type="number" className="input" defaultValue={editingRule?.cooldown_sec || 300} />
+                    <input id="rule-cooldown" name="cooldown_sec" type="number" className="input" required min="0" step="1" defaultValue={editingRule?.cooldown_sec || 300} />
                   </div>
                   <div className="flex gap-2">
                     <button type="submit" className="btn btn-primary flex-1" disabled={saving}>

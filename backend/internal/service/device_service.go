@@ -252,10 +252,10 @@ func (s *DeviceService) GetGraph(ctx context.Context) (*model.DeviceGraph, error
 		return nil, errors.NewDatabaseError(err.Error())
 	}
 
-	// 构造图结构：将设备列表转换为 GraphNode，基于位置关系生成 GraphEdge
+	// 构造图结构：将设备列表转换为 GraphNode，基于位置关系生成 GraphLink
 	graph := &model.DeviceGraph{
 		Nodes: make([]model.GraphNode, 0, len(devices)),
-		Edges: make([]model.GraphEdge, 0),
+		Links: make([]model.GraphLink, 0),
 	}
 
 	for _, d := range devices {
@@ -271,10 +271,10 @@ func (s *DeviceService) GetGraph(ctx context.Context) (*model.DeviceGraph, error
 	for i := 0; i < len(devices); i++ {
 		for j := i + 1; j < len(devices); j++ {
 			if devices[i].Location == devices[j].Location {
-				graph.Edges = append(graph.Edges, model.GraphEdge{
+				graph.Links = append(graph.Links, model.GraphLink{
 					Source: devices[i].ID,
 					Target: devices[j].ID,
-					Label:  "co-located",
+					Type:   "co-located",
 				})
 			}
 		}

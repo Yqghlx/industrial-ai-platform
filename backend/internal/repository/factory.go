@@ -111,3 +111,8 @@ func (f *RepositoryFactory) GetRBACRepository() (*RBACRepository, error) {
 func (f *RepositoryFactory) GetAgentTaskLogRepository() *AgentTaskLogRepository {
 	return NewAgentTaskLogRepository(f.db)
 }
+
+// GetSystemConfigRepo 获取系统配置 Repository
+func (f *RepositoryFactory) GetSystemConfigRepo() *SystemConfigRepo {
+	return NewSystemConfigRepo(f.db)
+}

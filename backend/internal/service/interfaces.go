@@ -253,3 +253,23 @@ type UserRoleServiceInterface interface {
 
 // 确保 RBACService 实现 RBACServiceInterface
 var _ RBACServiceInterface = (*RBACService)(nil)
+
+// LLMConfigResponse 大模型配置响应
+type LLMConfigResponse struct {
+	LLMAPIKey  string `json:"llm_api_key"`
+	LLMBaseURL string `json:"llm_base_url"`
+	LLMModel   string `json:"llm_model"`
+}
+
+// LLMConfigUpdate 大模型配置更新请求
+type LLMConfigUpdate struct {
+	LLMAPIKey  string `json:"llm_api_key"`
+	LLMBaseURL string `json:"llm_base_url"`
+	LLMModel   string `json:"llm_model"`
+}
+
+// ConfigServiceInterface 系统配置服务接口
+type ConfigServiceInterface interface {
+	GetLLMConfig(ctx context.Context) (*LLMConfigResponse, error)
+	UpdateLLMConfig(ctx context.Context, update *LLMConfigUpdate) error
+}

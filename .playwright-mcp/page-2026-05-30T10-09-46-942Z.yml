@@ -1,0 +1,198 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e11]
+            - generic [ref=e13]: Industrial AI
+          - button "关闭" [ref=e14] [cursor=pointer]:
+            - img [ref=e15]
+        - navigation [ref=e17]:
+          - list [ref=e18]:
+            - listitem [ref=e19]:
+              - link "仪表盘" [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - generic [ref=e26]: 仪表盘
+            - listitem [ref=e27]:
+              - link "数字孪生" [ref=e28] [cursor=pointer]:
+                - /url: /digital-twin
+                - img [ref=e29]
+                - generic [ref=e31]: 数字孪生
+            - listitem [ref=e32]:
+              - link "设备管理" [ref=e33] [cursor=pointer]:
+                - /url: /devices
+                - img [ref=e34]
+                - generic [ref=e37]: 设备管理
+            - listitem [ref=e38]:
+              - link "知识图谱" [ref=e39] [cursor=pointer]:
+                - /url: /knowledge-graph
+                - img [ref=e40]
+                - generic [ref=e45]: 知识图谱
+            - listitem [ref=e46]:
+              - link "规则配置" [ref=e47] [cursor=pointer]:
+                - /url: /rules
+                - img [ref=e48]
+                - generic [ref=e51]: 规则配置
+            - listitem [ref=e52]:
+              - link "工单管理" [ref=e53] [cursor=pointer]:
+                - /url: /work-orders
+                - img [ref=e54]
+                - generic [ref=e56]: 工单管理
+            - listitem [ref=e57]:
+              - link "通知中心" [ref=e58] [cursor=pointer]:
+                - /url: /notifications
+                - img [ref=e59]
+                - generic [ref=e62]: 通知中心
+            - listitem [ref=e63]:
+              - link "AI智能体" [ref=e64] [cursor=pointer]:
+                - /url: /ai-agent
+                - img [ref=e65]
+                - generic [ref=e68]: AI智能体
+            - listitem [ref=e69]:
+              - link "报告中心" [ref=e70] [cursor=pointer]:
+                - /url: /reports
+                - img [ref=e71]
+                - generic [ref=e74]: 报告中心
+            - listitem [ref=e75]:
+              - link "遥测数据" [ref=e76] [cursor=pointer]:
+                - /url: /telemetry
+                - img [ref=e77]
+                - generic [ref=e80]: 遥测数据
+            - listitem [ref=e81]:
+              - link "告警管理" [ref=e82] [cursor=pointer]:
+                - /url: /alerts
+                - img [ref=e83]
+                - generic [ref=e85]: 告警管理
+            - listitem [ref=e86]:
+              - link "黑匣子" [ref=e87] [cursor=pointer]:
+                - /url: /blackbox
+                - img [ref=e88]
+                - generic [ref=e91]: 黑匣子
+            - listitem [ref=e92]:
+              - link "ROI统计" [ref=e93] [cursor=pointer]:
+                - /url: /roi
+                - img [ref=e94]
+                - generic [ref=e96]: ROI统计
+            - listitem [ref=e97]: 系统管理
+            - listitem [ref=e98]:
+              - link "用户管理" [ref=e99] [cursor=pointer]:
+                - /url: /users
+                - img [ref=e100]
+                - generic [ref=e105]: 用户管理
+            - listitem [ref=e106]:
+              - link "系统状态" [ref=e107] [cursor=pointer]:
+                - /url: /system
+                - img [ref=e108]
+                - generic [ref=e112]: 系统状态
+                - img [ref=e113]
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - img [ref=e117]
+            - button "中文" [ref=e120] [cursor=pointer]
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - img [ref=e124]
+              - generic [ref=e129]:
+                - generic [ref=e130]: admin
+                - generic [ref=e131]: admin
+            - button "退出登录" [ref=e132] [cursor=pointer]:
+              - img [ref=e133]
+    - generic [ref=e136]:
+      - banner [ref=e137]:
+        - button "关闭" [ref=e139] [cursor=pointer]:
+          - img [ref=e140]
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - img [ref=e143]
+            - generic [ref=e145]: 实时连接
+          - button "通知中心" [ref=e146] [cursor=pointer]:
+            - img [ref=e147]
+            - generic "未读" [ref=e150]
+      - main [ref=e151]:
+        - generic [ref=e157]:
+          - generic [ref=e158]:
+            - generic [ref=e159]:
+              - heading "系统状态" [level=1] [ref=e160]
+              - paragraph [ref=e161]: 系统状态
+            - button "刷新" [ref=e162] [cursor=pointer]:
+              - img [ref=e163]
+              - generic [ref=e165]: 刷新
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - generic [ref=e168]:
+                - img [ref=e169]
+                - generic [ref=e173]: 数据库
+              - generic [ref=e174]:
+                - img [ref=e175]
+                - generic [ref=e178]: 健康
+              - generic [ref=e179]: "延迟: 0ms"
+            - generic [ref=e180]:
+              - generic [ref=e181]:
+                - img [ref=e182]
+                - generic [ref=e185]: 版本
+              - generic [ref=e186]: 1.0.0
+            - generic [ref=e187]:
+              - generic [ref=e188]:
+                - img [ref=e189]
+                - generic [ref=e192]: 运行时间
+              - generic [ref=e193]: 471.292µs
+            - generic [ref=e194]:
+              - generic [ref=e195]:
+                - img [ref=e196]
+                - generic [ref=e198]: 设备数量
+              - generic [ref=e199]: "1"
+          - generic [ref=e200]:
+            - generic [ref=e202]:
+              - img [ref=e203]
+              - heading "大模型配置" [level=2] [ref=e206]
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]: API Key
+                - textbox "3e24dc***" [ref=e210]
+                - paragraph [ref=e211]: 留空则保持原有 Key 不变，输入新值则覆盖
+              - generic [ref=e212]:
+                - generic [ref=e213]: 接口地址
+                - textbox "https://open.bigmodel.cn/api/paas/v4" [ref=e214]
+              - generic [ref=e215]:
+                - generic [ref=e216]: 模型名称
+                - textbox "glm-4-flash" [ref=e217]
+              - button "保存" [ref=e219] [cursor=pointer]:
+                - img [ref=e263]
+                - generic [ref=e224]: 保存
+          - generic [ref=e225]:
+            - heading "详细信息" [level=2] [ref=e227]
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - generic [ref=e231]: "延迟:"
+                - generic [ref=e232]: 0ms
+              - generic [ref=e233]:
+                - generic [ref=e234]: "用户管理:"
+                - text: "0"
+              - generic [ref=e235]:
+                - generic [ref=e236]: "设备数量:"
+                - text: "1"
+              - generic [ref=e237]:
+                - generic [ref=e238]: "时间戳:"
+                - text: 2026/5/30 18:09:03
+          - generic [ref=e241]:
+            - generic [ref=e242]:
+              - img [ref=e244]
+              - generic [ref=e248]: PostgreSQL
+              - generic [ref=e249]: healthy
+            - generic [ref=e250]:
+              - img [ref=e252]
+              - generic [ref=e255]: 后端
+              - generic [ref=e256]: 运行中
+            - generic [ref=e257]:
+              - img [ref=e259]
+              - generic [ref=e261]: WebSocket
+              - generic [ref=e262]: 已连接
+  - status [ref=e267]:
+    - generic [ref=e268]:
+      - generic [ref=e269]:
+        - generic [ref=e271]: ✓
+        - generic [ref=e272]: 配置已保存，即时生效
+      - button "关闭" [ref=e273] [cursor=pointer]:
+        - img [ref=e274]

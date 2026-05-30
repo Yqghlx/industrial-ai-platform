@@ -29,6 +29,7 @@ type ServiceFactory struct {
 	exportService       ExportServiceInterface
 	rbacService         RBACServiceInterface
 	tenantService       TenantServiceInterface
+	configService       ConfigServiceInterface
 	repoFactory         *repository.RepositoryFactory
 }
 
@@ -164,6 +165,21 @@ func (f *ServiceFactory) InitializeAgentService(cacheSvc cache.CacheService) {
 	)
 }
 
+// InitializeConfigService 创建并注入 ConfigService（需在 AgentService 之后调用）
+func (f *ServiceFactory) InitializeConfigService() {
+	if f.repoFactory == nil {
+		return
+	}
+	var agentSvc *AgentService
+	if impl, ok := f.agentService.(*AgentService); ok {
+		agentSvc = impl
+	}
+	f.configService = NewConfigService(
+		f.repoFactory.GetSystemConfigRepo(),
+		agentSvc,
+	)
+}
+
 // ============================================
 // Service 获取方法（单例模式）
 // ============================================
@@ -184,6 +200,8 @@ func (f *ServiceFactory) GetReportService() ReportServiceInterface     { return 
 func (f *ServiceFactory) GetExportService() ExportServiceInterface     { return f.exportService }
 func (f *ServiceFactory) GetRBACService() RBACServiceInterface         { return f.rbacService }
 func (f *ServiceFactory) GetTenantService() TenantServiceInterface     { return f.tenantService }
+func (f *ServiceFactory) GetConfigService() ConfigServiceInterface     { return f.configService }
+func (f *ServiceFactory) SetConfigService(svc ConfigServiceInterface)   { f.configService = svc }
 
 // ============================================
 // ReportServiceInterface 定义

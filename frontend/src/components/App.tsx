@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Sidebar from './Sidebar';
@@ -11,6 +11,7 @@ import { useSwipe, useIsMobile, useViewportHeight } from '../lib/useSwipe';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useI18n } from '../i18n';
 import { ConfirmDialogProvider } from './UI/ConfirmDialog';
+import { RouteLoader } from './LoadingSpinner';
 
 export default function App() {
   usePerformance('App');
@@ -21,6 +22,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { showToast } = useToast();
   const isMobile = useIsMobile();
 
@@ -77,6 +79,10 @@ export default function App() {
     setSidebarOpen(false);
   }, []);
 
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed(prev => !prev);
+  }, []);
+
   if (!isAuthenticated) {
     return null;
   }
@@ -88,17 +94,17 @@ export default function App() {
         {...swipeHandlers}
       >
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapsed} />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'} transition-all duration-300`}>
         {/* Top navbar */}
         <header className="h-14 lg:h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-3 lg:px-4 safe-area-top">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => isMobile ? setSidebarOpen(true) : toggleSidebarCollapsed()}
               className="p-2 text-slate-400 hover:text-slate-200 active:text-slate-100 active:bg-slate-700 rounded-lg touch-manipulation"
-              aria-label={t('common.openMenu')}
+              aria-label={sidebarCollapsed ? t('common.openMenu') : t('common.close')}
             >
               <Menu className="w-5 h-5 lg:w-6 lg:h-6" />
             </button>
@@ -128,7 +134,9 @@ export default function App() {
         {/* Page content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 lg:p-4 bg-slate-900 pb-20 lg:pb-4">
           <div className="max-w-7xl mx-auto">
-            <Outlet />
+            <Suspense fallback={<RouteLoader />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

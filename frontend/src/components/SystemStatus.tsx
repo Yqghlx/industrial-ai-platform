@@ -3,8 +3,8 @@ import api from '../lib/api';
 import { useI18n } from '../i18n';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
-import { Database, Activity, Server, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { SystemStatus as SystemStatusType } from '../types/api';
+import { Database, Activity, Server, Clock, CheckCircle, AlertCircle, Settings, Save } from 'lucide-react';
+import { SystemStatus as SystemStatusType, LLMConfig } from '../types/api';
 
 export default function SystemStatus() {
   const { t } = useI18n();
@@ -12,6 +12,9 @@ export default function SystemStatus() {
   const [status, setStatus] = useState<SystemStatusType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [llmConfig, setLLMConfig] = useState<LLMConfig | null>(null);
+  const [llmSaving, setLLMSaving] = useState(false);
+  const [llmForm, setLLMForm] = useState({ api_key: '', base_url: '', model: '' });
 
   const loadStatus = useCallback(async () => {
     setRefreshing(true);
@@ -27,11 +30,43 @@ export default function SystemStatus() {
     }
   }, [showToast, t]);
 
+  const loadLLMConfig = useCallback(async () => {
+    try {
+      const res = await api.getLLMConfig();
+      setLLMConfig(res as LLMConfig);
+      setLLMForm({
+        api_key: (res as LLMConfig).llm_api_key || '',
+        base_url: (res as LLMConfig).llm_base_url || '',
+        model: (res as LLMConfig).llm_model || '',
+      });
+    } catch {
+      // 非管理员可能无法访问，静默处理
+    }
+  }, []);
+
   useEffect(() => {
     loadStatus();
-    const interval = setInterval(loadStatus, 60000); // Refresh every minute
+    loadLLMConfig();
+    const interval = setInterval(loadStatus, 60000);
     return () => clearInterval(interval);
-  }, [loadStatus]);
+  }, [loadStatus, loadLLMConfig]);
+
+  const handleSaveLLM = async () => {
+    setLLMSaving(true);
+    try {
+      await api.updateLLMConfig({
+        llm_api_key: llmForm.api_key,
+        llm_base_url: llmForm.base_url,
+        llm_model: llmForm.model,
+      });
+      showToast({ type: 'success', message: t('system.configSaved') });
+      loadLLMConfig();
+    } catch {
+      showToast({ type: 'error', message: t('system.configSaveFailed') });
+    } finally {
+      setLLMSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -41,7 +76,7 @@ export default function SystemStatus() {
           <h1 className="text-2xl font-bold text-slate-100">{t('nav.system')}</h1>
           <p className="text-slate-400">{t('system.title')}</p>
         </div>
-        <button 
+        <button
           onClick={loadStatus}
           disabled={refreshing}
           className="btn btn-secondary flex items-center gap-2"
@@ -107,6 +142,71 @@ export default function SystemStatus() {
             </div>
           </div>
 
+          {/* LLM Config */}
+          {llmConfig && (
+            <div className="card">
+              <div className="card-header">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-primary-500" />
+                  <h2 className="text-lg font-semibold">{t('system.llmConfig')}</h2>
+                </div>
+              </div>
+              <div className="card-body space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={llmForm.api_key}
+                    onChange={(e) => setLLMForm(prev => ({ ...prev, api_key: e.target.value }))}
+                    placeholder={llmConfig.llm_api_key || t('system.apiKeyPlaceholder')}
+                    className="input w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">{t('system.apiKeyHint')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    {t('system.baseURL')}
+                  </label>
+                  <input
+                    type="text"
+                    value={llmForm.base_url}
+                    onChange={(e) => setLLMForm(prev => ({ ...prev, base_url: e.target.value }))}
+                    className="input w-full"
+                    placeholder="https://open.bigmodel.cn/api/paas/v4"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    {t('system.modelName')}
+                  </label>
+                  <input
+                    type="text"
+                    value={llmForm.model}
+                    onChange={(e) => setLLMForm(prev => ({ ...prev, model: e.target.value }))}
+                    className="input w-full"
+                    placeholder="glm-4-flash"
+                  />
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleSaveLLM}
+                    disabled={llmSaving || !llmForm.base_url || !llmForm.model}
+                    className="btn btn-primary flex items-center gap-2"
+                  >
+                    {llmSaving ? (
+                      <Activity className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span>{t('common.save')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Details */}
           <div className="card">
             <div className="card-header">
@@ -142,8 +242,8 @@ export default function SystemStatus() {
               <div className="flex items-center justify-center gap-8 py-8">
                 <div className="text-center">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                    status.database === 'healthy' 
-                      ? 'bg-green-500/20 border-2 border-green-500' 
+                    status.database === 'healthy'
+                      ? 'bg-green-500/20 border-2 border-green-500'
                       : 'bg-red-500/20 border-2 border-red-500'
                   }`}>
                     <Database className={`w-8 h-8 ${
@@ -153,7 +253,7 @@ export default function SystemStatus() {
                   <div className="mt-2 font-medium text-slate-100">{t('system.postgresql')}</div>
                   <div className="text-sm text-slate-400">{status.database}</div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-full bg-primary-500/20 border-2 border-primary-500 flex items-center justify-center">
                     <Server className="w-8 h-8 text-primary-400" />
@@ -161,7 +261,7 @@ export default function SystemStatus() {
                   <div className="mt-2 font-medium text-slate-100">{t('system.backend')}</div>
                   <div className="text-sm text-slate-400">{t('system.running')}</div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
                     <Activity className="w-8 h-8 text-green-400 animate-pulse" />

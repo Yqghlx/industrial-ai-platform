@@ -18,11 +18,12 @@ import (
 type AdminHandlerNew struct {
 	authSvc      service.AuthServiceInterface
 	telemetrySvc service.TelemetryServiceInterface
+	configSvc    service.ConfigServiceInterface
 }
 
 // NewAdminHandlerNew 创建管理员处理器
-func NewAdminHandlerNew(authSvc service.AuthServiceInterface, telemetrySvc service.TelemetryServiceInterface) *AdminHandlerNew {
-	return &AdminHandlerNew{authSvc: authSvc, telemetrySvc: telemetrySvc}
+func NewAdminHandlerNew(authSvc service.AuthServiceInterface, telemetrySvc service.TelemetryServiceInterface, configSvc service.ConfigServiceInterface) *AdminHandlerNew {
+	return &AdminHandlerNew{authSvc: authSvc, telemetrySvc: telemetrySvc, configSvc: configSvc}
 }
 
 // ListUsers 列出所有用户
@@ -205,4 +206,50 @@ func (h *AdminHandlerNew) GetSystemStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, status)
+}
+
+// GetLLMConfig 获取大模型配置
+func (h *AdminHandlerNew) GetLLMConfig(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	config, err := h.configSvc.GetLLMConfig(c.Request.Context())
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, config)
+}
+
+// UpdateLLMConfig 更新大模型配置
+func (h *AdminHandlerNew) UpdateLLMConfig(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	var req service.LLMConfigUpdate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数无效: "+err.Error())
+		return
+	}
+
+	if req.LLMBaseURL == "" {
+		response.BadRequest(c, "接口地址不能为空")
+		return
+	}
+	if req.LLMModel == "" {
+		response.BadRequest(c, "模型名称不能为空")
+		return
+	}
+
+	if err := h.configSvc.UpdateLLMConfig(c.Request.Context(), &req); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "配置已更新"})
 }

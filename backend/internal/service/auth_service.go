@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -106,11 +107,14 @@ func (s *AuthService) Register(ctx context.Context, req *model.RegisterRequest) 
 	}
 
 	// Create user
+	now := time.Now()
 	user := &model.User{
-		Username: req.Username,
-		Password: hashedPassword,
-		Email:    req.Email,
-		Role:     role,
+		Username:  req.Username,
+		Password:  hashedPassword,
+		Email:     req.Email,
+		Role:      role,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {

@@ -77,7 +77,7 @@ export default function ReportCenter() {
           <p className="text-slate-400">{t('report.title')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton reportType="alerts" label={t('export.alertReportExport')} />
+          <ExportButton reportType="alerts" label={t('export.alertReport')} />
           <button 
             onClick={() => setShowGenerateModal(true)}
             className="btn btn-primary flex items-center gap-2"

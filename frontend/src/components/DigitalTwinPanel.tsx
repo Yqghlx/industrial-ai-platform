@@ -7,12 +7,13 @@ import { Activity, Thermometer, Waves, Zap, Settings } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getGaugeColor, getGaugeStrokeColor, getGaugePercentage, getTelemetryStatusColor } from '../lib/colorUtils';
 import { isTelemetry, asTelemetryArraySafe } from '../types/typeGuards';
-import { Telemetry } from '../types/api';
+import { Telemetry, Device } from '../types/api';
 
 export default function DigitalTwinPanel() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const [telemetry, setTelemetry] = useState<Telemetry[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +47,15 @@ export default function DigitalTwinPanel() {
       setTelemetry(telemetryData);
       if (!selectedDevice && telemetryData.length > 0) {
         setSelectedDevice(telemetryData[0].device_id);
+      }
+      // 遥测数据为空时，回退到设备列表填充下拉框
+      if (telemetryData.length === 0) {
+        const devRes = await api.getDevices();
+        const deviceList = Array.isArray(devRes.data) ? devRes.data : [];
+        setDevices(deviceList);
+        if (!selectedDevice && deviceList.length > 0) {
+          setSelectedDevice(deviceList[0].id);
+        }
       }
     } catch (error) {
       // FIX-023: 使用统一 showError toast 服务
@@ -104,11 +114,19 @@ export default function DigitalTwinPanel() {
               className="input flex-1"
               aria-label={t('device.id')}
             >
-              {telemetry.map((t) => (
-                <option key={t.device_id} value={t.device_id}>
-                  {t.device_id} - {t.status}
-                </option>
-              ))}
+              {telemetry.length > 0 ? (
+                telemetry.map((t) => (
+                  <option key={t.device_id} value={t.device_id}>
+                    {t.device_id} - {t.status}
+                  </option>
+                ))
+              ) : (
+                devices.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.id}) - {d.status}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -119,7 +137,15 @@ export default function DigitalTwinPanel() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} variant="card" />)}
         </div>
-      ) : currentDevice && (
+      ) : !currentDevice ? (
+        <div className="card">
+          <div className="card-body text-center py-12">
+            <Activity className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+            <p className="text-slate-300 text-lg mb-2">{t('digitalTwin.noTelemetryData')}</p>
+            <p className="text-sm text-slate-400">{t('digitalTwin.waitingForData')}</p>
+          </div>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Temperature gauge */}
           <div className="card">
