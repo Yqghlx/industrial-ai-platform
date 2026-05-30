@@ -20,6 +20,7 @@ type RBACRepositoryInterface interface {
 	CreatePermission(ctx context.Context, perm *model.Permission) error
 	GetPermissionByID(ctx context.Context, id int) (*model.Permission, error)
 	ListPermissions(ctx context.Context) ([]model.Permission, error)
+	DeletePermission(ctx context.Context, id int) error
 	AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error
 	RemovePermissionFromRole(ctx context.Context, roleID, permissionID int) error
 	GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error)

@@ -21,8 +21,8 @@ func (s *ExportService) exportPDF(data interface{}, reportType string, filename 
 
 	result := &ExportResult{
 		Data:     buf.Bytes(),
-		Filename: filename + ".txt",
-		MimeType: "text/plain",
+		Filename: filename + ".pdf",
+		MimeType: "application/pdf",
 		Size:     int64(buf.Len()),
 	}
 

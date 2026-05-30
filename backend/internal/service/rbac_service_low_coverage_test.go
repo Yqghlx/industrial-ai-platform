@@ -16,7 +16,7 @@ import (
 // ============================================
 
 func TestRBACService_ListPermissionsByResource_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	// The actual query is: SELECT id, name, resource, action, description, created_at FROM permissions ORDER BY resource, action
@@ -76,7 +76,7 @@ func TestRBACService_DeletePermission_Error(t *testing.T) {
 // ============================================
 
 func TestRBACService_GetRoleWithPermissions_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	roleRows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -101,7 +101,7 @@ func TestRBACService_GetRoleWithPermissions_Basic(t *testing.T) {
 // ============================================
 
 func TestRBACService_IsAdmin_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	// IsAdmin calls GetUserRoles with SQL: SELECT r.id, r.name, ... FROM roles r JOIN user_roles ...
@@ -118,7 +118,7 @@ func TestRBACService_IsAdmin_Basic(t *testing.T) {
 }
 
 func TestRBACService_IsAdmin_NotAdmin(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -134,7 +134,7 @@ func TestRBACService_IsAdmin_NotAdmin(t *testing.T) {
 }
 
 func TestRBACService_IsAdmin_Error(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	mock.ExpectQuery("SELECT r\\.id, r\\.name.*FROM roles r.*JOIN user_roles").
@@ -150,7 +150,7 @@ func TestRBACService_IsAdmin_Error(t *testing.T) {
 // ============================================
 
 func TestRBACService_GetUserPermissionStrings_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).
@@ -171,7 +171,7 @@ func TestRBACService_GetUserPermissionStrings_Basic(t *testing.T) {
 // ============================================
 
 func TestRBACService_GetUserRoleNames_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "description", "tenant_id", "is_system", "created_at", "updated_at"}).
@@ -192,7 +192,7 @@ func TestRBACService_GetUserRoleNames_Basic(t *testing.T) {
 // ============================================
 
 func TestRBACService_RemovePermissionFromRole_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	mock.ExpectExec("DELETE FROM role_permissions").
@@ -207,7 +207,7 @@ func TestRBACService_RemovePermissionFromRole_Basic(t *testing.T) {
 // ============================================
 
 func TestRBACService_GetRolePermissions_Basic(t *testing.T) {
-	svc, mock, _ := newTestRBACServiceWithRBACRepo(t)
+	svc, mock, _ := newTestRBACService(t)
 	ctx := context.Background()
 
 	rows := sqlmock.NewRows([]string{"id", "name", "resource", "action", "description", "created_at"}).

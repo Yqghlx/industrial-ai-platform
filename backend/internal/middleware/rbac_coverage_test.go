@@ -26,9 +26,7 @@ func newTestRBACService(t *testing.T) (*service.RBACService, sqlmock.Sqlmock, *s
 	require.NoError(t, err)
 
 	rbacRepo := repository.NewRBACRepository(database.NewDBWrapper(db))
-	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
-	tenantRepo := repository.NewTenantRepo(database.NewDBWrapper(db))
-	svc := service.NewRBACServiceWithRBACRepo(rbacRepo, userRepo, tenantRepo)
+	svc := service.NewRBACService(rbacRepo)
 
 	t.Cleanup(func() {
 		db.Close()

@@ -10,59 +10,38 @@ import (
 	pkgerrors "github.com/industrial-ai/platform/pkg/errors"
 )
 
-// AssignPermissionToRole assigns a permission to a role
+// AssignPermissionToRole 分配权限给角色
 func (s *RBACService) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
-	var err error
-	if s.roleRepo != nil {
-		_, err = s.roleRepo.GetByID(ctx, roleID)
-	} else if s.rbacRepo != nil {
-		_, err = s.rbacRepo.GetRoleByID(ctx, roleID)
-	}
-
-	if err != nil {
+	// 验证角色存在
+	if _, err := s.rbacRepo.GetRoleByID(ctx, roleID); err != nil {
 		if errors.Is(err, repository.ErrRoleNotFound) {
 			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Role not found", "")
 		}
 		return fmt.Errorf("failed to verify role: %w", err)
 	}
 
-	if s.permRepo != nil {
-		_, err = s.permRepo.GetByID(permissionID)
-	} else if s.rbacRepo != nil {
-		_, err = s.rbacRepo.GetPermissionByID(ctx, permissionID)
-	}
-
-	if err != nil {
+	// 验证权限存在
+	if _, err := s.rbacRepo.GetPermissionByID(ctx, permissionID); err != nil {
 		if errors.Is(err, repository.ErrPermissionNotFound) {
 			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
 		}
 		return fmt.Errorf("failed to verify permission: %w", err)
 	}
 
-	if s.rbacRepo != nil {
-		return s.rbacRepo.AssignPermissionToRole(ctx, roleID, permissionID)
-	}
-
-	return pkgerrors.NewAppError(pkgerrors.ErrCodeService, "RBAC repository not initialized", "")
+	return s.rbacRepo.AssignPermissionToRole(ctx, roleID, permissionID)
 }
 
-// RemovePermissionFromRole removes a permission from a role
+// RemovePermissionFromRole 移除角色的权限
 func (s *RBACService) RemovePermissionFromRole(ctx context.Context, roleID, permissionID int) error {
-	if s.rbacRepo != nil {
-		return s.rbacRepo.RemovePermissionFromRole(ctx, roleID, permissionID)
-	}
-	return pkgerrors.NewAppError(pkgerrors.ErrCodeService, "RBAC repository not initialized", "")
+	return s.rbacRepo.RemovePermissionFromRole(ctx, roleID, permissionID)
 }
 
-// GetRolePermissions retrieves all permissions for a role
+// GetRolePermissions 获取角色的所有权限
 func (s *RBACService) GetRolePermissions(ctx context.Context, roleID int) ([]model.Permission, error) {
-	if s.rbacRepo != nil {
-		return s.rbacRepo.GetRolePermissions(ctx, roleID)
-	}
-	return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeService, "RBAC repository not initialized", "")
+	return s.rbacRepo.GetRolePermissions(ctx, roleID)
 }
 
-// CreatePermission creates a new permission
+// CreatePermission 创建新权限
 func (s *RBACService) CreatePermission(ctx context.Context, name, resource, action, description string) (*model.Permission, error) {
 	permission := &model.Permission{
 		Name:        name,
@@ -71,53 +50,35 @@ func (s *RBACService) CreatePermission(ctx context.Context, name, resource, acti
 		Description: description,
 	}
 
-	if s.permRepo != nil {
-		err := s.permRepo.Create(permission)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create permission: %w", err)
-		}
-		return permission, nil
+	if err := s.rbacRepo.CreatePermission(ctx, permission); err != nil {
+		return nil, fmt.Errorf("failed to create permission: %w", err)
 	}
-
-	if s.rbacRepo != nil {
-		err := s.rbacRepo.CreatePermission(ctx, permission)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create permission: %w", err)
-		}
-		return permission, nil
-	}
-
-	return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeService, "Permission repository not initialized", "")
+	return permission, nil
 }
 
-// GetPermission retrieves a permission by ID
+// GetPermission 通过 ID 获取权限
 func (s *RBACService) GetPermission(ctx context.Context, id int) (*model.Permission, error) {
-	if s.permRepo != nil {
-		return s.permRepo.GetByID(id)
+	perm, err := s.rbacRepo.GetPermissionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrPermissionNotFound) {
+			return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
+		}
+		return nil, fmt.Errorf("failed to get permission: %w", err)
 	}
-	if s.rbacRepo != nil {
-		return s.rbacRepo.GetPermissionByID(ctx, id)
-	}
-	return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeService, "Permission repository not initialized", "")
+	return perm, nil
 }
 
-// ListPermissions lists all permissions
+// ListPermissions 获取所有权限
 func (s *RBACService) ListPermissions(ctx context.Context) ([]model.Permission, error) {
-	if s.permRepo != nil {
-		return s.permRepo.List()
+	permissions, err := s.rbacRepo.ListPermissions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list permissions: %w", err)
 	}
-	if s.rbacRepo != nil {
-		return s.rbacRepo.ListPermissions(ctx)
-	}
-	return nil, pkgerrors.NewAppError(pkgerrors.ErrCodeService, "Permission repository not initialized", "")
+	return permissions, nil
 }
 
-// ListPermissionsByResource lists permissions by resource
+// ListPermissionsByResource 按资源过滤权限
 func (s *RBACService) ListPermissionsByResource(ctx context.Context, resource string) ([]model.Permission, error) {
-	if s.permRepo != nil {
-		return s.permRepo.ListByResource(resource)
-	}
-	// Fallback: filter from all permissions
 	permissions, err := s.ListPermissions(ctx)
 	if err != nil {
 		return nil, err
@@ -131,22 +92,19 @@ func (s *RBACService) ListPermissionsByResource(ctx context.Context, resource st
 	return result, nil
 }
 
-// DeletePermission deletes a permission
+// DeletePermission 删除权限
 func (s *RBACService) DeletePermission(ctx context.Context, id int) error {
-	if s.permRepo != nil {
-		return s.permRepo.Delete(id)
+	if err := s.rbacRepo.DeletePermission(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrPermissionNotFound) {
+			return pkgerrors.NewAppError(pkgerrors.ErrCodeNotFound, "Permission not found", "")
+		}
+		return fmt.Errorf("failed to delete permission: %w", err)
 	}
-	// RBACRepository doesn't have DeletePermission
-	return pkgerrors.NewAppError(pkgerrors.ErrCodeService, "Permission repository not initialized", "")
+	return nil
 }
 
-// SeedDefaultRolesAndPermissions seeds default roles and permissions for a tenant
+// SeedDefaultRolesAndPermissions 为租户创建默认角色和权限
 func (s *RBACService) SeedDefaultRolesAndPermissions(ctx context.Context, tenantID string) error {
-	if s.rbacRepo == nil {
-		return pkgerrors.NewAppError(pkgerrors.ErrCodeService, "RBAC repository not initialized", "")
-	}
-
-	// Create default roles
 	defaultRoles := []struct {
 		name        string
 		displayName string
@@ -164,16 +122,14 @@ func (s *RBACService) SeedDefaultRolesAndPermissions(ctx context.Context, tenant
 			TenantID:    tenantID,
 		})
 		if err != nil {
-			// Ignore if role already exists
-			continue
+			continue // 角色已存在则跳过
 		}
 	}
 
-	// Seed permissions
 	return s.SeedPermissionsOnly(ctx)
 }
 
-// SeedPermissionsOnly seeds default permissions
+// SeedPermissionsOnly 创建默认权限
 func (s *RBACService) SeedPermissionsOnly(ctx context.Context) error {
 	defaultPermissions := []struct {
 		name        string
@@ -201,14 +157,14 @@ func (s *RBACService) SeedPermissionsOnly(ctx context.Context) error {
 	for _, perm := range defaultPermissions {
 		_, err := s.CreatePermission(ctx, perm.name, perm.resource, perm.action, perm.description)
 		if err != nil {
-			continue // Ignore if permission already exists
+			continue // 权限已存在则跳过
 		}
 	}
 
 	return nil
 }
 
-// GetUserPermissionStrings retrieves user permissions as strings
+// GetUserPermissionStrings 获取用户权限字符串列表（格式: resource:action）
 func (s *RBACService) GetUserPermissionStrings(ctx context.Context, userID int) ([]string, error) {
 	permissions, err := s.GetUserPermissions(ctx, userID)
 	if err != nil {
@@ -219,11 +175,10 @@ func (s *RBACService) GetUserPermissionStrings(ctx context.Context, userID int) 
 	for i, perm := range permissions {
 		result[i] = fmt.Sprintf("%s:%s", perm.Resource, perm.Action)
 	}
-
 	return result, nil
 }
 
-// HasSystemPermission checks if user has any system-level permission
+// HasSystemPermission 检查用户是否有系统级权限
 func (s *RBACService) HasSystemPermission(ctx context.Context, userID int) (bool, error) {
 	permissions, err := s.GetUserPermissions(ctx, userID)
 	if err != nil {
@@ -235,11 +190,10 @@ func (s *RBACService) HasSystemPermission(ctx context.Context, userID int) (bool
 			return true, nil
 		}
 	}
-
 	return false, nil
 }
 
-// GetUserRoleNames retrieves user role names
+// GetUserRoleNames 获取用户角色名称列表
 func (s *RBACService) GetUserRoleNames(ctx context.Context, userID int) ([]string, error) {
 	roles, err := s.GetUserRoles(ctx, userID)
 	if err != nil {
@@ -252,7 +206,7 @@ func (s *RBACService) GetUserRoleNames(ctx context.Context, userID int) ([]strin
 	return names, nil
 }
 
-// IsAdmin checks if user has admin role
+// IsAdmin 检查用户是否拥有管理员角色
 func (s *RBACService) IsAdmin(ctx context.Context, userID int) (bool, error) {
 	roles, err := s.GetUserRoles(ctx, userID)
 	if err != nil {

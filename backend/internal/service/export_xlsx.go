@@ -22,8 +22,8 @@ func (s *ExportService) exportXLSX(data interface{}, reportType string, filename
 
 	result := &ExportResult{
 		Data:     buf.Bytes(),
-		Filename: filename + ".csv",
-		MimeType: "text/csv",
+		Filename: filename + ".xlsx",
+		MimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Size:     int64(buf.Len()),
 	}
 

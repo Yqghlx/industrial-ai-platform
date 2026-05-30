@@ -63,15 +63,11 @@ func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *Servi
 		factory.tenantService = NewTenantService(tenantRepo)
 	}
 
-	// RBACService: 使用 RBACRepository 初始化
-	rbacRepo, rbacErr := repoFactory.GetRBACRepository()
-	if rbacErr == nil && rbacRepo != nil {
-		factory.rbacService = NewRBACServiceWithRBACRepo(
-			rbacRepo,
-			repoFactory.GetUserRepository(),
-			nil, // tenantRepo 已在上面获取，此处传 nil
-		)
-	}
+		// RBACService: 使用 RBACRepositoryInterface 初始化
+		rbacRepo, rbacErr := repoFactory.GetRBACRepository()
+		if rbacErr == nil && rbacRepo != nil {
+			factory.rbacService = NewRBACService(rbacRepo)
+		}
 
 	// 2. AlertService（带配置）
 	alertSvc := NewAlertService(

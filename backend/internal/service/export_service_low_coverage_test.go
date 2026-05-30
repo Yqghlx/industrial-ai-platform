@@ -181,8 +181,7 @@ func TestExportService_ExportXLSX_DeviceReport2(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.NotEmpty(t, result.Data)
-	// Note: current implementation uses .csv extension (will change to .xlsx when using excelize)
-	assert.Contains(t, result.Filename, ".csv")
+	assert.Contains(t, result.Filename, ".xlsx")
 }
 
 func TestExportService_ExportXLSX_AlertReport2(t *testing.T) {
@@ -217,8 +216,7 @@ func TestExportService_ExportXLSX_AlertReport2(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	// Note: current implementation uses .csv extension
-	assert.Contains(t, result.Filename, ".csv")
+	assert.Contains(t, result.Filename, ".xlsx")
 }
 
 func TestExportService_ExportXLSX_ROIReport2(t *testing.T) {
@@ -250,8 +248,7 @@ func TestExportService_ExportXLSX_ROIReport2(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	// Note: current implementation uses .csv extension
-	assert.Contains(t, result.Filename, ".csv")
+	assert.Contains(t, result.Filename, ".xlsx")
 }
 
 // ============================================

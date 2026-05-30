@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useToast } from './Toast';
 import api from '../lib/api';
+import { downloadBlob } from '../lib/fileDownload';
 import { useI18n } from '../i18n';
 
 interface ExportButtonProps {
@@ -31,17 +32,7 @@ export default function ExportButton({
 
     try {
       const result = await api.exportReport(reportType, format, startDate, endDate);
-      
-      // Create download link
-      const blob = new Blob([result.data], { type: result.mimeType });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      downloadBlob(result.data, result.filename, result.mimeType);
 
       showToast({ type: 'success', message: t('export.exportSuccess') });
       setShowModal(false);

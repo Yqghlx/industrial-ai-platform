@@ -178,8 +178,8 @@ func TestExportPDF_DevicesWithStats(t *testing.T) {
 	result, err := svc.exportPDF(data, "devices", "test-report")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Contains(t, result.Filename, ".txt")
-	assert.Equal(t, "text/plain", result.MimeType)
+	assert.Contains(t, result.Filename, ".pdf")
+	assert.Equal(t, "application/pdf", result.MimeType)
 
 	content := string(result.Data)
 	assert.Contains(t, content, "设备状态报告")
@@ -324,8 +324,8 @@ func TestExportXLSX_DevicesReport(t *testing.T) {
 	result, err := svc.exportXLSX(data, "devices", "test-report")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Contains(t, result.Filename, ".csv")
-	assert.Equal(t, "text/csv", result.MimeType)
+	assert.Contains(t, result.Filename, ".xlsx")
+	assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", result.MimeType)
 
 	content := string(result.Data)
 	assert.Contains(t, content, "设备状态报告")

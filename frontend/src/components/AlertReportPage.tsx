@@ -3,6 +3,7 @@ import { useI18n } from '../i18n';
 import { useToast } from './Toast';
 import Skeleton from './Skeleton';
 import { api } from '../lib/api';
+import { downloadCSV, generateCSV } from '../lib/fileDownload';
 import {
   TrendingUp,
   BarChart3,
@@ -113,18 +114,8 @@ export default function AlertReportPage() {
       d.resolved,
     ]);
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(',')),
-    ].join('\n');
-
-    // Download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `alert_report_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    const csvContent = generateCSV(headers, rows);
+    downloadCSV(csvContent, `alert_report_${new Date().toISOString().split('T')[0]}.csv`);
 
     showToast({ type: 'success', message: t('alertReport.exportSuccess') });
   };

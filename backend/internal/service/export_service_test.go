@@ -243,3 +243,64 @@ func TestROIReportData(t *testing.T) {
 	}
 	assert.Equal(t, 10, data.ROIStats.TotalDevices)
 }
+
+
+// ============================================
+// PDF/XLSX 文件名和 MIME 类型验证
+// ============================================
+
+func TestExportPDF_FilenameAndMimeType(t *testing.T) {
+	svc := &ExportService{}
+	data := &DeviceReportData{
+		GeneratedAt: time.Now(),
+		Summary:     DeviceSummary{TotalDevices: 1, OnlineDevices: 1},
+		Devices:     []model.Device{{ID: "d1", Name: "Device1", Type: "pump", Location: "A", Status: "online"}},
+	}
+
+	result, err := svc.exportPDF(data, "devices", "report")
+	require.NoError(t, err)
+	assert.Equal(t, "report.pdf", result.Filename)
+	assert.Equal(t, "application/pdf", result.MimeType)
+	assert.True(t, len(result.Data) > 0)
+}
+
+func TestExportXLSX_FilenameAndMimeType(t *testing.T) {
+	svc := &ExportService{}
+	data := &DeviceReportData{
+		GeneratedAt: time.Now(),
+		Summary:     DeviceSummary{TotalDevices: 1, OnlineDevices: 1},
+		Devices:     []model.Device{{ID: "d1", Name: "Device1", Type: "pump", Location: "A", Status: "online"}},
+	}
+
+	result, err := svc.exportXLSX(data, "devices", "report")
+	require.NoError(t, err)
+	assert.Equal(t, "report.xlsx", result.Filename)
+	assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", result.MimeType)
+	assert.True(t, len(result.Data) > 0)
+}
+
+func TestExportPDF_AlertReport(t *testing.T) {
+	svc := &ExportService{}
+	data := &AlertReportData{
+		GeneratedAt: time.Now(),
+		AlertStats:  AlertStats{TotalAlerts: 10, ActiveAlerts: 3, ResolvedAlerts: 7},
+	}
+
+	result, err := svc.exportPDF(data, "alerts", "alert_report")
+	require.NoError(t, err)
+	assert.Equal(t, "alert_report.pdf", result.Filename)
+	assert.Contains(t, string(result.Data), "告警统计报告")
+}
+
+func TestExportPDF_ROIReport(t *testing.T) {
+	svc := &ExportService{}
+	data := &ROIReportData{
+		GeneratedAt: time.Now(),
+		ROIStats:    model.ROIStats{TotalDevices: 5, PredictedSavings: 10000, UptimePercentage: 99.5},
+	}
+
+	result, err := svc.exportPDF(data, "roi", "roi_report")
+	require.NoError(t, err)
+	assert.Equal(t, "roi_report.pdf", result.Filename)
+	assert.Contains(t, string(result.Data), "ROI分析报告")
+}

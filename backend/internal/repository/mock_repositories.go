@@ -434,6 +434,11 @@ func (m *MockRBACRepository) ListPermissions(ctx context.Context) ([]model.Permi
 	return args.Get(0).([]model.Permission), args.Error(1)
 }
 
+func (m *MockRBACRepository) DeletePermission(ctx context.Context, id int) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func (m *MockRBACRepository) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
 	args := m.Called(ctx, roleID, permissionID)
 	return args.Error(0)

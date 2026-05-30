@@ -270,6 +270,22 @@ func (r *RBACRepository) ListPermissions(ctx context.Context) ([]model.Permissio
 	return permissions, nil
 }
 
+// DeletePermission 删除权限（同时解除角色关联）
+func (r *RBACRepository) DeletePermission(ctx context.Context, id int) error {
+	if _, err := r.db.Exec(ctx, "DELETE FROM role_permissions WHERE permission_id = $1", id); err != nil {
+		return fmt.Errorf("failed to delete role_permissions: %w", err)
+	}
+	tag, err := r.db.Exec(ctx, "DELETE FROM permissions WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete permission: %w", err)
+	}
+	n, _ := tag.RowsAffected()
+	if n == 0 {
+		return ErrPermissionNotFound
+	}
+	return nil
+}
+
 // AssignPermissionToRole assigns a permission to a role
 func (r *RBACRepository) AssignPermissionToRole(ctx context.Context, roleID, permissionID int) error {
 	query := `

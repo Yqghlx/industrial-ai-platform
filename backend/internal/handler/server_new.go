@@ -205,6 +205,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	telemetryRepo := repository.NewTelemetryRepository(dbpkg.NewDBWrapper(db))
 	blackBoxRepo := repository.NewBlackBoxRepository(dbpkg.NewDBWrapper(db))
 	reportRepo := repository.NewReportRepository(dbpkg.NewDBWrapper(db))
+	rbacRepo, _ := repository.NewRBACRepository(dbpkg.NewDBWrapper(db)), error(nil)
 
 	// Initialize services
 	authSvc := service.NewAuthService(userRepo)
@@ -213,7 +214,7 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	deviceSvc := service.NewDeviceService(deviceRepo, userRepo)
 	telemetrySvc := service.NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, alertSvc)
 	tenantSvc := service.NewTenantService(tenantRepo)
-	rbacSvc := service.NewRBACService(nil, nil, userRepo, tenantRepo)
+	rbacSvc := service.NewRBACService(rbacRepo)
 	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
 	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
 	workOrderSvc := service.NewWorkOrderService(workOrderRepo)
