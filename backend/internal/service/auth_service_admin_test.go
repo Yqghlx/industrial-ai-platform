@@ -19,7 +19,7 @@ import (
 // EnsureDefaultAdmin 测试
 // ============================================
 
-// TestAuthService_EnsureDefaultAdmin_AlreadyExists 测试 admin 已存在时直接返回
+// TestAuthService_EnsureDefaultAdmin_AlreadyExists 测试 admin 已存在且密码不匹配时同步密码
 func TestAuthService_EnsureDefaultAdmin_AlreadyExists(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -38,10 +38,66 @@ func TestAuthService_EnsureDefaultAdmin_AlreadyExists(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "token_version", "tenant_id", "created_at", "updated_at"}).
 			AddRow(1, "admin", hashedPassword, "admin@industrial.ai", "admin", 0, "", time.Now(), time.Now()))
 
+	// Mock: 密码不匹配，UpdatePassword 被调用
+	mock.ExpectExec("UPDATE users SET password_hash").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
 	// 执行
 	err = authService.EnsureDefaultAdmin(ctx, "newpassword")
 
-	// 断言: admin 已存在，不应报错，不应创建新用户
+	// 断言: admin 已存在，密码同步成功
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestAuthService_EnsureDefaultAdmin_AlreadyExists_PasswordMatch 测试 admin 已存在且密码匹配时跳过同步
+func TestAuthService_EnsureDefaultAdmin_AlreadyExists_PasswordMatch(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+	authService := NewAuthService(userRepo)
+	ctx := context.Background()
+
+	// Mock: GetByUsername 找到已存在的 admin 用户，密码与传入的一致
+	hashedPassword, err := HashPassword("samepassword")
+	require.NoError(t, err)
+
+	mock.ExpectQuery(userQueryPattern).
+		WithArgs("admin").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "token_version", "tenant_id", "created_at", "updated_at"}).
+			AddRow(1, "admin", hashedPassword, "admin@industrial.ai", "admin", 0, "", time.Now(), time.Now()))
+
+	// 执行: 传入相同密码，不应触发 UpdatePassword
+	err = authService.EnsureDefaultAdmin(ctx, "samepassword")
+
+	// 断言: 密码匹配，不需要更新
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestAuthService_EnsureDefaultAdmin_AlreadyExists_NoPassword 测试 admin 已存在且未配置密码时跳过同步
+func TestAuthService_EnsureDefaultAdmin_AlreadyExists_NoPassword(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	userRepo := repository.NewUserRepository(database.NewDBWrapper(db))
+	authService := NewAuthService(userRepo)
+	ctx := context.Background()
+
+	// Mock: GetByUsername 找到已存在的 admin 用户
+	mock.ExpectQuery(userQueryPattern).
+		WithArgs("admin").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "token_version", "tenant_id", "created_at", "updated_at"}).
+			AddRow(1, "admin", "somehash", "admin@industrial.ai", "admin", 0, "", time.Now(), time.Now()))
+
+	// 执行: 传入空密码，不应触发密码同步
+	err = authService.EnsureDefaultAdmin(ctx, "")
+
+	// 断言: 未配置密码，跳过同步
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

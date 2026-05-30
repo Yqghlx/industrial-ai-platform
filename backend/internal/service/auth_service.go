@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/industrial-ai/platform/internal/model"
 	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/industrial-ai/platform/pkg/errors"
@@ -271,33 +273,54 @@ func generateRandomPassword(length int) string {
 
 // EnsureDefaultAdmin 确保默认管理员存在，不存在则创建
 func (s *AuthService) EnsureDefaultAdmin(ctx context.Context, password string) error {
-	_, err := s.userRepo.GetByUsername(ctx, "admin")
-	if err == nil {
+	user, err := s.userRepo.GetByUsername(ctx, "admin")
+	if err != nil {
+		// admin 不存在，创建
+		if password == "" {
+			password = generateRandomPassword(16)
+		}
+
+		passwordHash, err := HashPassword(password)
+		if err != nil {
+			logger.L().Error("管理员密码哈希失败", zap.Error(err))
+			return err
+		}
+
+		admin := &model.User{
+			Username: "admin",
+			Password: passwordHash,
+			Email:    "admin@industrial.ai",
+			Role:     "admin",
+		}
+
+		if err := s.userRepo.Create(ctx, admin); err != nil {
+			logger.L().Error("创建默认管理员失败", zap.Error(err))
+			return err
+		}
+
+		logger.L().Info("已创建默认管理员用户")
 		return nil
 	}
 
+	// admin 已存在，检查密码是否需要同步
 	if password == "" {
-		password = generateRandomPassword(16)
+		return nil
 	}
 
-	passwordHash, err := HashPassword(password)
-	if err != nil {
-		logger.L().Error("管理员密码哈希失败", zap.Error(err))
-		return err
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		passwordHash, err := HashPassword(password)
+		if err != nil {
+			logger.L().Error("管理员密码同步哈希失败", zap.Error(err))
+			return err
+		}
+
+		if err := s.userRepo.UpdatePassword(ctx, user.ID, passwordHash); err != nil {
+			logger.L().Error("管理员密码同步失败", zap.Error(err))
+			return err
+		}
+
+		logger.L().Info("管理员密码已同步更新")
 	}
 
-	admin := &model.User{
-		Username: "admin",
-		Password: passwordHash,
-		Email:    "admin@industrial.ai",
-		Role:     "admin",
-	}
-
-	if err := s.userRepo.Create(ctx, admin); err != nil {
-		logger.L().Error("创建默认管理员失败", zap.Error(err))
-		return err
-	}
-
-	logger.L().Info("已创建默认管理员用户")
 	return nil
 }
