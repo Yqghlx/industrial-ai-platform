@@ -1,6 +1,9 @@
 package service
 
 import (
+	"database/sql"
+
+	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/internal/repository"
 )
 
@@ -26,6 +29,7 @@ type ServiceFactory struct {
 	exportService       ExportServiceInterface
 	rbacService         RBACServiceInterface
 	tenantService       TenantServiceInterface
+	repoFactory         *repository.RepositoryFactory
 }
 
 // NewServiceFactory 创建 Service 工厂（空工厂）
@@ -33,9 +37,15 @@ type ServiceFactory struct {
 //
 // 注意：此工厂返回空实例，所有 Service 字段为 nil。
 // 调用方需要通过 Set* 方法手动注入 Service 实现，
-// 或使用 NewServiceFactoryFromRepo 创建完整工厂。
+// 或使用 NewServiceFactoryFromDB 创建完整工厂。
 func NewServiceFactory() *ServiceFactory {
 	return &ServiceFactory{}
+}
+
+// NewServiceFactoryFromDB 从数据库连接创建完整 Service 工厂
+// Handler 层只需传入 *sql.DB，不需要了解 Repository 层细节
+func NewServiceFactoryFromDB(db *sql.DB) *ServiceFactory {
+	return NewServiceFactoryFromRepo(repository.NewRepositoryFactory(db))
 }
 
 // NewServiceFactoryFromRepo 创建 Service 工厂（从 Repository 创建）
@@ -46,7 +56,7 @@ func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *Servi
 		return &ServiceFactory{}
 	}
 
-	factory := &ServiceFactory{}
+	factory := &ServiceFactory{repoFactory: repoFactory}
 
 	// 按依赖顺序初始化服务
 	// 1. 基础服务（无其他服务依赖）
@@ -107,13 +117,13 @@ func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *Servi
 		nil,
 	)
 
-	// 5. 其他服务（暂未实现或需要额外依赖）
-	// - agentService: 需要 CacheService 接口
-	// - workOrderService: 需要独立初始化
-	// - notificationService: 需要独立初始化
-	// - blackBoxService: 需要独立初始化
-	// - healthService: 需要 HTTP client 配置
-	// 这些服务可通过 Set* 方法手动注入
+	// 5. 工单、通知、黑匣子服务（仅依赖 Repository）
+	factory.workOrderService = NewWorkOrderService(repoFactory.GetWorkOrderRepository())
+	factory.notificationService = NewNotificationService(repoFactory.GetNotificationRepository())
+	factory.blackBoxService = NewBlackBoxService(repoFactory.GetBlackBoxRepository())
+
+	// healthService 需要 *sql.DB 和 HTTP client 配置，通过 SetHealthService 注入
+	// agentService 需要 CacheService，通过 SetAgentService 注入
 
 	return factory
 }
@@ -138,6 +148,20 @@ func (f *ServiceFactory) SetReportService(svc ReportServiceInterface)     { f.re
 func (f *ServiceFactory) SetExportService(svc ExportServiceInterface)     { f.exportService = svc }
 func (f *ServiceFactory) SetRBACService(svc RBACServiceInterface)         { f.rbacService = svc }
 func (f *ServiceFactory) SetTenantService(svc TenantServiceInterface)     { f.tenantService = svc }
+
+// InitializeAgentService 创建并注入 AgentService（需要 CacheService 外部依赖）
+// AgentService 的创建需要在 Handler 层提供 CacheService 后调用
+func (f *ServiceFactory) InitializeAgentService(cacheSvc cache.CacheService) {
+	if f.repoFactory == nil || cacheSvc == nil {
+		return
+	}
+	f.agentService = NewAgentService(
+		f.repoFactory.GetAgentTaskLogRepository(),
+		f.repoFactory.GetDeviceRepository(),
+		f.repoFactory.GetTelemetryRepository(),
+		cacheSvc,
+	)
+}
 
 // ============================================
 // Service 获取方法（单例模式）

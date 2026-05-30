@@ -15,11 +15,9 @@ import (
 	"github.com/industrial-ai/platform/internal/database"
 	"github.com/industrial-ai/platform/internal/middleware"
 	"github.com/industrial-ai/platform/internal/model"
-	"github.com/industrial-ai/platform/internal/repository"
 	"github.com/industrial-ai/platform/internal/service"
 	"github.com/industrial-ai/platform/pkg/cache"
 	"github.com/industrial-ai/platform/pkg/cache_service"
-	dbpkg "github.com/industrial-ai/platform/pkg/database"
 	"github.com/industrial-ai/platform/pkg/logger"
 	"github.com/industrial-ai/platform/pkg/wscompression"
 	"go.uber.org/zap"
@@ -89,13 +87,15 @@ type HTTPServerNew struct {
 	deviceSvc    service.DeviceServiceInterface
 	alertSvc     service.AlertServiceInterface
 	telemetrySvc service.TelemetryServiceInterface
-	tenantSvc    *service.TenantService
-	rbacSvc      *service.RBACService
-	exportSvc    *service.ExportService
+	tenantSvc    service.TenantServiceInterface
+	rbacSvc      service.RBACServiceInterface
+	exportSvc    service.ExportServiceInterface
 	reportSvc    service.ReportServiceInterface
-	workOrderSvc service.WorkOrderServiceInterface
-	cacheSvc     *cache_service.CacheServiceIntegration
-	agentSvc     service.AgentServiceInterface
+	workOrderSvc      service.WorkOrderServiceInterface
+	notificationSvc  service.NotificationServiceInterface
+	blackBoxSvc      service.BlackBoxServiceInterface
+	cacheSvc         *cache_service.CacheServiceIntegration
+	agentSvc         service.AgentServiceInterface
 
 	// Handlers (new architecture)
 	alertHandler     *AlertHandler
@@ -194,39 +194,24 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	cacheSvc := cache_service.NewCacheServiceIntegration(cacheConfig)
 	logger.L().Info("[Cache] Initialized", zap.String("backend", cacheSvc.GetCache().GetStats().BackendType))
 
-	// Initialize repositories
-	deviceRepo := repository.NewDeviceRepository(dbpkg.NewDBWrapper(db))
-	userRepo := repository.NewUserRepository(dbpkg.NewDBWrapper(db))
-	alertRepo := repository.NewAlertRepository(dbpkg.NewDBWrapper(db))
-	tenantRepo := repository.NewTenantRepo(dbpkg.NewDBWrapper(db))
-	ruleRepo := repository.NewRuleRepository(dbpkg.NewDBWrapper(db))
-	notificationRepo := repository.NewNotificationRepository(dbpkg.NewDBWrapper(db))
-	workOrderRepo := repository.NewWorkOrderRepository(dbpkg.NewDBWrapper(db))
-	telemetryRepo := repository.NewTelemetryRepository(dbpkg.NewDBWrapper(db))
-	blackBoxRepo := repository.NewBlackBoxRepository(dbpkg.NewDBWrapper(db))
-	reportRepo := repository.NewReportRepository(dbpkg.NewDBWrapper(db))
-	rbacRepo, _ := repository.NewRBACRepository(dbpkg.NewDBWrapper(db)), error(nil)
+	// Phase 3: Handler 层完全通过 ServiceFactory 获取服务，不直接依赖 Repository
+	serviceFactory := service.NewServiceFactoryFromDB(db)
+	serviceFactory.InitializeAgentService(cacheSvc.GetCache())
 
-	// Initialize services
-	authSvc := service.NewAuthService(userRepo)
-	userSvc := service.NewUserService(userRepo)
-	alertSvc := service.NewAlertService(ruleRepo, alertRepo, notificationRepo, workOrderRepo, blackBoxRepo, telemetryRepo, deviceRepo, service.AlertServiceConfig{})
-	deviceSvc := service.NewDeviceService(deviceRepo, userRepo)
-	telemetrySvc := service.NewTelemetryService(telemetryRepo, deviceRepo, alertRepo, workOrderRepo, alertSvc)
-	tenantSvc := service.NewTenantService(tenantRepo)
-	rbacSvc := service.NewRBACService(rbacRepo)
-	exportSvc := service.NewExportService(deviceRepo, nil, alertRepo, nil, nil)
-	reportSvc := service.NewReportService(reportRepo, telemetryRepo, deviceRepo, workOrderRepo, notificationRepo)
-	workOrderSvc := service.NewWorkOrderService(workOrderRepo)
-
-	// Initialize AgentService for AI features
-	taskLogRepo := repository.NewAgentTaskLogRepository(dbpkg.NewDBWrapper(db))
-	agentSvc := service.NewAgentService(
-		taskLogRepo,
-		deviceRepo,
-		telemetryRepo,
-		cacheSvc.GetCache(), // OPT-002: Pass cache service for response caching
-	)
+	// 从 ServiceFactory 获取服务实例（不再直接引用 Repository）
+	authSvc := serviceFactory.GetAuthService()
+	userSvc := serviceFactory.GetUserService()
+	alertSvc := serviceFactory.GetAlertService()
+	deviceSvc := serviceFactory.GetDeviceService()
+	telemetrySvc := serviceFactory.GetTelemetryService()
+	tenantSvc := serviceFactory.GetTenantService()
+	rbacSvc := serviceFactory.GetRBACService()
+	exportSvc := serviceFactory.GetExportService()
+	reportSvc := serviceFactory.GetReportService()
+	workOrderSvc := serviceFactory.GetWorkOrderService()
+	notificationSvc := serviceFactory.GetNotificationService()
+	blackBoxSvc := serviceFactory.GetBlackBoxService()
+	agentSvc := serviceFactory.GetAgentService()
 
 	// Initialize Gin router
 	router := gin.New()
@@ -342,8 +327,10 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 		rbacSvc:       rbacSvc,
 		exportSvc:     exportSvc,
 		reportSvc:     reportSvc,
-		workOrderSvc:  workOrderSvc,
-		cacheSvc:      cacheSvc,
+		workOrderSvc:     workOrderSvc,
+		notificationSvc: notificationSvc,
+		blackBoxSvc:     blackBoxSvc,
+		cacheSvc:        cacheSvc,
 		agentSvc:      agentSvc,
 		cache:         cacheSvc.GetCache(),
 		wsClients:     make(map[*websocket.Conn]bool),
@@ -366,8 +353,12 @@ func NewHTTPServerNew(cfg ServerConfig) (*HTTPServerNew, error) {
 	}
 
 	// 将 broadcastFn 注入到 service 层，使业务层的广播消息能到达 WebSocket 客户端
-	telemetrySvc.SetBroadcastFn(s.broadcastFn)
-	alertSvc.SetBroadcastFn(s.broadcastFn)
+	if ts, ok := telemetrySvc.(interface{ SetBroadcastFn(func(model.WSMessage)) }); ok {
+		ts.SetBroadcastFn(s.broadcastFn)
+	}
+	if as, ok := alertSvc.(interface{ SetBroadcastFn(func(model.WSMessage)) }); ok {
+		as.SetBroadcastFn(s.broadcastFn)
+	}
 
 	// Setup middleware
 	s.setupMiddleware(corsOrigins)
@@ -409,7 +400,7 @@ func (s *HTTPServerNew) setupHandlers() {
 	// Initialize handlers
 	s.alertHandler = NewAlertHandler(s.alertSvc, s.broadcastFn)
 	s.deviceHandler = NewDeviceHandlerNew(s.deviceSvc, s.alertSvc, s.authSvc, s.telemetrySvc, s.broadcastFn)
-	s.businessHandler = NewBusinessHandlerNew(s.workOrderSvc, nil, nil, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
+	s.businessHandler = NewBusinessHandlerNew(s.workOrderSvc, s.notificationSvc, s.blackBoxSvc, s.reportSvc, s.alertSvc, s.broadcastFn, s.cache)
 	s.telemetryHandler = NewTelemetryHandlerNew(s.telemetrySvc, s.agentSvc)
 	s.authHandler = NewAuthHandlerNew(s.authSvc, s.userSvc)
 	s.tenantHandler = NewTenantHandler(s.tenantSvc)

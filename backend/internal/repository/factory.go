@@ -106,3 +106,8 @@ func (f *RepositoryFactory) GetRBACRepository() (*RBACRepository, error) {
 	}
 	return NewRBACRepository(f.db), nil
 }
+
+// GetAgentTaskLogRepository 获取 AI 代理任务日志 Repository
+func (f *RepositoryFactory) GetAgentTaskLogRepository() *AgentTaskLogRepository {
+	return NewAgentTaskLogRepository(f.db)
+}
