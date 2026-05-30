@@ -114,3 +114,8 @@ infra/k8s/secrets-generated.yaml
 
 # 临时评审文件
 REVIEW.md
+
+# 测试截图（调试临时文件）
+.screenshots/
+test-screenshots/
+.playwright-mcp/
