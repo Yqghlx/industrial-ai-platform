@@ -9,7 +9,7 @@ import { ROIStats } from '../types/api';
 import { asROIStatsSafe } from '../types/typeGuards';
 
 export default function ROIDashboard() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { showToast } = useToast();
   const [stats, setStats] = useState<ROIStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +71,7 @@ export default function ROIDashboard() {
                 <span className="metric-label">{t('roi.predictedSavings')}</span>
               </div>
               <div className="metric-value text-green-400">
-                ¥{stats.predicted_savings.toLocaleString()}
+                {t('common.currency')}{stats.predicted_savings.toLocaleString()}
               </div>
               <div className="text-xs text-slate-400">{t('roi.monthlySavings')}</div>
             </div>
@@ -138,7 +138,7 @@ export default function ROIDashboard() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
                   <span className="text-slate-300">{t('roi.costSavings')}</span>
-                  <span className="text-2xl font-bold text-green-400">¥{stats.predicted_savings.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-green-400">{t('common.currency')}{stats.predicted_savings.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
                   <span className="text-slate-300">{t('roi.investmentCycle')}</span>

@@ -1,6 +1,8 @@
 export default {
   common: {
     loading: 'Loading...',
+    processing: 'Processing...',
+    loadingPage: 'Loading page...',
     error: 'Error',
     success: 'Success',
     confirm: 'Confirm',
@@ -28,6 +30,7 @@ export default {
     disconnected: 'Disconnected',
     enable: 'Enable',
     disable: 'Disable',
+    currency: '$',
   },
   auth: {
     login: 'Login',
@@ -42,6 +45,9 @@ export default {
     registerFailed: 'Registration failed',
     pleaseLogin: 'Please login first',
     invalidCredentials: 'Invalid username or password',
+    platformTitle: 'Industrial AI Agent Platform',
+    platformSubtitle: 'Industrial AI Platform',
+    demoAccount: 'Demo account: admin / Admin@123456',
   },
   errors: {
     networkError: 'Network connection failed, please check your network settings',
@@ -285,6 +291,10 @@ export default {
     type: 'Type',
     message: 'Message',
     time: 'Time',
+    typeAlert: 'Alert',
+    typeSystem: 'System',
+    typeWorkOrder: 'Work Order',
+    device: 'Device',
   },
   report: {
     title: 'Report',
@@ -325,6 +335,8 @@ export default {
     prompt3: 'Predict failure risks',
     prompt4: 'How to optimize production efficiency',
     prompt5: 'Generate daily report',
+    chatTitle: 'AI Agent Chat',
+    queryLabel: 'Query: ',
   },
   blackbox: {
     title: 'Black Box',
@@ -476,6 +488,10 @@ user: {
   digitalTwin: {
     realTimeMonitoring: 'Real-Time Device Monitoring',
     realTimeUpdate: 'Real-Time Update',
+  },
+  knowledgeGraph: {
+    topologyTitle: 'Device Topology Graph',
+    networkTitle: 'Device Relationship Network',
   },
   errorBoundary: {
     title: 'Something Went Wrong',

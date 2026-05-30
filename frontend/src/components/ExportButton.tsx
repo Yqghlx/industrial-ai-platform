@@ -4,6 +4,7 @@ import { useToast } from './Toast';
 import api from '../lib/api';
 import { downloadBlob } from '../lib/fileDownload';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 
 interface ExportButtonProps {
   reportType: 'devices' | 'alerts' | 'roi';
@@ -25,6 +26,9 @@ export default function ExportButton({
   const [showModal, setShowModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'xlsx'>('pdf');
+
+  // C1: Escape 键关闭模态框
+  useEscapeKey(() => setShowModal(false), showModal);
 
   const handleExport = async (format: 'pdf' | 'xlsx') => {
     setExporting(true);
@@ -71,7 +75,7 @@ export default function ExportButton({
 
       {/* Export Format Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold text-slate-100">

@@ -162,6 +162,14 @@ func (m *MockAlertRepository) Create(ctx context.Context, alert *model.Alert) er
 	return args.Error(0)
 }
 
+func (m *MockAlertRepository) GetByID(ctx context.Context, id int) (*model.Alert, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Alert), args.Error(1)
+}
+
 func (m *MockAlertRepository) List(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error) {
 	args := m.Called(ctx, status, page, pageSize)
 	alerts := args.Get(0).([]model.Alert)

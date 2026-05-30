@@ -17,7 +17,7 @@ describe('LoadingSpinner', () => {
       // 验证加载动画已渲染（包含旋转圆圈）
       expect(container.querySelector('.animate-spin')).toBeInTheDocument();
       // 验证默认加载文本
-      expect(container.textContent).toContain('加载中...');
+      expect(container.textContent).toContain('common.loading');
     });
   });
 });

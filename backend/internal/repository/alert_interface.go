@@ -17,6 +17,7 @@ type AlertFilter struct {
 // AlertRepositoryInterface defines the interface for alert repository
 type AlertRepositoryInterface interface {
 	Create(ctx context.Context, alert *model.Alert) error
+	GetByID(ctx context.Context, id int) (*model.Alert, error)
 	List(ctx context.Context, status string, page, pageSize int) ([]model.Alert, int, error)
 	// ListWithFilter 支持更多过滤条件的列表查询
 	ListWithFilter(ctx context.Context, filter AlertFilter, page, pageSize int) ([]model.Alert, int, error)

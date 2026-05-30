@@ -59,7 +59,7 @@ export default function AITeamDashboard() {
         <div className="card-header">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-primary-500" />
-            <span className="font-medium text-slate-100">AI智能体对话</span>
+            <span className="font-medium text-slate-100">{t('ai.chatTitle')}</span>
           </div>
         </div>
         <div className="card-body flex-1 overflow-y-auto scrollbar-thin space-y-4">
@@ -81,7 +81,7 @@ export default function AITeamDashboard() {
               {/* User query */}
               <div className="flex items-start gap-3 justify-end">
                 <div className="bg-primary-600 rounded-lg px-4 py-2 max-w-[70%]">
-                  <p className="text-white">{r.session_id ? `查询: ` : query}</p>
+                  <p className="text-white">{r.session_id ? t('ai.queryLabel') : query}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
                   <User className="w-4 h-4 text-slate-300" />

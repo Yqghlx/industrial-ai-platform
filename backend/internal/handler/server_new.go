@@ -391,6 +391,8 @@ func (s *HTTPServerNew) setupMiddleware(corsOrigins []string) {
 	s.router.Use(middleware.SecurityHeaders())
 	s.router.Use(middleware.PrometheusMiddleware())
 	s.router.Use(middleware.CORS(corsOrigins))
+	// WAF 中间件 - 检测 SQL 注入、XSS、路径遍历、命令注入等攻击
+	s.router.Use(middleware.WAFMiddleware(middleware.LoadWAFConfigFromEnv(), logger.L().Logger))
 	// SEC-MEDIUM-04: 全局速率限制 - 作为最后一层，避免影响其他中间件
 	s.router.Use(middleware.DefaultRateLimit(s.rateLimitCapacity, s.rateLimitRefillRate))
 }

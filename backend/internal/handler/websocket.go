@@ -44,7 +44,9 @@ func (s *Server) handleWebSocket(c *gin.Context) {
 		return
 	}
 
-	s.addWSClient(conn)
+	if !s.addWSClient(conn) {
+		return
+	}
 	defer s.removeWSClient(conn)
 
 	// Send initial connection message (compression not needed for small messages)
@@ -124,11 +126,19 @@ func (s *Server) startBroadcaster() {
 	}()
 }
 
-// addWSClient adds a WebSocket client
-func (s *Server) addWSClient(conn *websocket.Conn) {
+// addWSClient adds a WebSocket client（带连接数硬限制）
+func (s *Server) addWSClient(conn *websocket.Conn) bool {
 	s.wsClientsMu.Lock()
+	defer s.wsClientsMu.Unlock()
+
+	// 连接数硬限制：防止资源耗尽
+	if len(s.wsClients) >= 1000 {
+		conn.Close()
+		return false
+	}
+
 	s.wsClients[conn] = true
-	s.wsClientsMu.Unlock()
+	return true
 }
 
 // removeWSClient removes a WebSocket client

@@ -120,7 +120,7 @@ export default function App() {
               aria-label={t('nav.notifications')}
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" aria-label={t('notification.unread')} />
             </button>
           </div>
         </header>

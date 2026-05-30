@@ -110,7 +110,7 @@ const AlertItem = React.memo(function AlertItem({
         {alert.status === 'active' && (
           <>
             <button
-              className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors min-h-[44px]"
               onClick={() => onAcknowledge(alert.id)}
               aria-label={t('alert.acknowledgedLabel')}
             >
@@ -118,7 +118,7 @@ const AlertItem = React.memo(function AlertItem({
               {t('alert.acknowledge')}
             </button>
             <button
-              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors min-h-[44px]"
               onClick={() => onResolve(alert.id)}
               aria-label={t('alert.resolvedLabel')}
             >
@@ -129,7 +129,7 @@ const AlertItem = React.memo(function AlertItem({
         )}
         {alert.status === 'acknowledged' && (
           <button
-            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm text-white transition-colors min-h-[44px]"
             onClick={() => onResolve(alert.id)}
             aria-label={t('alert.resolvedLabel')}
           >
@@ -149,7 +149,7 @@ const AlertItem = React.memo(function AlertItem({
 });
 
 export default function AlertsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState<AlertType[]>([]);
@@ -317,7 +317,8 @@ export default function AlertsPage() {
 
   // Format timestamp
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('zh-CN', {
+    const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+    return new Date(timestamp).toLocaleString(locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -399,6 +400,7 @@ export default function AlertsPage() {
             className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-slate-500"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label={t('alert.status')}
           >
             <option value="all">{t('alert.allStatuses')}</option>
             <option value="active">{t('alert.activeLabel')}</option>
@@ -411,6 +413,7 @@ export default function AlertsPage() {
           className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-slate-500"
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
+          aria-label={t('alert.severity')}
         >
           <option value="all">{t('alert.allSeverities')}</option>
           <option value="critical">{t('alert.criticalLabel')}</option>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import { SkeletonTable } from './Skeleton';
 import { useToast } from './Toast';
 import { Plus, Search } from 'lucide-react';
@@ -37,6 +38,7 @@ const WorkOrderRow = React.memo(function WorkOrderRow({ order, t, onUpdateStatus
           value={order.status}
           onChange={(e) => onUpdateStatus(order.id, e.target.value)}
           className="input text-sm py-1"
+          aria-label={t('workOrder.updateStatus')}
         >
           <option value="pending">{t('workOrder.pending')}</option>
           <option value="in_progress">{t('workOrder.inProgress')}</option>
@@ -55,6 +57,14 @@ export default function WorkOrderBoard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // C1: Escape 键关闭模态框
+  const closeCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+  }, []);
+
+  useEscapeKey(closeCreateModal, showCreateModal);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -113,6 +123,7 @@ export default function WorkOrderBoard() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="input"
+              aria-label={t('workOrder.status')}
             >
               <option value="">{t('workOrder.allStatus')}</option>
               <option value="pending">{t('workOrder.pending')}</option>
@@ -161,7 +172,7 @@ export default function WorkOrderBoard() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) closeCreateModal(); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold">{t('workOrder.createOrder')}</h2>
@@ -169,6 +180,7 @@ export default function WorkOrderBoard() {
             <div className="card-body">
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                setCreating(true);
                 const formData = new FormData(e.target as HTMLFormElement);
                 const data = {
                   title: formData.get('title') as string,
@@ -184,24 +196,26 @@ export default function WorkOrderBoard() {
                   loadOrders();
                 } catch (error) {
                   showToast({ type: 'error', message: t('workOrder.createFailed') });
+                } finally {
+                  setCreating(false);
                 }
               }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="label">{t('workOrder.title')}</label>
-                    <input name="title" className="input" required />
+                    <label className="label" htmlFor="wo-create-title">{t('workOrder.title')}</label>
+                    <input id="wo-create-title" name="title" className="input" required />
                   </div>
                   <div>
-                    <label className="label">{t('device.description')}</label>
-                    <textarea name="description" className="input h-20" />
+                    <label className="label" htmlFor="wo-create-description">{t('device.description')}</label>
+                    <textarea id="wo-create-description" name="description" className="input h-20" />
                   </div>
                   <div>
-                    <label className="label">{t('device.id')}</label>
-                    <input name="device_id" className="input" />
+                    <label className="label" htmlFor="wo-create-device-id">{t('device.id')}</label>
+                    <input id="wo-create-device-id" name="device_id" className="input" />
                   </div>
                   <div>
-                    <label className="label">{t('workOrder.priority')}</label>
-                    <select name="priority" className="input">
+                    <label className="label" htmlFor="wo-create-priority">{t('workOrder.priority')}</label>
+                    <select id="wo-create-priority" name="priority" className="input">
                       <option value="urgent">{t('workOrder.urgent')}</option>
                       <option value="high">{t('workOrder.high')}</option>
                       <option value="medium">{t('alert.medium')}</option>
@@ -209,10 +223,10 @@ export default function WorkOrderBoard() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary flex-1">
+                    <button type="submit" className="btn btn-primary flex-1" disabled={creating}>
                       {t('common.create')}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowCreateModal(false)}
                       className="btn btn-secondary flex-1"

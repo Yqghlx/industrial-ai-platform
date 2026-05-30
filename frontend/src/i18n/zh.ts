@@ -1,6 +1,8 @@
 export default {
   common: {
     loading: '加载中...',
+    processing: '处理中...',
+    loadingPage: '正在加载页面...',
     error: '出错了',
     success: '成功',
     confirm: '确认',
@@ -28,6 +30,7 @@ export default {
     disconnected: '连接断开',
     enable: '启用',
     disable: '禁用',
+    currency: '¥',
   },
   auth: {
     login: '登录',
@@ -42,6 +45,9 @@ export default {
     registerFailed: '注册失败',
     pleaseLogin: '请先登录',
     invalidCredentials: '用户名或密码错误',
+    platformTitle: '工业AI代理平台',
+    platformSubtitle: 'Industrial AI Platform',
+    demoAccount: '演示账户: admin / Admin@123456',
   },
   errors: {
     networkError: '网络连接失败，请检查网络设置',
@@ -285,6 +291,10 @@ export default {
     type: '类型',
     message: '消息',
     time: '时间',
+    typeAlert: '告警',
+    typeSystem: '系统',
+    typeWorkOrder: '工单',
+    device: '设备',
   },
   report: {
     title: '报告',
@@ -325,6 +335,8 @@ export default {
     prompt3: '预测故障风险',
     prompt4: '如何优化生产效率',
     prompt5: '生成每日报告',
+    chatTitle: 'AI智能体对话',
+    queryLabel: '查询: ',
   },
   blackbox: {
     title: '黑匣子',
@@ -476,6 +488,10 @@ user: {
   digitalTwin: {
     realTimeMonitoring: '实时设备监控面板',
     realTimeUpdate: '实时更新',
+  },
+  knowledgeGraph: {
+    topologyTitle: '设备拓扑关系图',
+    networkTitle: '设备关系网络',
   },
   errorBoundary: {
     title: '出错了',

@@ -348,7 +348,7 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 
 	// Generate device metrics from real data
 	deviceMetrics := []DeviceMetric{}
-	devices, _, err := s.deviceRepo.List(ctx, 1, 100) // Get more devices for ROI report
+	devices, _, err := s.deviceRepo.List(ctx, 1, 100)
 	if err != nil {
 		logger.L().Warn("Failed to get devices for ROI report",
 			zap.Error(err),
@@ -356,12 +356,13 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 		devices = []model.Device{}
 	}
 
+	// 预计算设备 ID 列表（ROI 指标和月度趋势共用）
+	deviceIDs := make([]string, len(devices))
+	for i, d := range devices {
+		deviceIDs[i] = d.ID
+	}
+
 	if len(devices) > 0 {
-		// Batch query telemetry stats for all devices
-		deviceIDs := make([]string, len(devices))
-		for i, d := range devices {
-			deviceIDs[i] = d.ID
-		}
 
 		statsMap, err := s.telemetryRepo.GetStatsBatch(ctx, deviceIDs, startDate, now)
 		if err != nil {
@@ -371,47 +372,46 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 			statsMap = make(map[string]*model.DeviceStats)
 		}
 
-		// Get work orders for each device
+		// 一次性查询所有工单，按 device_id 分组（替代 N+1 循环查询）
+		allWorkOrders, _, err := s.workOrderRepo.List(ctx, "", "", 1, 10000)
+		if err != nil {
+			logger.L().Warn("Failed to get work orders for ROI report",
+				zap.Error(err),
+			)
+			allWorkOrders = []model.WorkOrder{}
+		}
+
+		// 按 device_id 分组工单并过滤时间范围
+		type woCounts struct{ fault, maintenance int }
+		woByDevice := make(map[string]*woCounts)
+		for _, wo := range allWorkOrders {
+			if wo.CreatedAt.Before(startDate) || wo.CreatedAt.After(now) {
+				continue
+			}
+			c, ok := woByDevice[wo.DeviceID]
+			if !ok {
+				c = &woCounts{}
+				woByDevice[wo.DeviceID] = c
+			}
+			if wo.Priority == "urgent" || wo.Priority == "high" {
+				c.fault++
+			} else {
+				c.maintenance++
+			}
+		}
+
 		for _, d := range devices {
-			// Get telemetry stats
 			var uptimeHours float64
-			var uptimePercent float64
 			if stats, ok := statsMap[d.ID]; ok && stats.DataPoints > 0 {
-				// Calculate uptime based on data points (assuming 1 point per minute)
-				// 30 days = 43200 minutes, each data point = 1 minute of uptime
 				uptimeHours = float64(stats.DataPoints) / 60.0
-				uptimePercent = (float64(stats.DataPoints) / 43200.0) * 100
-				if uptimePercent > 100 {
-					uptimePercent = 100
-				}
 			}
 
-			// Get work orders for this device
-			workOrders, _, err := s.workOrderRepo.List(ctx, "", d.ID, 1, 1000)
-			if err != nil {
-				logger.L().Warn("Failed to get work orders for device",
-					zap.Error(err),
-					zap.String("device_id", d.ID),
-				)
-				workOrders = []model.WorkOrder{}
-			}
-
-			// Count fault (urgent/high priority) and maintenance work orders
 			var faultCount, maintenanceCount int
-			for _, wo := range workOrders {
-				// Filter work orders within the time range
-				if wo.CreatedAt.Before(startDate) || wo.CreatedAt.After(now) {
-					continue
-				}
-				if wo.Priority == "urgent" || wo.Priority == "high" {
-					faultCount++
-				} else {
-					maintenanceCount++
-				}
+			if c, ok := woByDevice[d.ID]; ok {
+				faultCount = c.fault
+				maintenanceCount = c.maintenance
 			}
 
-			// Calculate savings based on uptime and reduced downtime
-			// Base savings: $50/hour of uptime, minus cost of faults ($500 each) and maintenance ($100 each)
 			savings := uptimeHours*50.0 - float64(faultCount)*500.0 - float64(maintenanceCount)*100.0
 			if savings < 0 {
 				savings = 0
@@ -428,8 +428,31 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 		}
 	}
 
-	// Generate monthly trend from real data (last 6 months)
+	// 生成月度趋势数据（优化：复用已有的 devices 变量，告警用 GetTrendData 替代全量加载）
 	monthlyTrend := []MonthlyMetric{}
+
+	// 复用上方已查询的 devices 列表（不再重复查询）
+
+	// 使用数据库层趋势数据替代全量告警加载
+	trendData, err := s.alertRepo.GetTrendData(ctx, 180) // 最近 180 天（6 个月）
+	if err != nil {
+		logger.L().Warn("Failed to get alert trend data",
+			zap.Error(err),
+		)
+		trendData = nil
+	}
+	// 将趋势数据按月份索引
+	trendByMonth := make(map[string]int)
+	for _, td := range trendData {
+		if dateStr, ok := td["date"].(string); ok {
+			if count, ok := td["count"].(int); ok {
+				trendByMonth[dateStr[:7]] = count // 取 "YYYY-MM" 部分
+			}
+		}
+	}
+
+		// 复用上方已计算的 deviceIDs
+
 	for i := 5; i >= 0; i-- {
 		monthStart := time.Now().AddDate(0, -i, 0)
 		monthStart = time.Date(monthStart.Year(), monthStart.Month(), 1, 0, 0, 0, 0, monthStart.Location())
@@ -437,26 +460,11 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 
 		monthStr := monthStart.Format("2006-01")
 
-		// Get device stats for this month
-		monthDevices, _, err := s.deviceRepo.List(ctx, 1, 100)
-		if err != nil {
-			logger.L().Warn("Failed to get devices for monthly trend",
-				zap.Error(err),
-				zap.String("month", monthStr),
-			)
-			continue
-		}
-
 		var totalSavings float64
 		var totalUptimePercent float64
 		var validDevices int
 
-		if len(monthDevices) > 0 {
-			deviceIDs := make([]string, len(monthDevices))
-			for i, d := range monthDevices {
-				deviceIDs[i] = d.ID
-			}
-
+		if len(deviceIDs) > 0 {
 			statsMap, err := s.telemetryRepo.GetStatsBatch(ctx, deviceIDs, monthStart, monthEnd)
 			if err != nil {
 				logger.L().Warn("Failed to get telemetry stats for monthly trend",
@@ -466,11 +474,10 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 				statsMap = make(map[string]*model.DeviceStats)
 			}
 
-			// Calculate uptime and savings for each device
 			daysInMonth := monthEnd.Sub(monthStart).Hours() / 24.0
 			minutesInMonth := daysInMonth * 24.0 * 60.0
 
-			for _, d := range monthDevices {
+			for _, d := range devices {
 				if stats, ok := statsMap[d.ID]; ok && stats.DataPoints > 0 {
 					validDevices++
 					uptimePercent := (float64(stats.DataPoints) / minutesInMonth) * 100
@@ -478,30 +485,13 @@ func (s *ExportService) generateROIReportData(ctx context.Context) *ROIReportDat
 						uptimePercent = 100
 					}
 					totalUptimePercent += uptimePercent
-
-					uptimeHours := float64(stats.DataPoints) / 60.0
-					savings := uptimeHours * 50.0 // $50/hour of uptime
-					totalSavings += savings
+					totalSavings += (float64(stats.DataPoints) / 60.0) * 50.0
 				}
 			}
 		}
 
-		// Get alert count for this month
-		alerts, _, err := s.alertRepo.List(ctx, "", 1, 10000)
-		if err != nil {
-			logger.L().Warn("Failed to get alerts for monthly trend",
-				zap.Error(err),
-				zap.String("month", monthStr),
-			)
-			alerts = []model.Alert{}
-		}
-
-		var alertCount int
-		for _, a := range alerts {
-			if a.TriggeredAt.After(monthStart) && a.TriggeredAt.Before(monthEnd) {
-				alertCount++
-			}
-		}
+			// 从数据库层趋势数据获取当月告警数（替代内存过滤）
+			alertCount := trendByMonth[monthStr]
 
 		avgUptimePercent := 0.0
 		if validDevices > 0 {

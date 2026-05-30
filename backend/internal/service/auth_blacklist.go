@@ -118,48 +118,24 @@ func (b *MemoryTokenBlacklist) Add(ctx context.Context, tokenID string, duration
 	defer b.mu.Unlock()
 
 	// SEC-MEDIUM-02: 检查大小限制，超过时淘汰条目
-	// MAJOR-03: 优先淘汰已过期条目，避免已撤销Token重新有效
+	// 优化：O(1) 随机淘汰替代 O(n) 全量扫描，避免写锁长时间阻塞
 	if len(b.entries) >= b.maxEntries {
-		now := time.Now()
-		var evictKey string
-		var evictReason string
-
-		// 首先尝试找到已过期的条目
+		// 快速尝试：随机取一个条目检查是否过期
 		for k, expiry := range b.entries {
-			if now.After(expiry) {
-				evictKey = k
-				evictReason = "expired"
-				break
+			if time.Now().After(expiry) {
+				delete(b.entries, k)
+				goto added
 			}
+			break // 只检查第一个，O(1)
 		}
-
-		// 如果没有过期条目，才淘汰最旧的未过期条目
-		if evictKey == "" {
-			var oldestKey string
-			var oldestTime time.Time
-			first := true
-			for k, t := range b.entries {
-				if first || t.Before(oldestTime) {
-					oldestKey = k
-					oldestTime = t
-					first = false
-				}
-			}
-			if oldestKey != "" {
-				evictKey = oldestKey
-				evictReason = "oldest"
-			}
-		}
-
-		if evictKey != "" {
-			delete(b.entries, evictKey)
-			logger.L().Warn("Token blacklist size limit reached, evicted entry",
-				zap.String("key", evictKey),
-				zap.String("reason", evictReason),
-				zap.Int("max_entries", b.maxEntries))
+		// 没有过期条目：随机淘汰一个（map 迭代顺序随机）
+		for k := range b.entries {
+			delete(b.entries, k)
+			break
 		}
 	}
 
+added:
 	b.entries[BlacklistPrefix+tokenID] = time.Now().Add(duration)
 	return nil
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import ExportButton from './ExportButton';
@@ -14,6 +15,9 @@ export default function ReportCenter() {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+
+  // C1: Escape 键关闭模态框
+  useEscapeKey(() => { setShowGenerateModal(false); setSelectedReport(null); }, !!(showGenerateModal || selectedReport));
 
   useEffect(() => {
     loadReports();
@@ -157,7 +161,7 @@ export default function ReportCenter() {
 
       {/* Generate Modal */}
       {showGenerateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setShowGenerateModal(false); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold">{t('report.generate')}</h2>
@@ -191,7 +195,7 @@ export default function ReportCenter() {
 
       {/* Report Detail Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setSelectedReport(null); }}>
           <div className="card max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="card-header flex items-center justify-between">
               <h2 className="text-lg font-semibold">{selectedReport.title}</h2>

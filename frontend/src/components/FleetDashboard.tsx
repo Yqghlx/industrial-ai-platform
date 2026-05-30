@@ -29,7 +29,7 @@ const DeviceCard = React.memo(function DeviceCard({ device, t }: DeviceCardProps
       <div className="flex items-start justify-between mb-2 lg:mb-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full shrink-0 ${getDeviceStatusColor(device.status)}`} />
+            <div className={`w-2 h-2 rounded-full shrink-0 ${getDeviceStatusColor(device.status)}`} aria-label={t(`device.${device.status}`)} />
             <span className="font-medium text-slate-100 truncate">{device.name}</span>
           </div>
           <span className="text-xs lg:text-sm text-slate-400">{device.id}</span>
@@ -153,11 +153,14 @@ export default function FleetDashboard() {
   }, [isConnected, loadData]);
 
   // FE-P2-05: 使用 useMemo 优化 devicesWithTelemetry 计算，避免每次渲染重新计算
-  const devicesWithTelemetry = useMemo(() => 
-    devices.map(device => {
-      const tel = telemetry.find(t => t.device_id === device.id);
+  // 使用 Map 将 O(n*m) 查找优化为 O(n+m)
+  const devicesWithTelemetry = useMemo(() => {
+    const telMap = new Map(telemetry.map(t => [t.device_id, t]));
+    return devices.map(device => {
+      const tel = telMap.get(device.id);
       return { ...device, telemetry: tel };
-    }), [devices, telemetry]);
+    });
+  }, [devices, telemetry]);
 
   return (
     <div className="space-y-4 lg:space-y-6 mobile-page">

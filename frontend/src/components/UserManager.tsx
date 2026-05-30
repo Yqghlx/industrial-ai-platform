@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import { useAuth } from './AuthContext';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
@@ -40,7 +41,7 @@ const UserRow = React.memo(function UserRow({ user, t, onDelete }: UserRowProps)
       <td>
         <button
           onClick={() => onDelete(user.id)}
-          className="p-1 text-slate-400 hover:text-red-400"
+          className="p-1 text-slate-400 hover:text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={t('common.delete')}
         >
           <Trash2 className="w-4 h-4" />
@@ -56,6 +57,14 @@ export default function UserManager() {
   const { showToast } = useToast();
   const { showConfirm } = useConfirmDialog();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // C1: Escape 键关闭模态框
+  const closeCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+  }, []);
+
+  useEscapeKey(closeCreateModal, showCreateModal);
 
   // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
   const [state, actions] = useCRUD<User>({
@@ -160,7 +169,7 @@ export default function UserManager() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) closeCreateModal(); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold">{t('user.createUser')}</h2>
@@ -168,6 +177,7 @@ export default function UserManager() {
             <div className="card-body">
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                setCreating(true);
                 const formData = new FormData(e.target as HTMLFormElement);
                 const data = {
                   username: formData.get('username') as string,
@@ -183,33 +193,34 @@ export default function UserManager() {
                 } else {
                   showToast({ type: 'error', message: t('user.createFailed') });
                 }
+                setCreating(false);
                 setShowCreateModal(false);
               }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="label">{t('auth.username')}</label>
-                    <input name="username" className="input" required minLength={3} />
+                    <label className="label" htmlFor="user-create-username">{t('auth.username')}</label>
+                    <input id="user-create-username" name="username" className="input" required minLength={3} />
                   </div>
                   <div>
-                    <label className="label">{t('auth.password')}</label>
-                    <input name="password" type="password" className="input" required minLength={6} />
+                    <label className="label" htmlFor="user-create-password">{t('auth.password')}</label>
+                    <input id="user-create-password" name="password" type="password" className="input" required minLength={6} />
                   </div>
                   <div>
-                    <label className="label">{t('auth.email')}</label>
-                    <input name="email" type="email" className="input" required />
+                    <label className="label" htmlFor="user-create-email">{t('auth.email')}</label>
+                    <input id="user-create-email" name="email" type="email" className="input" required />
                   </div>
                   <div>
-                    <label className="label">{t('user.role')}</label>
-                    <select name="role" className="input">
+                    <label className="label" htmlFor="user-create-role">{t('user.role')}</label>
+                    <select id="user-create-role" name="role" className="input">
                       <option value="user">{t('user.user')}</option>
                       <option value="admin">{t('user.admin')}</option>
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary flex-1">
+                    <button type="submit" className="btn btn-primary flex-1" disabled={creating}>
                       {t('common.create')}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowCreateModal(false)}
                       className="btn btn-secondary flex-1"

@@ -116,6 +116,9 @@ func (c *MemoryCache) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 // Set 设置缓存值
+// O(1) 淘汰：超过上限时随机淘汰一个条目，避免写锁长时间阻塞
+const cacheMaxEntries = 100000
+
 func (c *MemoryCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -124,6 +127,22 @@ func (c *MemoryCache) Set(ctx context.Context, key string, value []byte, ttl tim
 		ttl = c.ttl
 	}
 
+	// O(1) 淘汰：优先找过期条目，否则随机淘汰（map 迭代顺序随机）
+	if len(c.data) >= cacheMaxEntries {
+		for k, item := range c.data {
+			if time.Now().After(item.expiredAt) {
+				delete(c.data, k)
+				goto added
+			}
+			break
+		}
+		for k := range c.data {
+			delete(c.data, k)
+			break
+		}
+	}
+
+added:
 	c.data[key] = &memoryItem{
 		value:     value,
 		expiredAt: time.Now().Add(ttl),

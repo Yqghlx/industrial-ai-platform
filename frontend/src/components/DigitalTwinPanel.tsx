@@ -102,6 +102,7 @@ export default function DigitalTwinPanel() {
               value={selectedDevice || ''}
               onChange={(e) => setSelectedDevice(e.target.value)}
               className="input flex-1"
+              aria-label={t('device.id')}
             >
               {telemetry.map((t) => (
                 <option key={t.device_id} value={t.device_id}>
@@ -244,7 +245,7 @@ export default function DigitalTwinPanel() {
         <div className="card">
           <div className="card-body">
             <div className="flex items-center justify-center gap-4">
-              <div className={`w-4 h-4 rounded-full ${getTelemetryStatusColor(currentDevice.status)}`} />
+              <div className={`w-4 h-4 rounded-full ${getTelemetryStatusColor(currentDevice.status)}`} aria-label={currentDevice.status} />
               <span className="text-xl font-medium text-slate-100">
                 {currentDevice.device_id} - {currentDevice.status}
               </span>

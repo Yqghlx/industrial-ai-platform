@@ -699,21 +699,9 @@ func mustAtoi(s string) int {
 // Phase 1: 补充AlertService方法 - Handler重构支持
 // ============================================
 
-// GetAlertByID retrieves a single alert by ID
+// GetAlertByID 根据 ID 查询单条告警
 func (s *AlertService) GetAlertByID(ctx context.Context, id int) (*model.Alert, error) {
-	// 从alertRepo获取所有告警，然后找到匹配的
-	alerts, _, err := s.alertRepo.List(ctx, "all", 1, 1000)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, a := range alerts {
-		if a.ID == id {
-			return &a, nil
-		}
-	}
-
-	return nil, fmt.Errorf("alert not found")
+	return s.alertRepo.GetByID(ctx, id)
 }
 
 // ResolveAlert marks an alert as resolved

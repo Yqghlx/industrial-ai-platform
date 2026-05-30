@@ -45,9 +45,9 @@ describe('LoginPage', () => {
         <LoginPage />
       </MemoryRouter>
     );
-    // 验证登录页面渲染了平台标题
+    // 验证登录页面渲染了平台副标题
     await waitFor(() => {
-      expect(screen.getByText('Industrial AI Platform')).toBeInTheDocument();
+      expect(screen.getByText('auth.platformSubtitle')).toBeInTheDocument();
     });
   });
 

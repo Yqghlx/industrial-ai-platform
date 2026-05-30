@@ -171,6 +171,7 @@ export default function AlertReportPage() {
             className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200"
             value={trendDays}
             onChange={(e) => setTrendDays(Number(e.target.value))}
+            aria-label={t('alertReport.timeRange')}
           >
             <option value="7">{t('alertReport.recent7Days')}</option>
             <option value="14">{t('alertReport.recent14Days')}</option>

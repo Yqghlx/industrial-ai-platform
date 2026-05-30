@@ -92,11 +92,12 @@ export default function NotificationCenter() {
               value={filter.type}
               onChange={(e) => setFilter({ ...filter, type: e.target.value })}
               className="input"
+              aria-label={t('notification.type')}
             >
               <option value="">{t('device.allTypes')}</option>
-              <option value="alert">告警</option>
-              <option value="system">系统</option>
-              <option value="work_order">工单</option>
+              <option value="alert">{t('notification.typeAlert')}</option>
+              <option value="system">{t('notification.typeSystem')}</option>
+              <option value="work_order">{t('notification.typeWorkOrder')}</option>
             </select>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -169,7 +170,7 @@ export default function NotificationCenter() {
                       </p>
                       <p className="text-xs text-slate-400 mt-2">
                         {new Date(n.created_at).toLocaleString()}
-                        {n.device_id && ` · 设备: ${n.device_id}`}
+                        {n.device_id && ` · ${t('notification.device')}: ${n.device_id}`}
                       </p>
                     </div>
                   </div>

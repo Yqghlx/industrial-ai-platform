@@ -14,6 +14,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// MaxBodySize HTTP 请求体最大字节数（1MB）
+const MaxBodySize = 1 << 20
+
 // ============================================
 // WAF 中间件 - Web 应用防火墙
 // ============================================
@@ -288,7 +291,7 @@ func WAFMiddleware(config WAFConfig, logger *zap.Logger) gin.HandlerFunc {
 		// 5. 检查请求体 (POST/PUT/DELETE)
 		if method == "POST" || method == "PUT" || method == "DELETE" {
 			// 读取请求体
-			bodyBytes, _ := io.ReadAll(c.Request.Body)
+			bodyBytes, _ := io.ReadAll(io.LimitReader(c.Request.Body, MaxBodySize))
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 			body := string(bodyBytes)

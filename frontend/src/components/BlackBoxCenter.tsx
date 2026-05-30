@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
 import { Box, Play, Clock } from 'lucide-react';
@@ -32,6 +33,9 @@ export default function BlackBoxCenter() {
   const [records, setRecords] = useState<BlackBoxRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<BlackBoxRecord | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // C1: Escape 键关闭模态框
+  useEscapeKey(() => setSelectedRecord(null), !!selectedRecord);
 
   useEffect(() => {
     loadRecords();
@@ -147,7 +151,7 @@ export default function BlackBoxCenter() {
 
       {/* Detail modal */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setSelectedRecord(null); }}>
           <div className="card max-w-2xl w-full mx-4">
             <div className="card-header flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t('blackbox.playback')} #{selectedRecord.id}</h2>

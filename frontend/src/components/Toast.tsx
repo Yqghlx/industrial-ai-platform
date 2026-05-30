@@ -78,7 +78,7 @@ export default function Toast({ toasts, removeToast }: ToastProps) {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 left-4 right-4 lg:left-auto lg:right-4 z-50 space-y-2 flex flex-col items-center lg:items-end">
+    <div className="fixed top-4 left-4 right-4 lg:left-auto lg:right-4 z-50 space-y-2 flex flex-col items-center lg:items-end" role="status" aria-live="polite">
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -117,7 +117,7 @@ export default function Toast({ toasts, removeToast }: ToastProps) {
           </div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-200 active:text-slate-100 touch-manipulation"
+            className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-200 active:text-slate-100 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={t('common.close')}
           >
             <CloseIcon />

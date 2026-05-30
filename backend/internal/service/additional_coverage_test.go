@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,27 +26,22 @@ func TestAlertService_GetAlertByID_Coverage(t *testing.T) {
 
 	ctx := context.Background()
 
-	alerts := []model.Alert{
-		{ID: 1, DeviceID: "device-1", Message: "Alert 1"},
-		{ID: 2, DeviceID: "device-2", Message: "Alert 2"},
-	}
-
 	t.Run("AlertFound", func(t *testing.T) {
-		mockAlertRepo.On("List", ctx, "all", 1, 1000).Return(alerts, 2, nil).Once()
+		alert := &model.Alert{ID: 1, DeviceID: "device-1", Message: "Alert 1"}
+		mockAlertRepo.On("GetByID", ctx, 1).Return(alert, nil).Once()
 
-		alert, err := service.GetAlertByID(ctx, 1)
+		result, err := service.GetAlertByID(ctx, 1)
 		assert.NoError(t, err)
-		assert.NotNil(t, alert)
-		assert.Equal(t, 1, alert.ID)
+		assert.NotNil(t, result)
+		assert.Equal(t, 1, result.ID)
 	})
 
 	t.Run("AlertNotFound", func(t *testing.T) {
-		mockAlertRepo.On("List", ctx, "all", 1, 1000).Return(alerts, 2, nil).Once()
+		mockAlertRepo.On("GetByID", ctx, 999).Return(nil, fmt.Errorf("sql: no rows in result set")).Once()
 
-		alert, err := service.GetAlertByID(ctx, 999)
+		result, err := service.GetAlertByID(ctx, 999)
 		assert.Error(t, err)
-		assert.Nil(t, alert)
-		assert.Contains(t, err.Error(), "not found")
+		assert.Nil(t, result)
 	})
 }
 

@@ -339,6 +339,28 @@ func (r *AlertRepository) CountByStatus(ctx context.Context, status string) (int
 }
 
 // Resolve resolves an alert
+// GetByID 根据 ID 查询单条告警
+func (r *AlertRepository) GetByID(ctx context.Context, id int) (*model.Alert, error) {
+	query := `
+		SELECT id, rule_id, device_id, message, severity, status, triggered_at, resolved_at
+		FROM alerts WHERE id = $1
+	`
+	var a model.Alert
+	var resolvedAt sql.NullTime
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&a.ID, &a.RuleID, &a.DeviceID, &a.Message, &a.Severity,
+		&a.Status, &a.TriggeredAt, &resolvedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if resolvedAt.Valid {
+		t := resolvedAt.Time
+		a.ResolvedAt = &t
+	}
+	return &a, nil
+}
+
 func (r *AlertRepository) Resolve(ctx context.Context, id int) error {
 	now := time.Now()
 	_, err := r.db.Exec(ctx,

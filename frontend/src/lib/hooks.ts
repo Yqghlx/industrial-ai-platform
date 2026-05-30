@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 /**
+ * Escape 键关闭模态框 Hook
+ * 封装 Escape 键监听逻辑，避免 7+ 个组件重复实现
+ */
+export function useEscapeKey(callback: () => void, isActive: boolean) {
+  useEffect(() => {
+    if (!isActive) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') callback();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [callback, isActive]);
+}
+
+/**
  * 防抖 Hook
  */
 export function useDebounce<T>(value: T, delay: number): T {
@@ -296,4 +311,5 @@ export default {
   useLocalStorage,
   useIntersectionObserver,
   useResizeObserver,
+  useEscapeKey,
 };

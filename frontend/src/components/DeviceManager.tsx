@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import { useAuth } from './AuthContext';
 import { SkeletonTable } from './Skeleton';
 import { useToast } from './Toast';
@@ -39,7 +40,7 @@ const DeviceRow = React.memo(function DeviceRow({ device, t, isAdmin, onEdit, on
           <button
             data-testid="edit-btn"
             onClick={() => onEdit(device)}
-            className="p-1 text-slate-400 hover:text-primary-400"
+            className="p-1 text-slate-400 hover:text-primary-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={t('common.edit')}
           >
             <Edit className="w-4 h-4" />
@@ -48,7 +49,7 @@ const DeviceRow = React.memo(function DeviceRow({ device, t, isAdmin, onEdit, on
             <button
               data-testid="delete-btn"
               onClick={() => onDelete(device.id)}
-              className="p-1 text-slate-400 hover:text-red-400"
+              className="p-1 text-slate-400 hover:text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={t('common.delete')}
             >
               <Trash2 className="w-4 h-4" />
@@ -69,6 +70,15 @@ export default function DeviceManager() {
   const [typeFilter, setTypeFilter] = useState('');
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // C1: Escape 键关闭模态框
+  const closeDeviceModal = useCallback(() => {
+    setShowCreateModal(false);
+    setEditingDevice(null);
+  }, []);
+
+  useEscapeKey(closeDeviceModal, !!(showCreateModal || editingDevice));
 
   // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
   const [state, actions] = useCRUD<Device>({
@@ -272,7 +282,7 @@ export default function DeviceManager() {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || editingDevice) && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) closeDeviceModal(); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold">
@@ -282,6 +292,7 @@ export default function DeviceManager() {
             <div className="card-body">
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                setSaving(true);
                 const formData = new FormData(e.target as HTMLFormElement);
                 const data = {
                   id: formData.get('device-id') as string,
@@ -304,35 +315,36 @@ export default function DeviceManager() {
                 if (!success) {
                   showToast({ type: 'error', message: t('device.operationFailed') });
                 }
+                setSaving(false);
                 setShowCreateModal(false);
                 setEditingDevice(null);
               }}>
                 <div className="space-y-4">
                   {!editingDevice && (
                     <div>
-                      <label className="label">{t('device.id')}</label>
-                      <input name="device-id" className="input" required defaultValue="" />
+                      <label className="label" htmlFor="device-edit-id">{t('device.id')}</label>
+                      <input id="device-edit-id" name="device-id" className="input" required defaultValue="" />
                     </div>
                   )}
                   <div>
-                    <label className="label">{t('device.name')}</label>
-                    <input name="device-name" className="input" required defaultValue={editingDevice?.name} />
+                    <label className="label" htmlFor="device-edit-name">{t('device.name')}</label>
+                    <input id="device-edit-name" name="device-name" className="input" required defaultValue={editingDevice?.name} />
                   </div>
                   <div>
-                    <label className="label">{t('device.type')}</label>
-                    <select name="device-type" className="input" defaultValue={editingDevice?.type}>
+                    <label className="label" htmlFor="device-edit-type">{t('device.type')}</label>
+                    <select id="device-edit-type" name="device-type" className="input" defaultValue={editingDevice?.type}>
                       {DEVICE_TYPE_OPTIONS.map(dt => (
                         <option key={dt.value} value={dt.value}>{dt.label}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="label">{t('device.location')}</label>
-                    <input name="device-location" className="input" defaultValue={editingDevice?.location} />
+                    <label className="label" htmlFor="device-edit-location">{t('device.location')}</label>
+                    <input id="device-edit-location" name="device-location" className="input" defaultValue={editingDevice?.location} />
                   </div>
                   <div>
-                    <label className="label">{t('device.status')}</label>
-                    <select name="status" className="input" defaultValue={editingDevice?.status}>
+                    <label className="label" htmlFor="device-edit-status">{t('device.status')}</label>
+                    <select id="device-edit-status" name="status" className="input" defaultValue={editingDevice?.status}>
                       <option value="online">{t('device.online')}</option>
                       <option value="warning">{t('device.warning')}</option>
                       <option value="fault">{t('device.fault')}</option>
@@ -340,10 +352,10 @@ export default function DeviceManager() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary flex-1">
+                    <button type="submit" className="btn btn-primary flex-1" disabled={saving}>
                       {t('common.save')}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => { setShowCreateModal(false); setEditingDevice(null); }}
                       className="btn btn-secondary flex-1"

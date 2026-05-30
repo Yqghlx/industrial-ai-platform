@@ -199,7 +199,7 @@ export default function TelemetryPage() {
               aria-label={`${t('device.id')}: ${d.device_id}`}
             >
               {d.device_id}
-              <span className={`ml-2 w-2 h-2 rounded-full inline-block ${getTelemetryStatusColor(d.status)}`} />
+              <span className={`ml-2 w-2 h-2 rounded-full inline-block ${getTelemetryStatusColor(d.status)}`} aria-label={d.status} />
             </button>
           ))}
         </div>

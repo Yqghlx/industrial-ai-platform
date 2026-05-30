@@ -102,19 +102,20 @@ func NewServiceFactoryFromRepo(repoFactory *repository.RepositoryFactory) *Servi
 	)
 
 	// 4. 报告和导出服务
-	factory.reportService = NewReportService(
+	reportSvc := NewReportService(
 		repoFactory.GetReportRepository(),
 		repoFactory.GetTelemetryRepository(),
 		repoFactory.GetDeviceRepository(),
 		repoFactory.GetWorkOrderRepository(),
 		repoFactory.GetNotificationRepository(),
 	)
+	factory.reportService = reportSvc
 	factory.exportService = NewExportService(
 		repoFactory.GetDeviceRepository(),
-		nil,
+		repoFactory.GetTelemetryRepository(),
 		repoFactory.GetAlertRepository(),
-		nil,
-		nil,
+		repoFactory.GetWorkOrderRepository(),
+		reportSvc,
 	)
 
 	// 5. 工单、通知、黑匣子服务（仅依赖 Repository）

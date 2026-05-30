@@ -106,7 +106,8 @@ func (s *AgentService) callLLM(ctx context.Context, query string, contextData ma
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := io.ReadAll(resp.Body)
+	// LLM 响应体最大 1MB（与 middleware.MaxBodySize 保持一致）
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return "", errors.NewInternalError(fmt.Sprintf("Failed to read response: %v", err))
 	}

@@ -85,8 +85,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary-600 mb-4">
             <Activity className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Industrial AI Platform</h1>
-          <p className="text-slate-400 mt-2">工业AI代理平台</p>
+          <h1 className="text-2xl font-bold text-slate-100">{t('auth.platformTitle')}</h1>
+          <p className="text-slate-400 mt-2">{t('auth.platformSubtitle')}</p>
         </div>
 
         {/* Form */}
@@ -121,10 +121,11 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username */}
               <div>
-                <label className="label">{t('auth.username')}</label>
+                <label className="label" htmlFor="login-username">{t('auth.username')}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
+                    id="login-username"
                     type="text"
                     name="username"
                     value={username}
@@ -138,10 +139,11 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label className="label">{t('auth.password')}</label>
+                <label className="label" htmlFor="login-password">{t('auth.password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
+                    id="login-password"
                     type="password"
                     name="password"
                     value={password}
@@ -156,10 +158,11 @@ export default function LoginPage() {
               {/* Email (register only) */}
               {mode === 'register' && (
                 <div>
-                  <label className="label">{t('auth.email')}</label>
+                  <label className="label" htmlFor="login-email">{t('auth.email')}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
+                      id="login-email"
                       type="email"
                       name="email"
                       value={email}
@@ -201,7 +204,7 @@ export default function LoginPage() {
             {/* Demo hint - only show in development mode */}
             {import.meta.env.DEV && (
               <div className="mt-6 pt-4 border-t border-slate-700 text-center text-sm text-slate-400">
-                <p>演示账户: admin / Admin@123456</p>
+                <p>{t('auth.demoAccount')}</p>
               </div>
             )}
           </div>

@@ -364,23 +364,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/auth/csrf-token:
+    get:
+      tags: [Auth]
+      summary: 获取 CSRF Token
+      description: 获取 CSRF Token 用于额外的安全保护（可选，JWT via Authorization header 已提供 CSRF 安全认证）
+      responses:
+        '200':
+          description: CSRF Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  csrf_token:
+                    type: string
+
   /api/v1/auth/validate:
-    post:
+    get:
       tags: [Auth]
       summary: 验证Token
+      description: 通过 Authorization header 中的 Bearer Token 验证当前用户身份
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token]
-              properties:
-                token:
-                  type: string
-                  description: 要验证的JWT Token
       responses:
         '200':
           description: Token验证成功
@@ -1011,7 +1017,9 @@ paths:
       tags: [Telemetry]
       summary: 遥测数据摄入
       description: |
-        边缘设备上报遥测数据接口（公开接口，无需认证）。
+        边缘设备上报遥测数据接口（需要设备 API Key 认证）。
+
+        **认证方式：** 通过 `X-Device-Key` 请求头或 `device_key` 查询参数提供设备 API Key。
         
         **功能说明：**
         - 接收边缘设备实时采集的传感器数据
@@ -1495,7 +1503,7 @@ paths:
           description: 成功
 
   /api/v1/notifications/{id}/read:
-    put:
+    post:
       tags: [Notifications]
       summary: 标记已读
       security:
@@ -1979,6 +1987,28 @@ paths:
         '200':
           description: 分配成功
 
+  /api/v1/roles/{id}/permissions/{perm_id}:
+    delete:
+      tags: [RBAC]
+      summary: 移除角色权限
+      description: 从角色中移除指定权限（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: perm_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 移除成功
+
   /api/v1/permissions:
     get:
       tags: [RBAC]
@@ -2047,6 +2077,28 @@ paths:
       responses:
         '200':
           description: 分配成功
+
+  /api/v1/users/{id}/roles/{role_id}:
+    delete:
+      tags: [RBAC]
+      summary: 移除用户角色
+      description: 移除用户的指定角色（管理员权限）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 移除成功
 
   # ===== Telemetry =====
   /api/v1/telemetry/latest:
@@ -2269,12 +2321,13 @@ paths:
                 properties:
                   status:
                     type: string
-                  database:
-                    type: string
-                  db_latency:
-                    type: integer
+                    example: healthy
                   timestamp:
                     type: string
+                    format: date-time
+                  uptime:
+                    type: integer
+                    description: 运行时间（秒）
 
   # ===== WebSocket =====
   /ws:
@@ -2285,6 +2338,37 @@ paths:
       responses:
         '200':
           description: WebSocket连接成功
+
+  /cache/status:
+    get:
+      tags: [Monitoring]
+      summary: 缓存状态
+      description: 获取当前缓存系统状态信息
+      responses:
+        '200':
+          description: 缓存状态信息
+
+  /ws/stats:
+    get:
+      tags: [Monitoring]
+      summary: WebSocket统计
+      description: 获取当前 WebSocket 连接数和统计信息
+      responses:
+        '200':
+          description: WebSocket 统计信息
+
+  /metrics:
+    get:
+      tags: [Monitoring]
+      summary: Prometheus 指标
+      description: Prometheus 格式的应用指标端点（基础设施用途，无需认证）
+      responses:
+        '200':
+          description: Prometheus 指标数据
+          content:
+            text/plain:
+              schema:
+                type: string
 
 components:
   securitySchemes:

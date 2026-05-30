@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import api from '../lib/api';
 import { useI18n } from '../i18n';
+import { useEscapeKey } from '../lib/hooks';
 import { useAuth } from './AuthContext';
 import Skeleton from './Skeleton';
 import { useToast } from './Toast';
@@ -16,6 +17,15 @@ export default function RuleManager() {
   const { showConfirm } = useConfirmDialog();
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // C1: Escape 键关闭模态框
+  const closeRuleModal = useCallback(() => {
+    setShowCreateModal(false);
+    setEditingRule(null);
+  }, []);
+
+  useEscapeKey(closeRuleModal, !!(showCreateModal || editingRule));
 
   // FE-P2-09: 使用通用 useCRUD hook 替代重复的 CRUD 逻辑
   // 由于 Rule API 返回格式不同（无分页），需要适配
@@ -135,7 +145,7 @@ export default function RuleManager() {
                       <td>
                         <button
                           onClick={() => handleToggle(rule.id, !rule.enabled)}
-                          className="p-1 hover:bg-slate-700 rounded"
+                          className="p-1 hover:bg-slate-700 rounded min-w-[44px] min-h-[44px] flex items-center justify-center"
                           aria-label={rule.enabled ? t('common.disable') : t('common.enable')}
                         >
                           {rule.enabled ? (
@@ -149,7 +159,7 @@ export default function RuleManager() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setEditingRule(rule)}
-                            className="p-1 text-slate-400 hover:text-primary-400"
+                            className="p-1 text-slate-400 hover:text-primary-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             aria-label={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
@@ -157,7 +167,7 @@ export default function RuleManager() {
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(rule.id)}
-                              className="p-1 text-slate-400 hover:text-red-400"
+                              className="p-1 text-slate-400 hover:text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
                               aria-label={t('common.delete')}
                             >
                               ×
@@ -176,7 +186,7 @@ export default function RuleManager() {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || editingRule) && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) closeRuleModal(); }}>
           <div className="card max-w-md">
             <div className="card-header">
               <h2 className="text-lg font-semibold">
@@ -186,6 +196,7 @@ export default function RuleManager() {
             <div className="card-body">
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                setSaving(true);
                 const formData = new FormData(e.target as HTMLFormElement);
                 const data = {
                   name: formData.get('name') as string,
@@ -211,17 +222,18 @@ export default function RuleManager() {
                 } else {
                   showToast({ type: 'error', message: t('alert.saveFailed') });
                 }
+                setSaving(false);
                 setShowCreateModal(false);
                 setEditingRule(null);
               }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="label">{t('alert.ruleName')}</label>
-                    <input name="name" className="input" required defaultValue={editingRule?.name} />
+                    <label className="label" htmlFor="rule-name">{t('alert.ruleName')}</label>
+                    <input id="rule-name" name="name" className="input" required defaultValue={editingRule?.name} />
                   </div>
                   <div>
-                    <label className="label">{t('alert.deviceType')}</label>
-                    <select name="device_type" className="input" defaultValue={editingRule?.device_type || 'other'}>
+                    <label className="label" htmlFor="rule-device-type">{t('alert.deviceType')}</label>
+                    <select id="rule-device-type" name="device_type" className="input" defaultValue={editingRule?.device_type || 'other'}>
                       <option value="pump">{t('device.pump')}</option>
                       <option value="motor">{t('device.motor')}</option>
                       <option value="compressor">{t('device.compressor')}</option>
@@ -232,8 +244,8 @@ export default function RuleManager() {
                     </select>
                   </div>
                   <div>
-                    <label className="label">{t('alert.metric')}</label>
-                    <select name="metric" className="input" defaultValue={editingRule?.metric}>
+                    <label className="label" htmlFor="rule-metric">{t('alert.metric')}</label>
+                    <select id="rule-metric" name="metric" className="input" defaultValue={editingRule?.metric}>
                       <option value="temperature">{t('telemetry.temperature')}</option>
                       <option value="vibration">{t('telemetry.vibration')}</option>
                       <option value="pressure">{t('telemetry.pressure')}</option>
@@ -242,8 +254,8 @@ export default function RuleManager() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="label">{t('alert.operator')}</label>
-                      <select name="operator" className="input" defaultValue={editingRule?.operator}>
+                      <label className="label" htmlFor="rule-operator">{t('alert.operator')}</label>
+                      <select id="rule-operator" name="operator" className="input" defaultValue={editingRule?.operator}>
                         <option value=">">&gt;</option>
                         <option value=">=">&gt;=</option>
                         <option value="<">&lt;</option>
@@ -251,13 +263,13 @@ export default function RuleManager() {
                       </select>
                     </div>
                     <div>
-                      <label className="label">{t('alert.threshold')}</label>
-                      <input name="threshold" type="number" className="input" defaultValue={editingRule?.threshold} />
+                      <label className="label" htmlFor="rule-threshold">{t('alert.threshold')}</label>
+                      <input id="rule-threshold" name="threshold" type="number" className="input" defaultValue={editingRule?.threshold} />
                     </div>
                   </div>
                   <div>
-                    <label className="label">{t('alert.severity')}</label>
-                    <select name="severity" className="input" defaultValue={editingRule?.severity}>
+                    <label className="label" htmlFor="rule-severity">{t('alert.severity')}</label>
+                    <select id="rule-severity" name="severity" className="input" defaultValue={editingRule?.severity}>
                       <option value="critical">{t('alert.critical')}</option>
                       <option value="high">{t('alert.high')}</option>
                       <option value="medium">{t('alert.medium')}</option>
@@ -265,14 +277,14 @@ export default function RuleManager() {
                     </select>
                   </div>
                   <div>
-                    <label className="label">{t('alert.cooldown')} ({t('alert.cooldownUnit')})</label>
-                    <input name="cooldown_sec" type="number" className="input" defaultValue={editingRule?.cooldown_sec || 300} />
+                    <label className="label" htmlFor="rule-cooldown">{t('alert.cooldown')} ({t('alert.cooldownUnit')})</label>
+                    <input id="rule-cooldown" name="cooldown_sec" type="number" className="input" defaultValue={editingRule?.cooldown_sec || 300} />
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary flex-1">
+                    <button type="submit" className="btn btn-primary flex-1" disabled={saving}>
                       {t('common.save')}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => { setShowCreateModal(false); setEditingRule(null); }}
                       className="btn btn-secondary flex-1"

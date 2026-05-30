@@ -112,7 +112,7 @@ export default function KnowledgeGraph() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-100">{t('nav.knowledgeGraph')}</h1>
-          <p className="text-slate-400">设备拓扑关系图</p>
+          <p className="text-slate-400">{t('knowledgeGraph.topologyTitle')}</p>
         </div>
         <button 
           onClick={loadGraph}
@@ -129,7 +129,7 @@ export default function KnowledgeGraph() {
         <div className="card-header">
           <div className="flex items-center gap-2">
             <Network className="w-5 h-5 text-primary-500" />
-            <span className="font-medium text-slate-100">设备关系网络</span>
+            <span className="font-medium text-slate-100">{t('knowledgeGraph.networkTitle')}</span>
           </div>
         </div>
         <div className="card-body">

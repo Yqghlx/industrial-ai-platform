@@ -163,7 +163,7 @@ func TestAlertService_GetAlertByID(t *testing.T) {
 	ctx := context.Background()
 	alert := &model.Alert{ID: 1, Severity: "high"}
 
-	mockAlertRepo.On("List", mock.MatchedBy(func(ctx context.Context) bool { return true }), "all", 1, 1000).Return([]model.Alert{*alert}, 1, nil)
+	mockAlertRepo.On("GetByID", mock.Anything, 1).Return(alert, nil)
 
 	result, err := svc.GetAlertByID(ctx, 1)
 	assert.NoError(t, err)
