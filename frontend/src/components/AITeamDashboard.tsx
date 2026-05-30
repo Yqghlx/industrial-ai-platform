@@ -106,8 +106,27 @@ export default function AITeamDashboard() {
           ))}
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-slate-700">
+        {/* Quick prompts + Input */}
+        <div className="p-4 border-t border-slate-700 space-y-3">
+          {/* 快捷建议按钮放在输入框紧邻上方，确保用户能看到填入效果 */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              t('ai.prompt1'),
+              t('ai.prompt2'),
+              t('ai.prompt3'),
+              t('ai.prompt4'),
+              t('ai.prompt5'),
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => setQuery(prompt)}
+                className="px-3 py-1 bg-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-600 transition-colors"
+                aria-label={prompt}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               type="text"
@@ -131,34 +150,6 @@ export default function AITeamDashboard() {
               <span>{t('ai.askQuestion')}</span>
             </button>
           </form>
-        </div>
-      </div>
-
-      {/* Quick prompts */}
-      <div className="card">
-        <div className="card-body">
-          <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
-            <Sparkles className="w-4 h-4" />
-            <span>{t('ai.quickPrompts')}:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              t('ai.prompt1'),
-              t('ai.prompt2'),
-              t('ai.prompt3'),
-              t('ai.prompt4'),
-              t('ai.prompt5'),
-            ].map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => setQuery(prompt)}
-                className="px-3 py-1 bg-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-600 transition-colors"
-                aria-label={prompt}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

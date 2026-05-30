@@ -47,18 +47,18 @@ function getSharedWebSocket(): CompressedWebSocket {
 
 /**
  * Cleanup shared WebSocket when no subscribers remain
+ * 使用 30 秒延迟清理，避免页面切换时连接频繁断开重建
  */
 function cleanupSharedWebSocket(): void {
   connectionCount--;
-  
+
   if (connectionCount <= 0 && sharedWebSocket) {
-    // Delay cleanup to allow for quick navigation between components
     setTimeout(() => {
       if (connectionCount <= 0 && sharedWebSocket) {
         sharedWebSocket.disconnect();
         sharedWebSocket = null;
       }
-    }, 5000);
+    }, 30000);
   }
 }
 
