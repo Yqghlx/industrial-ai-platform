@@ -284,20 +284,20 @@ func generateSessionID() string {
 }
 
 // GetDeviceContext gathers device context for AI queries
-func (s *AgentService) GetDeviceContext(ctx context.Context, deviceID string) (map[string]interface{}, error) {
-	contextData := make(map[string]interface{})
+func (s *AgentService) GetDeviceContext(ctx context.Context, deviceID string) (*model.DeviceContext, error) {
+	contextData := &model.DeviceContext{}
 
 	if deviceID != "" {
 		// Get device info
 		device, err := s.deviceRepo.GetByID(ctx, deviceID)
 		if err == nil {
-			contextData["device"] = device
+			contextData.Device = device
 		}
 
 		// Get latest telemetry
 		telemetry, err := s.telemetryRepo.GetByDeviceID(ctx, deviceID, time.Now().Add(-1*time.Hour), time.Now(), 10)
 		if err == nil {
-			contextData["telemetry"] = telemetry
+			contextData.Telemetry = telemetry
 		}
 	}
 

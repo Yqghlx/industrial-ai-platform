@@ -121,7 +121,7 @@ func (s *TenantService) ListTenants(ctx context.Context, limit, offset int) ([]m
 
 // FIX-003: 添加 context 参数
 // FIX-019: 添加 Context 超时设置
-func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error) {
+func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates *model.TenantUpdates) (*model.Tenant, error) {
 	// FIX-019: 确保 context 有超时
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()
@@ -131,25 +131,25 @@ func (s *TenantService) UpdateTenant(ctx context.Context, id string, updates map
 	}
 
 	// Apply updates
-	if name, ok := updates["name"].(string); ok && name != "" {
-		tenant.Name = name
+	if updates.Name != nil && *updates.Name != "" {
+		tenant.Name = *updates.Name
 	}
-	if slug, ok := updates["slug"].(string); ok && slug != "" {
+	if updates.Slug != nil && *updates.Slug != "" {
 		// Check if new slug exists for another tenant
-		existing, err := s.repo.GetBySlug(ctx, slug)
+		existing, err := s.repo.GetBySlug(ctx, *updates.Slug)
 		if err == nil && existing != nil && existing.ID != id {
-			return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", slug)
+			return nil, errors.NewAppError(errors.ErrCodeConflict, "Tenant slug already exists", *updates.Slug)
 		}
-		tenant.Slug = slug
+		tenant.Slug = *updates.Slug
 	}
-	if plan, ok := updates["plan"].(string); ok {
+	if updates.Plan != nil {
 		validPlans := map[string]bool{"free": true, "pro": true, "enterprise": true}
-		if validPlans[plan] {
-			tenant.Plan = plan
+		if validPlans[*updates.Plan] {
+			tenant.Plan = *updates.Plan
 		}
 	}
-	if maxDevices, ok := updates["max_devices"].(int); ok && maxDevices > 0 {
-		tenant.MaxDevices = maxDevices
+	if updates.MaxDevices != nil && *updates.MaxDevices > 0 {
+		tenant.MaxDevices = *updates.MaxDevices
 	}
 
 	tenant.UpdatedAt = time.Now()

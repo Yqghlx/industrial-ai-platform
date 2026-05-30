@@ -235,9 +235,8 @@ func TestTenantService_UpdateTenant(t *testing.T) {
 		WithArgs("t-1", "New Name", "old-slug", "free", 10, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	updates := map[string]interface{}{
-		"name": "New Name",
-	}
+	name := "New Name"
+	updates := &model.TenantUpdates{Name: &name}
 	tenant, err := svc.UpdateTenant(context.Background(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.NotNil(t, tenant)
@@ -263,9 +262,8 @@ func TestTenantService_UpdateTenant_Slug(t *testing.T) {
 		WithArgs("t-1", "Test", "new-slug", "free", 10, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	updates := map[string]interface{}{
-		"slug": "new-slug",
-	}
+	slug := "new-slug"
+	updates := &model.TenantUpdates{Slug: &slug}
 	tenant, err := svc.UpdateTenant(context.Background(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, "new-slug", tenant.Slug)
@@ -289,9 +287,8 @@ func TestTenantService_UpdateTenant_SlugConflict(t *testing.T) {
 		WithArgs("new-slug").
 		WillReturnRows(existingRows)
 
-	updates := map[string]interface{}{
-		"slug": "new-slug",
-	}
+	slug := "new-slug"
+	updates := &model.TenantUpdates{Slug: &slug}
 	tenant, err := svc.UpdateTenant(context.Background(), "t-1", updates)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Tenant slug already exists")
@@ -312,9 +309,8 @@ func TestTenantService_UpdateTenant_Plan(t *testing.T) {
 		WithArgs("t-1", "Test", "test", "pro", 10, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	updates := map[string]interface{}{
-		"plan": "pro",
-	}
+	plan := "pro"
+	updates := &model.TenantUpdates{Plan: &plan}
 	tenant, err := svc.UpdateTenant(context.Background(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, "pro", tenant.Plan)
@@ -334,9 +330,8 @@ func TestTenantService_UpdateTenant_MaxDevices(t *testing.T) {
 		WithArgs("t-1", "Test", "test", "free", 200, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	updates := map[string]interface{}{
-		"max_devices": 200,
-	}
+	maxDevices := 200
+	updates := &model.TenantUpdates{MaxDevices: &maxDevices}
 	tenant, err := svc.UpdateTenant(context.Background(), "t-1", updates)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, tenant.MaxDevices)
@@ -349,7 +344,8 @@ func TestTenantService_UpdateTenant_NotFound(t *testing.T) {
 		WithArgs("nonexistent").
 		WillReturnError(repository.ErrTenantNotFound)
 
-	updates := map[string]interface{}{"name": "New"}
+	name := "New"
+	updates := &model.TenantUpdates{Name: &name}
 	tenant, err := svc.UpdateTenant(context.Background(), "nonexistent", updates)
 	assert.Error(t, err)
 	assert.Nil(t, tenant)

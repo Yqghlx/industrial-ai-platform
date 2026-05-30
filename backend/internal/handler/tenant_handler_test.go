@@ -336,7 +336,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				MaxDevices: 500,
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("*model.TenantUpdates")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Updated Tenant",
 					Slug:       "test-tenant",
@@ -359,7 +359,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				"name": "Only Name Updated",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("*model.TenantUpdates")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Only Name Updated",
 					Slug:       "test-tenant",
@@ -395,7 +395,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 				Name: "Updated Tenant",
 			},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", mock.Anything, "non-existent", mock.AnythingOfType("map[string]interface {}")).Return(nil, errors.New("tenant not found"))
+				m.On("UpdateTenant", mock.Anything, "non-existent", mock.AnythingOfType("*model.TenantUpdates")).Return(nil, errors.New("tenant not found"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectSuccess:  false,
@@ -408,7 +408,7 @@ func TestTenantHandler_UpdateTenant(t *testing.T) {
 			},
 			requestBody: map[string]interface{}{},
 			mockSetup: func(m *MockTenantService) {
-				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("map[string]interface {}")).Return(&model.Tenant{
+				m.On("UpdateTenant", mock.Anything, "tenant-001", mock.AnythingOfType("*model.TenantUpdates")).Return(&model.Tenant{
 					ID:         "tenant-001",
 					Name:       "Test Tenant",
 					Slug:       "test-tenant",

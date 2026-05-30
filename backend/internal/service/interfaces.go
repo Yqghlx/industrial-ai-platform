@@ -138,7 +138,7 @@ type AlertReportServiceInterface interface {
 // AgentServiceInterface Agent 服务接口
 type AgentServiceInterface interface {
 	Query(ctx context.Context, query model.AgentQuery) (*model.AgentResponse, error)
-	GetDeviceContext(ctx context.Context, deviceID string) (map[string]interface{}, error)
+	GetDeviceContext(ctx context.Context, deviceID string) (*model.DeviceContext, error)
 	GetTaskLogs(ctx context.Context, limit int) ([]model.AgentTaskLog, error)
 }
 
@@ -203,7 +203,7 @@ type TenantServiceInterface interface {
 	GetTenant(ctx context.Context, id string) (*model.Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error)
 	ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error)
-	UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error)
+	UpdateTenant(ctx context.Context, id string, updates *model.TenantUpdates) (*model.Tenant, error)
 	DeleteTenant(ctx context.Context, id string) error
 	CountTenants(ctx context.Context) (int, error)
 }

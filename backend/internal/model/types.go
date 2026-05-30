@@ -322,3 +322,9 @@ type EfficiencyReport struct {
 	TotalAlerts    int     `json:"total_alerts"`
 	ResolvedAlerts int     `json:"resolved_alerts"`
 }
+
+// DeviceContext AI 查询的设备上下文数据
+type DeviceContext struct {
+	Device    *Device        `json:"device,omitempty"`
+	Telemetry []TelemetryData `json:"telemetry,omitempty"`
+}

@@ -120,3 +120,11 @@ func (t *Tenant) GetPlanLimits() (maxDevices, maxUsers, maxAlerts int) {
 	}
 	return 10, 3, 20 // Default to free plan limits
 }
+
+// TenantUpdates 租户更新参数（指针字段表示可选更新）
+type TenantUpdates struct {
+	Name       *string `json:"name,omitempty"`
+	Slug       *string `json:"slug,omitempty"`
+	Plan       *string `json:"plan,omitempty"`
+	MaxDevices *int    `json:"max_devices,omitempty"`
+}

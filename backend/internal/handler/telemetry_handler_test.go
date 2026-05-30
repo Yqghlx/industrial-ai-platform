@@ -118,10 +118,7 @@ func TestAgentQuery_Success(t *testing.T) {
 	}
 
 	mockAgentSvc.On("Query", mock.Anything, query).Return(expectedResponse, nil)
-	mockAgentSvc.On("GetDeviceContext", mock.Anything, "device-001").Return(map[string]interface{}{
-		"temperature": 25.5,
-		"status":      "normal",
-	}, nil)
+	mockAgentSvc.On("GetDeviceContext", mock.Anything, "device-001").Return(&model.DeviceContext{}, nil)
 
 	assert.Equal(t, "What is the status of device-001?", query.Query)
 	assert.Equal(t, "device-001", query.DeviceID)

@@ -340,12 +340,12 @@ func (m *MockAgentService) Query(ctx context.Context, query model.AgentQuery) (*
 	return args.Get(0).(*model.AgentResponse), args.Error(1)
 }
 
-func (m *MockAgentService) GetDeviceContext(ctx context.Context, deviceID string) (map[string]interface{}, error) {
+func (m *MockAgentService) GetDeviceContext(ctx context.Context, deviceID string) (*model.DeviceContext, error) {
 	args := m.Called(ctx, deviceID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(*model.DeviceContext), args.Error(1)
 }
 
 func (m *MockAgentService) GetTaskLogs(ctx context.Context, limit int) ([]model.AgentTaskLog, error) {
@@ -582,8 +582,8 @@ func (m *MockTenantService) CreateTenant(name, slug, plan string, maxDevices int
 	return args.Get(0).(*model.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) UpdateTenant(id, name, slug, plan string, maxDevices int) (*model.Tenant, error) {
-	args := m.Called(id, name, slug, plan, maxDevices)
+func (m *MockTenantService) UpdateTenant(ctx context.Context, id string, updates *model.TenantUpdates) (*model.Tenant, error) {
+	args := m.Called(ctx, id, updates)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

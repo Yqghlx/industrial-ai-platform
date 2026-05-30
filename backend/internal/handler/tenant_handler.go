@@ -18,7 +18,7 @@ type TenantServiceInterface interface {
 	GetTenant(ctx context.Context, id string) (*model.Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (*model.Tenant, error)
 	ListTenants(ctx context.Context, limit, offset int) ([]model.Tenant, error)
-	UpdateTenant(ctx context.Context, id string, updates map[string]interface{}) (*model.Tenant, error)
+	UpdateTenant(ctx context.Context, id string, updates *model.TenantUpdates) (*model.Tenant, error)
 	DeleteTenant(ctx context.Context, id string) error
 	CountTenants(ctx context.Context) (int, error)
 }
@@ -168,18 +168,18 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 		return
 	}
 
-	updates := map[string]interface{}{}
+	updates := &model.TenantUpdates{}
 	if req.Name != "" {
-		updates["name"] = req.Name
+		updates.Name = &req.Name
 	}
 	if req.Slug != "" {
-		updates["slug"] = req.Slug
+		updates.Slug = &req.Slug
 	}
 	if req.Plan != "" {
-		updates["plan"] = req.Plan
+		updates.Plan = &req.Plan
 	}
 	if req.MaxDevices > 0 {
-		updates["max_devices"] = req.MaxDevices
+		updates.MaxDevices = &req.MaxDevices
 	}
 
 	tenant, err := h.tenantSvc.UpdateTenant(ctx, id, updates)

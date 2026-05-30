@@ -56,14 +56,14 @@ func TestGetDeviceContext_WithDeviceID(t *testing.T) {
 	// Assertions
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.Contains(t, contextData, "device")
-	assert.Contains(t, contextData, "telemetry")
+	assert.NotNil(t, contextData.Device)
+	assert.NotNil(t, contextData.Telemetry)
 
-	device := contextData["device"].(*model.Device)
+	device := contextData.Device
 	assert.Equal(t, deviceID, device.ID)
 	assert.Equal(t, "CNC Machine 001", device.Name)
 
-	telemetry := contextData["telemetry"].([]model.TelemetryData)
+	telemetry := contextData.Telemetry
 	assert.Len(t, telemetry, 1)
 
 	assert.NoError(t, mockDB.ExpectationsWereMet())
@@ -104,8 +104,8 @@ func TestGetDeviceContext_DeviceError(t *testing.T) {
 	// Assertions - should not return error, just skip device in context
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.NotContains(t, contextData, "device") // Device should not be in context due to error
-	assert.Contains(t, contextData, "telemetry") // Telemetry should still be present
+	assert.Nil(t, contextData.Device) // Device should not be in context due to error
+	assert.NotNil(t, contextData.Telemetry) // Telemetry should still be present
 
 	assert.NoError(t, mockDB.ExpectationsWereMet())
 }
@@ -145,8 +145,8 @@ func TestGetDeviceContext_TelemetryError(t *testing.T) {
 	// Assertions - should not return error, just skip telemetry in context
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.Contains(t, contextData, "device")      // Device should be in context
-	assert.NotContains(t, contextData, "telemetry") // Telemetry should not be in context
+	assert.NotNil(t, contextData.Device)      // Device should be in context
+	assert.Nil(t, contextData.Telemetry) // Telemetry should not be in context
 
 	assert.NoError(t, mockDB.ExpectationsWereMet())
 }
@@ -262,13 +262,13 @@ func TestGetDeviceContext_WithRepositoryMocks(t *testing.T) {
 	// Assertions
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.Contains(t, contextData, "device")
-	assert.Contains(t, contextData, "telemetry")
+	assert.NotNil(t, contextData.Device)
+	assert.NotNil(t, contextData.Telemetry)
 
-	device := contextData["device"].(*model.Device)
+	device := contextData.Device
 	assert.Equal(t, deviceID, device.ID)
 
-	telemetry := contextData["telemetry"].([]model.TelemetryData)
+	telemetry := contextData.Telemetry
 	assert.Len(t, telemetry, 1)
 
 	mockDeviceRepo.AssertExpectations(t)
@@ -310,8 +310,8 @@ func TestGetDeviceContext_WithRepositoryMocks_DeviceError(t *testing.T) {
 	// Assertions - should not return error, just skip device in context
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.NotContains(t, contextData, "device") // Device should not be in context due to error
-	assert.Contains(t, contextData, "telemetry")
+	assert.Nil(t, contextData.Device) // Device should not be in context due to error
+	assert.NotNil(t, contextData.Telemetry)
 
 	mockDeviceRepo.AssertExpectations(t)
 	mockTelemetryRepo.AssertExpectations(t)
@@ -349,8 +349,8 @@ func TestGetDeviceContext_WithRepositoryMocks_TelemetryError(t *testing.T) {
 	// Assertions - should not return error, just skip telemetry in context
 	assert.NoError(t, err)
 	assert.NotNil(t, contextData)
-	assert.Contains(t, contextData, "device")
-	assert.NotContains(t, contextData, "telemetry")
+	assert.NotNil(t, contextData.Device)
+	assert.Nil(t, contextData.Telemetry)
 
 	mockDeviceRepo.AssertExpectations(t)
 	mockTelemetryRepo.AssertExpectations(t)
