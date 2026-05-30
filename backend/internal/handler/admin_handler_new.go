@@ -253,3 +253,113 @@ func (h *AdminHandlerNew) UpdateLLMConfig(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "配置已更新"})
 }
+
+// ListLLMConfigs 获取所有模型配置列表
+func (h *AdminHandlerNew) ListLLMConfigs(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	configs, err := h.configSvc.ListLLMConfigs(c.Request.Context())
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": configs})
+}
+
+// CreateLLMConfig 创建新的模型配置
+func (h *AdminHandlerNew) CreateLLMConfig(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	var req model.LLMConfigCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数无效: "+err.Error())
+		return
+	}
+
+	config, err := h.configSvc.CreateLLMConfig(c.Request.Context(), &req)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, config)
+}
+
+// UpdateLLMConfigByID 更新指定模型配置
+func (h *AdminHandlerNew) UpdateLLMConfigByID(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.BadRequest(c, "无效的配置 ID")
+		return
+	}
+
+	var req model.LLMConfigUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数无效: "+err.Error())
+		return
+	}
+
+	if err := h.configSvc.UpdateLLMConfigByID(c.Request.Context(), id, &req); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "配置已更新"})
+}
+
+// ActivateLLMConfig 激活指定模型配置
+func (h *AdminHandlerNew) ActivateLLMConfig(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.BadRequest(c, "无效的配置 ID")
+		return
+	}
+
+	if err := h.configSvc.SetActiveLLMConfig(c.Request.Context(), id); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "已切换激活模型"})
+}
+
+// DeleteLLMConfig 删除模型配置
+func (h *AdminHandlerNew) DeleteLLMConfig(c *gin.Context) {
+	if h.configSvc == nil {
+		response.BadRequest(c, "配置服务未初始化")
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.BadRequest(c, "无效的配置 ID")
+		return
+	}
+
+	if err := h.configSvc.DeleteLLMConfig(c.Request.Context(), id); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "配置已删除"})
+}

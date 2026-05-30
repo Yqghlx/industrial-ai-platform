@@ -379,6 +379,33 @@ export interface LLMConfigUpdate {
   llm_model: string;
 }
 
+/** 多模型配置项（API Key 脱敏） */
+export interface LLMConfigItem {
+  id: number;
+  name: string;
+  api_key: string;
+  base_url: string;
+  model: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
+/** 多模型配置创建请求 */
+export interface LLMConfigCreateRequest {
+  name: string;
+  api_key: string;
+  base_url: string;
+  model: string;
+}
+
+/** 多模型配置更新请求 */
+export interface LLMConfigUpdateRequest {
+  name?: string;
+  api_key?: string;
+  base_url?: string;
+  model?: string;
+}
+
 export interface HealthCheck {
   status: 'ok' | 'error';
   database: 'healthy' | 'unhealthy';

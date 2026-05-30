@@ -140,6 +140,7 @@ type AgentService struct {
 	config        *AgentServiceConfig
 	optimizer     *AgentOptimizer // P2-3: Queue + Cache optimization
 	configMu      sync.RWMutex    // 保护动态配置字段的读写锁
+	cacheSvc      cache.CacheService // 缓存服务引用，用于切换时清理缓存
 }
 
 // NewAgentService creates a new agent service
@@ -192,7 +193,8 @@ func NewAgentService(
 		model:         config.LLMModel,
 		httpClient:    httpClient,
 		config:        config,
-		optimizer:     optimizer, // OPT-002: Enable caching
+		optimizer:     optimizer,
+		cacheSvc:      cacheSvc,
 	}
 }
 

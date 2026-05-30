@@ -116,3 +116,8 @@ func (f *RepositoryFactory) GetAgentTaskLogRepository() *AgentTaskLogRepository 
 func (f *RepositoryFactory) GetSystemConfigRepo() *SystemConfigRepo {
 	return NewSystemConfigRepo(f.db)
 }
+
+// GetLLMConfigRepo 获取多模型配置 Repository
+func (f *RepositoryFactory) GetLLMConfigRepo() *LLMConfigRepo {
+	return NewLLMConfigRepo(f.db)
+}

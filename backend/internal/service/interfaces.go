@@ -272,4 +272,23 @@ type LLMConfigUpdate struct {
 type ConfigServiceInterface interface {
 	GetLLMConfig(ctx context.Context) (*LLMConfigResponse, error)
 	UpdateLLMConfig(ctx context.Context, update *LLMConfigUpdate) error
+	// 多模型配置
+	ListLLMConfigs(ctx context.Context) ([]*model.LLMConfigItemResponse, error)
+	CreateLLMConfig(ctx context.Context, req *model.LLMConfigCreateRequest) (*model.LLMConfigItemResponse, error)
+	UpdateLLMConfigByID(ctx context.Context, id int, req *model.LLMConfigUpdateRequest) error
+	DeleteLLMConfig(ctx context.Context, id int) error
+	SetActiveLLMConfig(ctx context.Context, id int) error
+	EnsureActiveConfig(ctx context.Context) error
+}
+
+// ErrCannotDeleteActive 不能删除激活中的模型配置
+var ErrCannotDeleteActive = &configError{"不能删除正在使用的模型配置，请先切换到其他模型"}
+
+// configError 配置相关错误
+type configError struct {
+	message string
+}
+
+func (e *configError) Error() string {
+	return e.message
 }

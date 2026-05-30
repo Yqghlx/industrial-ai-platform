@@ -37,6 +37,9 @@ import {
   SystemStatus,
   LLMConfig,
   LLMConfigUpdate,
+  LLMConfigItem,
+  LLMConfigCreateRequest,
+  LLMConfigUpdateRequest,
   HealthCheck,
   DeviceGraph,
   PaginatedResponse,
@@ -498,13 +501,34 @@ class ApiClient {
     return this.request<SystemStatus>('GET', '/system/status');
   }
 
-  // LLM Config
+  // LLM Config (单模型兼容)
   async getLLMConfig(): Promise<LLMConfig> {
     return this.request<LLMConfig>('GET', '/admin/config/llm');
   }
 
   async updateLLMConfig(config: LLMConfigUpdate): Promise<{ message: string }> {
     return this.request<{ message: string }>('PUT', '/admin/config/llm', config);
+  }
+
+  // 多模型配置 CRUD
+  async listLLMConfigs(): Promise<{ data: LLMConfigItem[] }> {
+    return this.request<{ data: LLMConfigItem[] }>('GET', '/admin/config/llm');
+  }
+
+  async createLLMConfig(data: LLMConfigCreateRequest): Promise<LLMConfigItem> {
+    return this.request<LLMConfigItem>('POST', '/admin/config/llm', data);
+  }
+
+  async updateLLMConfigByID(id: number, data: LLMConfigUpdateRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>('PUT', `/admin/config/llm/${id}`, data);
+  }
+
+  async activateLLMConfig(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>('PUT', `/admin/config/llm/${id}/activate`);
+  }
+
+  async deleteLLMConfig(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>('DELETE', `/admin/config/llm/${id}`);
   }
 
   // Health

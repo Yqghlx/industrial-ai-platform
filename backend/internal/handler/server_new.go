@@ -536,8 +536,11 @@ func (s *HTTPServerNew) setupHandlers() {
 		admin.POST("/admin/users", s.adminHandler.CreateUser)
 		admin.DELETE("/admin/users/:id", s.adminHandler.DeleteUser)
 		admin.GET("/system/status", s.adminHandler.GetSystemStatus)
-		admin.GET("/admin/config/llm", s.adminHandler.GetLLMConfig)
-		admin.PUT("/admin/config/llm", s.adminHandler.UpdateLLMConfig)
+		admin.GET("/admin/config/llm", s.adminHandler.ListLLMConfigs)
+		admin.POST("/admin/config/llm", s.adminHandler.CreateLLMConfig)
+		admin.PUT("/admin/config/llm/:id", s.adminHandler.UpdateLLMConfigByID)
+		admin.PUT("/admin/config/llm/:id/activate", s.adminHandler.ActivateLLMConfig)
+		admin.DELETE("/admin/config/llm/:id", s.adminHandler.DeleteLLMConfig)
 
 		admin.POST("/tenants", s.tenantHandler.CreateTenant)
 		admin.GET("/tenants", s.tenantHandler.ListTenants)

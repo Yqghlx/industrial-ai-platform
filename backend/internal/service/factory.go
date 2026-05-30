@@ -176,6 +176,7 @@ func (f *ServiceFactory) InitializeConfigService() {
 	}
 	f.configService = NewConfigService(
 		f.repoFactory.GetSystemConfigRepo(),
+		f.repoFactory.GetLLMConfigRepo(),
 		agentSvc,
 	)
 }

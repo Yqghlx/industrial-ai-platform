@@ -337,3 +337,42 @@ type SystemConfig struct {
 	Category  string    `json:"category" db:"category"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// LLMConfigItem 多模型配置项（数据库结构）
+type LLMConfigItem struct {
+	ID        int       `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	APIKey    string    `json:"-" db:"api_key"` // JSON 不输出原始 Key
+	BaseURL   string    `json:"base_url" db:"base_url"`
+	Model     string    `json:"model" db:"model"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// LLMConfigItemResponse 多模型配置项响应（API Key 脱敏）
+type LLMConfigItemResponse struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	APIKeyMasked string `json:"api_key"` // 脱敏后的值
+	BaseURL      string `json:"base_url"`
+	Model        string `json:"model"`
+	IsActive     bool   `json:"is_active"`
+	UpdatedAt    string `json:"updated_at"`
+}
+
+// LLMConfigCreateRequest 多模型配置创建请求
+type LLMConfigCreateRequest struct {
+	Name    string `json:"name" binding:"required,min=1,max=100"`
+	APIKey  string `json:"api_key"`
+	BaseURL string `json:"base_url" binding:"required"`
+	Model   string `json:"model" binding:"required"`
+}
+
+// LLMConfigUpdateRequest 多模型配置更新请求
+type LLMConfigUpdateRequest struct {
+	Name    string `json:"name" binding:"omitempty,min=1,max=100"`
+	APIKey  string `json:"api_key"`
+	BaseURL string `json:"base_url"`
+	Model   string `json:"model"`
+}
