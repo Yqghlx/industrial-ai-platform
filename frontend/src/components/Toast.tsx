@@ -19,6 +19,8 @@ const CloseIcon = () => (
   </svg>
 );
 
+const MAX_TOASTS = 5;
+
 interface ToastMessage {
   id: number;
   type: 'success' | 'error' | 'warning' | 'info';
@@ -48,8 +50,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const showToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { ...toast, id }]);
-    
+    setToasts((prev) => {
+      const next = [...prev, { ...toast, id }];
+      // 超出上限时移除最早的
+      return next.length > MAX_TOASTS ? next.slice(-MAX_TOASTS) : next;
+    });
+
     // Auto remove after 5 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

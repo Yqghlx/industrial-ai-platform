@@ -244,15 +244,33 @@ func NewAgentServiceWithConfig(
 func (s *AgentService) UpdateConfig(apiKey, baseURL, model string) {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()
+	configChanged := false
 	if apiKey != "" {
 		s.apiKey = apiKey
+		configChanged = true
 	}
 	if baseURL != "" {
 		s.baseURL = baseURL
+		configChanged = true
 	}
 	if model != "" {
 		s.model = model
+		configChanged = true
 	}
+
+	if configChanged {
+		// 清理 HTTP 连接池，避免复用旧地址的连接
+		if transport, ok := s.httpClient.(*http.Client); ok {
+			if tr, ok := transport.Transport.(*http.Transport); ok {
+				tr.CloseIdleConnections()
+			}
+		}
+		// 清理 AI 缓存，确保新模型生效后不会返回旧缓存
+		if s.cacheSvc != nil {
+			_ = s.cacheSvc.DeleteByPattern(context.Background(), "agent:*")
+		}
+	}
+
 	logger.L().Info("AgentService 配置已动态更新",
 		zap.String("base_url", s.baseURL),
 		zap.String("model", s.model),
@@ -289,7 +307,11 @@ func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*mode
 	var response string
 	var err error
 
-	if s.apiKey != "" {
+	s.configMu.RLock()
+	hasAPIKey := s.apiKey != ""
+	s.configMu.RUnlock()
+
+	if hasAPIKey {
 		// P2-3: Acquire slot for LLM call (queue mechanism)
 		if s.optimizer != nil {
 			if err := s.optimizer.AcquireSlot(ctx); err != nil {
@@ -343,10 +365,16 @@ func (s *AgentService) Query(ctx context.Context, query model.AgentQuery) (*mode
 		logger.L().Error("Failed to create task log", zap.Error(err))
 	}
 
+	// 读取当前模型名称
+	s.configMu.RLock()
+	currentModel := s.model
+	s.configMu.RUnlock()
+
 	return &model.AgentResponse{
 		SessionID: sessionID,
 		Response:  response,
 		Agent:     agent,
+		Model:     currentModel,
 		Timestamp: time.Now(),
 	}, nil
 }

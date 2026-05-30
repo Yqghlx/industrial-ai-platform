@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Sidebar from './Sidebar';
@@ -39,14 +39,26 @@ export default function App() {
     }
   }, [location.pathname, isMobile]);
 
+  // 告警 toast 去重：相同消息 10 秒内不重复弹出
+  const lastAlertToastRef = useRef<Map<string, number>>(new Map());
+
   // WebSocket connection with compression support
   const { isConnected: wsConnected } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'alert') {
-        showToast({
-          type: 'warning',
-          message: (message.payload as { message: string }).message,
-        });
+        const alertMsg = (message.payload as { message: string })?.message || '';
+        const now = Date.now();
+        const last = lastAlertToastRef.current.get(alertMsg) || 0;
+        if (now - last > 10000) {
+          lastAlertToastRef.current.set(alertMsg, now);
+          // 清理过期条目，防止内存泄漏
+          if (lastAlertToastRef.current.size > 50) {
+            for (const [k, v] of lastAlertToastRef.current) {
+              if (now - v > 10000) lastAlertToastRef.current.delete(k);
+            }
+          }
+          showToast({ type: 'warning', message: alertMsg });
+        }
       } else if (message.type === 'telemetry') {
         // Update in real-time
       } else if (message.type === 'ping') {

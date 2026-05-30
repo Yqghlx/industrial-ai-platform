@@ -193,6 +193,7 @@ type AgentResponse struct {
 	SessionID string                   `json:"session_id"`
 	Response  string                   `json:"response"`
 	Agent     string                   `json:"agent"`
+	Model     string                   `json:"model,omitempty"`
 	Actions   []map[string]interface{} `json:"actions,omitempty"`
 	Timestamp time.Time                `json:"timestamp"`
 }

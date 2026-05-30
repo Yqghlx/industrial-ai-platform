@@ -5,15 +5,45 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+// SnakeCase 命名策略（兼容 .NET 8）
+class SnakeCaseNamingPolicy : System.Text.Json.JsonNamingPolicy
+{
+    public override string ConvertName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        var result = new System.Text.StringBuilder();
+        foreach (var c in name)
+        {
+            if (char.IsUpper(c))
+            {
+                if (result.Length > 0) result.Append('_');
+                result.Append(char.ToLower(c));
+            }
+            else
+            {
+                result.Append(c);
+            }
+        }
+        return result.ToString();
+    }
+}
+
 class EdgeSimulator
 {
-    private static readonly HttpClient httpClient = new HttpClient();
+    private static readonly HttpClient httpClient = new HttpClient
+    {
+        DefaultRequestHeaders =
+        {
+            { "User-Agent", "IndustrialAI-EdgeSimulator/1.0" }
+        }
+    };
     private static readonly Random random = new Random();
     
     // Configuration
     private static readonly int DeviceCount = GetEnvInt("DEVICE_COUNT", 5);
     private static readonly int ReportIntervalMs = GetEnvInt("REPORT_INTERVAL_MS", 3000);
     private static readonly string ApiBaseUrl = GetEnvString("API_BASE_URL", "http://localhost:8080");
+    private static readonly string DeviceKey = GetEnvString("DEVICE_KEY", "edge-simulator-key");
     
     // Device state for fault injection
     private static readonly Dictionary<string, bool> faultStates = new Dictionary<string, bool>();
@@ -38,6 +68,7 @@ class EdgeSimulator
         Console.WriteLine($"  Device Count:      {DeviceCount}");
         Console.WriteLine($"  Report Interval:   {ReportIntervalMs}ms");
         Console.WriteLine($"  API Base URL:      {ApiBaseUrl}");
+        Console.WriteLine($"  Device Key:        {(string.IsNullOrEmpty(DeviceKey) ? "(none)" : "***configured***")}");
         Console.WriteLine();
 
         // Initialize devices
@@ -213,11 +244,19 @@ class EdgeSimulator
 
     static async Task SendTelemetryAsync(TelemetryData telemetry)
     {
-        var json = JsonSerializer.Serialize(telemetry);
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = new SnakeCaseNamingPolicy() };
+        var json = JsonSerializer.Serialize(telemetry, options);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync($"{ApiBaseUrl}/api/v1/devices/telemetry", content);
-        
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/api/v1/devices/telemetry");
+        request.Content = content;
+        if (!string.IsNullOrEmpty(DeviceKey))
+        {
+            request.Headers.Add("X-Device-Key", DeviceKey);
+        }
+
+        var response = await httpClient.SendAsync(request);
+
         if (!response.IsSuccessStatusCode)
         {
             Console.WriteLine($"{RedColor}[ERROR] Failed to send telemetry: {response.StatusCode}{ResetColor}");

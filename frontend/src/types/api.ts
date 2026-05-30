@@ -256,6 +256,7 @@ export interface AgentResponse {
   session_id: string;
   response: string;
   agent: string;
+  model?: string;
 }
 
 export interface AgentQueryInput {

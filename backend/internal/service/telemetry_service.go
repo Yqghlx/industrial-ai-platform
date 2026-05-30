@@ -59,6 +59,25 @@ func (s *TelemetryService) broadcast(msg model.WSMessage) {
 // Ingest stores telemetry data and triggers alert evaluation
 // BE-P2-02: 使用常量替换魔法数字
 func (s *TelemetryService) Ingest(ctx context.Context, data *model.TelemetryData) error {
+	// 自动注册设备：如果设备不存在则创建
+	if s.deviceRepo != nil {
+		if _, err := s.deviceRepo.GetByID(ctx, data.DeviceID); err != nil {
+			device := &model.Device{
+				ID:          data.DeviceID,
+				Name:        data.DeviceID,
+				Type:        "sensor",
+				Status:      "online",
+				Location:    "自动注册",
+				Description: "由遥测数据上报自动注册",
+			}
+			if createErr := s.deviceRepo.Create(ctx, device); createErr != nil {
+				logger.L().Debug("设备自动注册跳过（可能已存在）", zap.String("device_id", data.DeviceID), zap.Error(createErr))
+			} else {
+				logger.L().Info("设备自动注册成功", zap.String("device_id", data.DeviceID))
+			}
+		}
+	}
+
 	// Set timestamp if not provided
 	if data.Timestamp.IsZero() {
 		data.Timestamp = time.Now()

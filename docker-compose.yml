@@ -57,6 +57,8 @@ services:
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
       - LLM_MODEL=${LLM_MODEL:-glm-5}
+      # Device Authentication
+      - DEVICE_API_KEY=${DEVICE_API_KEY:-edge-simulator-key}
       # CORS & Security
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:8080}
       - ENV=${ENV:-production}
@@ -147,6 +149,26 @@ services:
       - --maxmemory-policy allkeys-lru
       - --save 60 1000
       - --requirepass ${REDIS_PASSWORD}
+
+  # ====================
+  # Edge Simulator (C# .NET 8)
+  # ====================
+  edge-simulator:
+    build:
+      context: ./edge
+      dockerfile: Dockerfile
+    container_name: industrial-ai-edge-simulator
+    environment:
+      - DEVICE_COUNT=${EDGE_DEVICE_COUNT:-5}
+      - REPORT_INTERVAL_MS=${EDGE_REPORT_INTERVAL_MS:-3000}
+      - API_BASE_URL=http://backend:8080
+      - DEVICE_KEY=${DEVICE_API_KEY:-edge-simulator-key}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - industrial-ai-network
+    restart: unless-stopped
 
   # ====================
   # Optional: Monitoring (Prometheus + Grafana)

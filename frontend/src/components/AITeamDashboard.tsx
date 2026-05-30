@@ -15,6 +15,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   agent?: string;
+  model?: string;
   timestamp: number;
 }
 
@@ -75,6 +76,7 @@ export default function AITeamDashboard() {
         role: 'assistant',
         content: res.response || '',
         agent: res.agent,
+        model: res.model,
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, aiMsg]);
@@ -154,8 +156,15 @@ export default function AITeamDashboard() {
                   </div>
                   <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 max-w-[70%]">
                     {msg.agent && (
-                      <div className={`text-sm mb-2 font-medium ${getAgentColor(msg.agent)}`}>
-                        {msg.agent}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-sm font-medium ${getAgentColor(msg.agent)}`}>
+                          {msg.agent}
+                        </span>
+                        {msg.model && (
+                          <span className="text-xs text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">
+                            {msg.model}
+                          </span>
+                        )}
                       </div>
                     )}
                     <div className="text-slate-200 prose prose-invert prose-sm max-w-none
